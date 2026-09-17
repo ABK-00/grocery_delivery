@@ -1,93 +1,55 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Start Session
-|--------------------------------------------------------------------------
-*/
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Require Login
-|--------------------------------------------------------------------------
-|
-| Makes sure the user is logged in before accessing protected pages.
-|
-*/
-
-function require_login()
+function isLoggedIn()
 {
-    if (empty($_SESSION["user_id"])) {
+    return isset($_SESSION['user_id']);
+}
 
-        header("Location: /grocery_delivery/login.php");
-
+function requireLogin()
+{
+    if (!isLoggedIn()) {
+        header("Location: ../login.php");
         exit;
     }
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Require Role
-|--------------------------------------------------------------------------
-|
-| Allows access only to users with the specified role(s).
-|
-| Example:
-|
-| require_role("admin");
-|
-| or:
-|
-| require_role(["admin", "staff"]);
-|
-*/
-
-function require_role($roles)
+function requireRole($role)
 {
-    require_login();
+    requireLogin();
 
-    $roles = (array) $roles;
-
-    $current_role = $_SESSION["role"] ?? "";
-
-    if (!in_array($current_role, $roles, true)) {
-
-        http_response_code(403);
-
-        exit("Access denied.");
+    if ($_SESSION['user_role'] !== $role) {
+        header("Location: ../index.php");
+        exit;
     }
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Optional Helper: Check Role
-|--------------------------------------------------------------------------
-*/
-
-function has_role($role)
+function redirectByRole()
 {
-    if (empty($_SESSION["role"])) {
-        return false;
+    switch ($_SESSION['user_role']) {
+
+        case 'admin':
+            header("Location: admin/dashboard.php");
+            break;
+
+        case 'staff':
+            header("Location: staff/dashboard.php");
+            break;
+
+        case 'customer':
+            header("Location: customer/dashboard.php");
+            break;
+
+        case 'delivery_partner':
+            header("Location: delivery/dashboard.php");
+            break;
+
+        default:
+            header("Location: index.php");
     }
 
-    return $_SESSION["role"] === $role;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Optional Helper: Check Login
-|--------------------------------------------------------------------------
-*/
-
-function is_logged_in()
-{
-    return !empty($_SESSION["user_id"]);
+    exit;
 }
