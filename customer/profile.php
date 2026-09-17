@@ -357,30 +357,36 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             }
         }
 
-    <link href="../assets/css/admin.css" rel="stylesheet">
+    </style>
+
 </head>
 
 <body>
 
 <?php include "../includes/customer_sidebar.php"; ?>
 
-<main class="main-content">
+<div class="main">
 
-    <!-- TOPBAR -->
-    <div class="topbar">
-        <div class="topbar-left">
-            <button class="sidebar-toggle" id="sidebarToggle" type="button">
+    <div class="topbar d-flex align-items-center justify-content-between">
+
+        <div>
+            <button
+                class="btn btn-outline-dark mobile-toggle"
+                onclick="toggleSidebar()"
+            >
                 <i class="bi bi-list"></i>
             </button>
-            <div>
-                <h1 class="topbar-title">My Profile</h1>
-                <p class="topbar-subtitle">Manage your personal information, address, and password.</p>
-            </div>
+
+            <span class="ms-2 fw-semibold">
+                My Profile
+            </span>
         </div>
+
         <div class="text-muted small">
             <i class="bi bi-person-circle me-1"></i>
             <?= e($user['name']) ?>
         </div>
+
     </div>
 
     <div class="content">

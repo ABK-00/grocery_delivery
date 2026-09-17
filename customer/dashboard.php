@@ -252,43 +252,19 @@ function orderStatusLabel($status)
         rel="stylesheet"
     >
 
+    <link
+        href="../assets/css/admin.css"
+        rel="stylesheet"
+    >
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
 
         body {
-            margin: 0;
-            background: #f5f7fb;
-            color: #1e293b;
-            font-family:
-                Inter,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }
-
-        .main {
-            margin-left: 250px;
-            padding: 30px;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 25px;
-        }
-
-        .page-title h3 {
-            margin: 0;
-            font-weight: 750;
-            color: #0f172a;
-        }
-
-        .page-title p {
-            margin: 5px 0 0;
-            color: #64748b;
-            font-size: 14px;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: #f4f7f6;
         }
 
         .notification-btn {
@@ -298,6 +274,7 @@ function orderStatusLabel($status)
             border-radius: 12px;
             background: #fff;
             color: #475569;
+            cursor: pointer;
         }
 
         .welcome-card {
@@ -524,61 +501,43 @@ function orderStatusLabel($status)
         }
 
         @media(max-width: 768px) {
-
-            .main {
-                margin-left: 0;
-                padding: 20px 15px;
-            }
-
-            .topbar {
-                padding-left: 55px;
-            }
-
-            .welcome-card {
-                padding: 24px;
-            }
+            .welcome-card { padding: 24px; }
         }
 
-        <link href="../assets/css/admin.css" rel="stylesheet">
+    </style>
+
 </head>
 
 <body>
 
+<?php include __DIR__ . '/../includes/loader.php'; ?>
+
 <?php include __DIR__ . '/../includes/customer_sidebar.php'; ?>
 
-<main class="main-content">
+<main class="main">
 
-    <!-- TOPBAR -->
+    <!-- =====================================================
+         TOPBAR
+         ===================================================== -->
 
     <div class="topbar">
 
         <div class="topbar-left">
 
-            <button
-                class="sidebar-toggle"
-                id="sidebarToggle"
-                type="button"
-            >
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
                 <i class="bi bi-list"></i>
             </button>
 
             <div>
-                <h1 class="topbar-title">
-                    Customer Dashboard
-                </h1>
-
-                <p class="topbar-subtitle">
-                    Manage your groceries, orders, and deliveries.
-                </p>
+                <h1 class="topbar-title">Customer Dashboard</h1>
+                <p class="topbar-subtitle">Manage your groceries, orders and deliveries.</p>
             </div>
 
         </div>
 
-        <div>
-            <button class="notification-btn" type="button">
-                <i class="bi bi-bell"></i>
-            </button>
-        </div>
+        <button class="notification-btn" title="Notifications">
+            <i class="bi bi-bell"></i>
+        </button>
 
     </div>
 

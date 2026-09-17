@@ -348,32 +348,51 @@ $mapLng = $latestLocation
             }
         }
 
-    <link href="../assets/css/admin.css" rel="stylesheet">
+    </style>
+
 </head>
+
 
 <body>
 
+
 <?php include "../includes/customer_sidebar.php"; ?>
 
-<main class="main-content">
 
-    <!-- TOPBAR -->
-    <div class="topbar">
-        <div class="topbar-left">
-            <button class="sidebar-toggle" id="sidebarToggle" type="button">
-                <i class="bi bi-list"></i>
-            </button>
-            <div>
-                <h1 class="topbar-title">Track Order <?= e($order['order_number']) ?></h1>
-                <p class="topbar-subtitle">Real-time GPS tracking for your grocery delivery.</p>
-            </div>
-        </div>
+<div class="main-content">
+
+
+    <!-- HEADER -->
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+
         <div>
-            <a href="../orders.php" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> My Orders
-            </a>
+
+            <h2 class="page-title">
+
+                <i class="bi bi-geo-alt-fill text-success me-2"></i>
+
+                Track Your Order
+
+            </h2>
+
+            <div class="page-subtitle">
+
+                Order <?= e($order['order_number']) ?>
+
+            </div>
+
         </div>
-    </div>
+
+
+        <a
+            href="orders.php"
+            class="btn btn-outline-secondary"
+        >
+
+            <i class="bi bi-arrow-left me-1"></i>
+
+            My Orders
 
         </a>
 

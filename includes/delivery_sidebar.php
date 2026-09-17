@@ -6,8 +6,6 @@ if (!isset($_SESSION['user_name'])) {
     $_SESSION['user_name'] = 'Delivery Partner';
 }
 
-require_once __DIR__ . "/loader.php";
-
 ?>
 
 <style>
