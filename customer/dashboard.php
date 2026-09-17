@@ -539,33 +539,46 @@ function orderStatusLabel($status)
             }
         }
 
-    </style>
-
+        <link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include __DIR__ . '/../includes/customer_sidebar.php'; ?>
 
-<main class="main">
+<main class="main-content">
 
-    <!-- Top bar -->
+    <!-- TOPBAR -->
 
     <div class="topbar">
 
-        <div class="page-title">
+        <div class="topbar-left">
 
-            <h3>Customer Dashboard</h3>
+            <button
+                class="sidebar-toggle"
+                id="sidebarToggle"
+                type="button"
+            >
+                <i class="bi bi-list"></i>
+            </button>
 
-            <p>
-                Manage your groceries, orders and deliveries.
-            </p>
+            <div>
+                <h1 class="topbar-title">
+                    Customer Dashboard
+                </h1>
+
+                <p class="topbar-subtitle">
+                    Manage your groceries, orders, and deliveries.
+                </p>
+            </div>
 
         </div>
 
-        <button class="notification-btn">
-            <i class="bi bi-bell"></i>
-        </button>
+        <div>
+            <button class="notification-btn" type="button">
+                <i class="bi bi-bell"></i>
+            </button>
+        </div>
 
     </div>
 

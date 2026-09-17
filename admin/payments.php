@@ -1,15 +1,15 @@
 <?php
 
-require_once "../config/db.php";
-require_once "../includes/functions.php";
-require_once "../includes/auth.php";
+require_once __DIR__ . "/../config/db.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 // Confirm authentication function exists
-if (!function_exists("require_role")) {
-    die("Authentication error: require_role() was not loaded. Please check includes/auth.php.");
+if (!function_exists("requireRole")) {
+    die("Authentication error: requireRole() was not loaded. Please check includes/auth.php.");
 }
 
-require_role("admin");
+requireRole("admin");
 
 $page_title = "Payments";
 
@@ -60,16 +60,16 @@ function status_badge($status)
 {
     $status = strtolower(trim((string) $status));
 
-    $class = "bg-secondary";
+    $class = "badge-pending";
 
     if (in_array($status, ["paid", "completed", "successful", "success"], true)) {
-        $class = "bg-success";
+        $class = "badge-delivered";
     } elseif (in_array($status, ["pending", "processing", "awaiting"], true)) {
-        $class = "bg-warning text-dark";
+        $class = "badge-pending";
     } elseif (in_array($status, ["failed", "cancelled", "canceled", "rejected"], true)) {
-        $class = "bg-danger";
+        $class = "badge-cancelled";
     } elseif (in_array($status, ["refunded", "refund"], true)) {
-        $class = "bg-info text-dark";
+        $class = "badge-preparing";
     }
 
     return '<span class="badge ' . $class . '">' . e(ucfirst($status ?: "Unknown")) . '</span>';
@@ -84,25 +84,33 @@ function status_badge($status)
 $orders_columns = get_table_columns($conn, "orders");
 
 if (empty($orders_columns)) {
-    require "../includes/header.php";
     ?>
-
-    <div class="container-fluid py-4">
-        <div class="alert alert-danger">
-            <h5 class="alert-heading">
-                <i class="bi bi-exclamation-triangle"></i>
-                Orders table not found
-            </h5>
-
-            <p class="mb-0">
-                The <strong>orders</strong> table could not be found in the
-                <strong>grocery_delivery</strong> database.
-            </p>
-        </div>
-    </div>
-
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payments | Grocery Delivery</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+        <link href="../assets/css/admin.css" rel="stylesheet">
+    </head>
+    <body>
+        <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+        <main class="main-content">
+            <div class="alert alert-danger">
+                <h5 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Orders table not found
+                </h5>
+                <p class="mb-0">
+                    The <strong>orders</strong> table could not be found in the <strong>grocery_delivery</strong> database.
+                </p>
+            </div>
+        </main>
+    </body>
+    </html>
     <?php
-    require "../includes/footer.php";
     exit;
 }
 
@@ -468,142 +476,97 @@ if ($payment_method_column) {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Header
-|--------------------------------------------------------------------------
-*/
-
-require "../includes/header.php";
-
 ?>
 
-<style>
-    .payments-page {
-        padding-bottom: 40px;
-    }
+<!DOCTYPE html>
+<html lang="en">
 
-    .page-header {
-        background: linear-gradient(135deg, #212529, #343a40);
-        color: #fff;
-        border-radius: 16px;
-        padding: 28px;
-        margin-bottom: 24px;
-    }
+<head>
 
-    .page-header h1 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        margin-bottom: 6px;
-    }
+    <meta charset="UTF-8">
 
-    .page-header p {
-        margin-bottom: 0;
-        color: rgba(255,255,255,.75);
-    }
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-    .stat-card {
-        border: 0;
-        border-radius: 16px;
-        box-shadow: 0 5px 20px rgba(0,0,0,.07);
-        height: 100%;
-    }
+    <title>Payments | Grocery Delivery</title>
 
-    .stat-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.35rem;
-    }
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
-    .stat-label {
-        font-size: .85rem;
-        color: #6c757d;
-        margin-bottom: 4px;
-    }
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet">
 
-    .stat-value {
-        font-size: 1.35rem;
-        font-weight: 700;
-        margin: 0;
-    }
+    <link
+        href="../assets/css/admin.css"
+        rel="stylesheet">
 
-    .content-card {
-        border: 0;
-        border-radius: 16px;
-        box-shadow: 0 5px 20px rgba(0,0,0,.07);
-    }
-
-    .table > :not(caption) > * > * {
-        vertical-align: middle;
-        padding: 14px 12px;
-    }
-
-    .payment-ref {
-        font-family: monospace;
-        font-size: .85rem;
-    }
-
-    .customer-name {
-        font-weight: 600;
-    }
-
-    .filter-card {
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 5px 20px rgba(0,0,0,.06);
-        border: 0;
-    }
-
-    .empty-state {
-        padding: 60px 20px;
-        text-align: center;
-        color: #6c757d;
-    }
-
-    .empty-state i {
-        font-size: 3rem;
-        display: block;
-        margin-bottom: 15px;
-    }
-
-    @media (max-width: 768px) {
-        .page-header {
-            padding: 22px;
+    <style>
+        .payment-ref {
+            font-family: monospace;
+            font-size: .85rem;
         }
 
-        .page-header h1 {
-            font-size: 1.45rem;
+        .customer-name {
+            font-weight: 600;
         }
 
-        .table-responsive {
-            border-radius: 12px;
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #6c757d;
         }
-    }
-</style>
 
-<div class="container-fluid payments-page">
+        .empty-state i {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 15px;
+        }
+    </style>
 
-    <!-- Page Header -->
-    <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+</head>
 
-        <div>
-            <h1>
-                <i class="bi bi-credit-card-2-front me-2"></i>
-                Payments
-            </h1>
+<body>
 
-            <p>
-                Monitor customer payments, transaction references and payment status.
-            </p>
+<!-- SIDEBAR -->
+
+<?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+
+
+<!-- MAIN CONTENT -->
+
+<main class="main-content">
+
+    <!-- TOPBAR -->
+
+    <div class="topbar">
+
+        <div class="topbar-left">
+
+            <button
+                class="sidebar-toggle"
+                id="sidebarToggle"
+                type="button"
+            >
+                <i class="bi bi-list"></i>
+            </button>
+
+            <div>
+                <h1 class="topbar-title">
+                    Payments Management
+                </h1>
+
+                <p class="topbar-subtitle">
+                    Monitor customer payments, transaction references, and payment status.
+                </p>
+            </div>
+
         </div>
 
         <div>
-            <a href="orders.php" class="btn btn-light">
-                <i class="bi bi-box-seam me-1"></i>
+            <a href="orders.php" class="btn btn-success">
+                <i class="bi bi-cart-check me-1"></i>
                 View Orders
             </a>
         </div>
@@ -1313,4 +1276,8 @@ require "../includes/header.php";
 <?php endforeach; ?>
 
 
-<?php require "../includes/footer.php"; ?>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

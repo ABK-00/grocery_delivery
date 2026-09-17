@@ -251,40 +251,31 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             }
         }
 
-    </style>
-
+    <link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
 
+<main class="main-content">
 
-<div class="main-content">
-
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
-
-        <div>
-
-            <h2 class="page-title">
-                <i class="bi bi-geo-alt-fill text-success me-2"></i>
-                Live Delivery Tracking
-            </h2>
-
-            <div class="page-subtitle">
-                Track and share your current location with the customer.
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button">
+                <i class="bi bi-list"></i>
+            </button>
+            <div>
+                <h1 class="topbar-title">Live Delivery Tracking</h1>
+                <p class="topbar-subtitle">Track and share your current location with the customer.</p>
             </div>
-
         </div>
-
-        <a
-            href="order_details.php?id=<?= (int)$deliveryId ?>"
-            class="btn btn-outline-secondary"
-        >
-            <i class="bi bi-arrow-left me-1"></i>
-            Back to Delivery
-        </a>
-
+        <div>
+            <a href="order_details.php?id=<?= (int)$deliveryId ?>" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Delivery
+            </a>
+        </div>
     </div>
 
 

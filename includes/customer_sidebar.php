@@ -8,280 +8,134 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $customerName = $_SESSION['user_name'] ?? 'Customer';
 
+require_once __DIR__ . "/loader.php";
+
 ?>
 
-<style>
-    .customer-sidebar {
-        width: 250px;
-        height: 100vh;
-        position: fixed;
-        left: 0;
-        top: 0;
-        background: #101827;
-        color: #fff;
-        z-index: 1000;
-        overflow-y: auto;
-        transition: all .3s ease;
-    }
+<!-- =====================================================
+     CUSTOMER SIDEBAR (Matching Admin Style & Collapse)
+     ===================================================== -->
 
-    .customer-brand {
-        height: 75px;
-        display: flex;
-        align-items: center;
-        padding: 0 22px;
-        border-bottom: 1px solid rgba(255,255,255,.08);
-    }
+<aside class="sidebar" id="customerSidebar">
 
-    .customer-brand-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        background: #198754;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 11px;
-        font-size: 19px;
-    }
-
-    .customer-brand h5 {
-        margin: 0;
-        font-weight: 700;
-        font-size: 17px;
-    }
-
-    .customer-brand small {
-        color: #94a3b8;
-        font-size: 11px;
-    }
-
-    .customer-profile {
-        padding: 20px;
-        border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-
-    .customer-avatar {
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        background: #198754;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        font-weight: 700;
-        flex-shrink: 0;
-    }
-
-    .customer-profile-name {
-        font-weight: 600;
-        font-size: 14px;
-    }
-
-    .customer-profile-role {
-        font-size: 11px;
-        color: #94a3b8;
-    }
-
-    .customer-nav {
-        padding: 18px 12px;
-    }
-
-    .customer-nav-title {
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #64748b;
-        padding: 0 12px 8px;
-        font-weight: 700;
-    }
-
-    .customer-nav a {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        color: #cbd5e1;
-        text-decoration: none;
-        padding: 11px 13px;
-        border-radius: 9px;
-        margin-bottom: 4px;
-        font-size: 14px;
-        transition: .2s;
-    }
-
-    .customer-nav a:hover {
-        background: rgba(255,255,255,.06);
-        color: #fff;
-    }
-
-    .customer-nav a.active {
-        background: #198754;
-        color: #fff;
-        font-weight: 600;
-    }
-
-    .customer-nav a i {
-        width: 20px;
-        text-align: center;
-        font-size: 16px;
-    }
-
-    .customer-logout {
-        margin-top: 18px;
-        padding-top: 15px;
-        border-top: 1px solid rgba(255,255,255,.08);
-    }
-
-    .customer-menu-btn {
-        display: none;
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 1100;
-        width: 42px;
-        height: 42px;
-        border: 0;
-        border-radius: 10px;
-        background: #198754;
-        color: white;
-        font-size: 20px;
-    }
-
-    @media(max-width: 768px) {
-
-        .customer-sidebar {
-            transform: translateX(-100%);
-        }
-
-        .customer-sidebar.show {
-            transform: translateX(0);
-        }
-
-        .customer-menu-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-    }
-</style>
-
-<button class="customer-menu-btn" id="customerMenuBtn">
-    <i class="bi bi-list"></i>
-</button>
-
-<aside class="customer-sidebar" id="customerSidebar">
-
-    <div class="customer-brand">
-
-        <div class="customer-brand-icon">
-            <i class="bi bi-basket2-fill"></i>
-        </div>
-
-        <div>
-            <h5>GroceryDelivery</h5>
-            <small>Customer Portal</small>
-        </div>
-
+    <!-- BRAND -->
+    <div class="sidebar-brand">
+        <a href="dashboard.php">
+            <div class="brand-icon">
+                <i class="bi bi-cart3"></i>
+            </div>
+            <div class="brand-text">
+                Grocery<span>Delivery</span>
+            </div>
+        </a>
     </div>
 
-    <div class="customer-profile d-flex align-items-center">
-
-        <div class="customer-avatar">
+    <!-- PROFILE SUMMARY -->
+    <div class="p-3 border-bottom border-secondary border-opacity-10 d-flex align-items-center gap-3">
+        <div class="brand-icon" style="background: #22c55e; color: #111827; font-weight: 700; width: 38px; height: 38px; min-width: 38px;">
             <?= strtoupper(substr($customerName, 0, 1)) ?>
         </div>
-
-        <div class="ms-3">
-            <div class="customer-profile-name">
-                <?= htmlspecialchars($customerName) ?>
-            </div>
-
-            <div class="customer-profile-role">
-                Shopper / Customer
-            </div>
+        <div class="text-truncate">
+            <div class="fw-bold text-white small text-truncate"><?= htmlspecialchars($customerName) ?></div>
+            <div class="text-secondary" style="font-size: 11px;">Customer Portal</div>
         </div>
-
     </div>
 
-    <nav class="customer-nav">
+    <!-- NAVIGATION -->
+    <div class="sidebar-nav">
 
-        <div class="customer-nav-title">
+        <div class="sidebar-section-title">
             Main Menu
         </div>
 
-        <a
-            href="dashboard.php"
-            class="<?= $currentPage === 'dashboard.php' ? 'active' : '' ?>"
-        >
+        <a href="dashboard.php" class="nav-link <?= ($currentPage === 'dashboard.php' || $currentPage === 'index.php') ? 'active' : '' ?>">
             <i class="bi bi-grid-1x2-fill"></i>
-            Dashboard
+            <span>Dashboard</span>
         </a>
 
-        <a
-            href="../products.php"
-            class="<?= in_array($currentPage, ['products.php', 'product.php']) ? 'active' : '' ?>"
-        >
+        <a href="../products.php" class="nav-link <?= in_array($currentPage, ['products.php', 'product.php']) ? 'active' : '' ?>">
             <i class="bi bi-shop"></i>
-            Shop Products
+            <span>Shop Products</span>
         </a>
 
-        <a
-            href="../cart.php"
-        >
+        <a href="../cart.php" class="nav-link <?= ($currentPage === 'cart.php') ? 'active' : '' ?>">
             <i class="bi bi-cart3"></i>
-            My Cart
+            <span>My Cart</span>
         </a>
 
-        <a
-            href="../orders.php"
-            class="<?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>"
-        >
-            <i class="bi bi-bag-check"></i>
-            My Orders
+        <a href="../orders.php" class="nav-link <?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>">
+            <i class="bi bi-bag-check-fill"></i>
+            <span>My Orders</span>
         </a>
 
-        <a
-            href="track_order.php"
-            class="<?= $currentPage === 'track_order.php' ? 'active' : '' ?>"
-        >
+        <a href="track_order.php" class="nav-link <?= ($currentPage === 'track_order.php') ? 'active' : '' ?>">
             <i class="bi bi-geo-alt-fill"></i>
-            Track Delivery
+            <span>Track Delivery</span>
         </a>
 
-        <div class="customer-nav-title mt-4">
-            Account
+        <div class="sidebar-section-title mt-3">
+            Account Settings
         </div>
 
-        <a
-            href="profile.php"
-            class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>"
-        >
+        <a href="profile.php" class="nav-link <?= ($currentPage === 'profile.php') ? 'active' : '' ?>">
             <i class="bi bi-person-circle"></i>
-            My Profile
+            <span>My Profile</span>
         </a>
 
-        <div class="customer-logout">
+    </div>
 
-            <a href="../logout.php">
-                <i class="bi bi-box-arrow-right"></i>
-                Logout
-            </a>
-
-        </div>
-
-    </nav>
+    <!-- LOGOUT -->
+    <div class="sidebar-footer">
+        <a href="../logout.php" class="nav-link text-danger-subtle">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Logout</span>
+        </a>
+    </div>
 
 </aside>
 
+<!-- =====================================================
+     MOBILE OVERLAY
+     ===================================================== -->
+
+<div class="sidebar-overlay" id="customerOverlay"></div>
+
+<!-- =====================================================
+     SIDEBAR JAVASCRIPT
+     ===================================================== -->
+
 <script>
-    const customerMenuBtn =
-        document.getElementById('customerMenuBtn');
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("customerSidebar") || document.getElementById("adminSidebar");
+    const toggleBtns = [
+        document.getElementById("sidebarToggle"),
+        document.getElementById("customerMenuBtn")
+    ];
+    const overlay = document.getElementById("customerOverlay") || document.getElementById("sidebarOverlay");
 
-    const customerSidebar =
-        document.getElementById('customerSidebar');
+    toggleBtns.forEach(function(btn) {
+        if (btn && sidebar) {
+            btn.addEventListener("click", function () {
+                sidebar.classList.toggle("show");
+                if (overlay) overlay.classList.toggle("show");
+            });
+        }
+    });
 
-    if (customerMenuBtn) {
-        customerMenuBtn.addEventListener('click', () => {
-            customerSidebar.classList.toggle('show');
+    if (overlay && sidebar) {
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("show");
+            overlay.classList.remove("show");
         });
     }
+
+    document.querySelectorAll(".sidebar .nav-link").forEach(function(link) {
+        link.addEventListener("click", function() {
+            if (window.innerWidth <= 900 && sidebar && overlay) {
+                sidebar.classList.remove("show");
+                overlay.classList.remove("show");
+            }
+        });
+    });
+});
 </script>

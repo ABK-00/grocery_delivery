@@ -6,6 +6,8 @@ if (!isset($_SESSION['user_name'])) {
     $_SESSION['user_name'] = 'Delivery Partner';
 }
 
+require_once __DIR__ . "/loader.php";
+
 ?>
 
 <style>
@@ -194,3 +196,42 @@ if (!isset($_SESSION['user_name'])) {
     </div>
 
 </div>
+
+<!-- MOBILE OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("deliverySidebar") || document.getElementById("adminSidebar");
+    const toggleBtns = [
+        document.getElementById("sidebarToggle"),
+        document.getElementById("deliveryMenuBtn")
+    ];
+    const overlay = document.getElementById("sidebarOverlay");
+
+    toggleBtns.forEach(function(btn) {
+        if (btn && sidebar && overlay) {
+            btn.addEventListener("click", function () {
+                sidebar.classList.toggle("show");
+                overlay.classList.toggle("show");
+            });
+        }
+    });
+
+    if (overlay && sidebar) {
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("show");
+            overlay.classList.remove("show");
+        });
+    }
+
+    document.querySelectorAll(".delivery-sidebar a").forEach(function(link) {
+        link.addEventListener("click", function() {
+            if (window.innerWidth <= 991 && sidebar && overlay) {
+                sidebar.classList.remove("show");
+                overlay.classList.remove("show");
+            }
+        });
+    });
+});
+</script>

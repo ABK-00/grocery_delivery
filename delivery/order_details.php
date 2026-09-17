@@ -441,35 +441,31 @@ body {
 
 }
 
-</style>
-
+<link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
 
-<div class="main-content">
+<main class="main-content">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-
-            <a
-                href="orders.php"
-                class="text-decoration-none text-muted"
-            >
-                <i class="bi bi-arrow-left"></i>
-                Back to Deliveries
-            </a>
-
-            <h3 class="fw-bold mt-2 mb-0">
-
-                <?= e($delivery['order_number']) ?>
-
-            </h3>
-
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button">
+                <i class="bi bi-list"></i>
+            </button>
+            <div>
+                <a href="orders.php" class="text-decoration-none text-muted small">
+                    <i class="bi bi-arrow-left"></i> Back to Deliveries
+                </a>
+                <h1 class="topbar-title mt-1">
+                    Order <?= e($delivery['order_number']) ?>
+                </h1>
+            </div>
         </div>
+    </div>
 
         <?php
 

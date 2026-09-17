@@ -2,6 +2,8 @@
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 
+require_once __DIR__ . "/loader.php";
+
 ?>
 
 <style>
@@ -275,36 +277,28 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 
 <script>
-
 document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("staffSidebar");
+    const toggleBtns = [
+        document.getElementById("sidebarToggle"),
+        document.getElementById("staffMenuBtn")
+    ];
+    const overlay = document.getElementById("staffOverlay") || document.getElementById("sidebarOverlay");
 
-    const btn =
-        document.getElementById("staffMenuBtn");
-
-    const sidebar =
-        document.getElementById("staffSidebar");
-
-    const overlay =
-        document.getElementById("staffOverlay");
-
-
-    btn.addEventListener("click", function () {
-
-        sidebar.classList.toggle("show");
-
-        overlay.classList.toggle("show");
-
+    toggleBtns.forEach(function(btn) {
+        if (btn && sidebar && overlay) {
+            btn.addEventListener("click", function () {
+                sidebar.classList.toggle("show");
+                overlay.classList.toggle("show");
+            });
+        }
     });
 
-
-    overlay.addEventListener("click", function () {
-
-        sidebar.classList.remove("show");
-
-        overlay.classList.remove("show");
-
-    });
-
+    if (overlay && sidebar) {
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("show");
+            overlay.classList.remove("show");
+        });
+    }
 });
-
 </script>

@@ -151,27 +151,27 @@ body {
 
 }
 
-</style>
-
+<link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
 
-<div class="main-content">
+<main class="main-content">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h3 class="fw-bold mb-1">
-                Delivery Dashboard
-            </h3>
-
-            <p class="text-muted mb-0">
-                Welcome back, <?= e($_SESSION['user_name']) ?>
-            </p>
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button">
+                <i class="bi bi-list"></i>
+            </button>
+            <div>
+                <h1 class="topbar-title">Delivery Dashboard</h1>
+                <p class="topbar-subtitle">Welcome back, <?= e($_SESSION['user_name']) ?> 👋</p>
+            </div>
         </div>
+    </div>
 
         <div>
 

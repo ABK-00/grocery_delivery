@@ -1,5 +1,7 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
+
+require_once __DIR__ . "/loader.php";
 ?>
 
 <!-- =====================================================

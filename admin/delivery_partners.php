@@ -1463,79 +1463,8 @@ $partners = $stmt->fetchAll();
 </div>
 
 
-<!-- =====================================================
-     BOOTSTRAP JAVASCRIPT
-     ===================================================== -->
+</main>
 
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-></script>
-
-
-<!-- =====================================================
-     SIDEBAR JAVASCRIPT
-     ===================================================== -->
-
-<script>
-
-const sidebar =
-    document.getElementById("adminSidebar");
-
-const sidebarToggle =
-    document.getElementById("sidebarToggle");
-
-const sidebarOverlay =
-    document.getElementById("sidebarOverlay");
-
-
-sidebarToggle.addEventListener(
-    "click",
-    function () {
-
-        sidebar.classList.toggle("show");
-
-        sidebarOverlay.classList.toggle("show");
-
-    }
-);
-
-
-sidebarOverlay.addEventListener(
-    "click",
-    function () {
-
-        sidebar.classList.remove("show");
-
-        sidebarOverlay.classList.remove("show");
-
-    }
-);
-
-
-document
-    .querySelectorAll(".sidebar .nav-link")
-    .forEach(function(link) {
-
-        link.addEventListener(
-            "click",
-            function() {
-
-                if (window.innerWidth <= 900) {
-
-                    sidebar.classList.remove("show");
-
-                    sidebarOverlay.classList.remove("show");
-
-                }
-
-            }
-        );
-
-    });
-
-</script>
-
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

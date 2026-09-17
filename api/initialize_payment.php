@@ -237,4 +237,3 @@ try {
         'message' => 'Payment error: ' . $e->getMessage()
     ]);
 }
-```

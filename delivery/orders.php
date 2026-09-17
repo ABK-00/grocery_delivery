@@ -106,26 +106,26 @@ body {
 
 }
 
-</style>
-
+<link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
 
-<div class="main-content">
+<main class="main-content">
 
-    <div class="mb-4">
-
-        <h3 class="fw-bold">
-            My Deliveries
-        </h3>
-
-        <p class="text-muted">
-            Manage your assigned delivery orders.
-        </p>
-
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <button class="sidebar-toggle" id="sidebarToggle" type="button">
+                <i class="bi bi-list"></i>
+            </button>
+            <div>
+                <h1 class="topbar-title">My Deliveries</h1>
+                <p class="topbar-subtitle">Manage your assigned delivery orders.</p>
+            </div>
+        </div>
     </div>
 
 

@@ -785,119 +785,14 @@ $totalStock = (float) $conn->query("
         rel="stylesheet">
 
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+
+    <link
+        href="../assets/css/admin.css"
         rel="stylesheet">
 
     <style>
-
-        :root {
-            --navy: #07182d;
-            --navy-light: #0d2747;
-            --green: #20c997;
-            --green-dark: #12a67e;
-            --bg: #f5f7fb;
-            --text: #172033;
-            --muted: #718096;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: Inter, Arial, sans-serif;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            padding: 30px;
-            min-height: 100vh;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 28px;
-        }
-
-        .page-title h1 {
-            font-size: 28px;
-            font-weight: 800;
-            margin: 0;
-        }
-
-        .page-title p {
-            color: var(--muted);
-            margin: 6px 0 0;
-        }
-
-        .btn-primary-custom {
-            background: var(--green);
-            border: none;
-            color: #062018;
-            font-weight: 700;
-            padding: 11px 18px;
-            border-radius: 10px;
-        }
-
-        .btn-primary-custom:hover {
-            background: var(--green-dark);
-            color: white;
-        }
-
-        .stat-card {
-            background: white;
-            border: none;
-            border-radius: 16px;
-            padding: 22px;
-            box-shadow: 0 5px 20px rgba(0,0,0,.04);
-            height: 100%;
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #e9faf5;
-            color: var(--green-dark);
-            font-size: 21px;
-            margin-bottom: 15px;
-        }
-
-        .stat-number {
-            font-size: 27px;
-            font-weight: 800;
-        }
-
-        .stat-label {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .content-card {
-            background: white;
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,.04);
-        }
-
-        .filters {
-            padding: 20px;
-            border-bottom: 1px solid #edf0f5;
-        }
-
-        .product-table {
-            vertical-align: middle;
-        }
-
         .product-image {
             width: 65px;
             height: 65px;
@@ -933,17 +828,17 @@ $totalStock = (float) $conn->query("
         }
 
         .gallery-thumb.primary {
-            border-color: var(--green);
+            border-color: #22c55e;
         }
 
         .badge-active {
-            background: #dff8ef;
-            color: #087f5b;
+            background: #dcfce7;
+            color: #15803d;
         }
 
         .badge-inactive {
-            background: #ffe3e3;
-            color: #c92a2a;
+            background: #fee2e2;
+            color: #b91c1c;
         }
 
         .image-manager {
@@ -971,8 +866,8 @@ $totalStock = (float) $conn->query("
             position: absolute;
             top: 10px;
             left: 10px;
-            background: var(--green);
-            color: #063b2d;
+            background: #22c55e;
+            color: #111827;
             font-size: 11px;
             font-weight: 800;
             padding: 4px 7px;
@@ -990,73 +885,67 @@ $totalStock = (float) $conn->query("
             font-size: 11px;
         }
 
-        .modal-content {
-            border: none;
-            border-radius: 18px;
-        }
-
-        .modal-header {
-            border-bottom: 1px solid #edf0f5;
-        }
-
-        .form-control,
-        .form-select {
-            border-radius: 9px;
-            padding: 10px 12px;
-        }
-
         @media (max-width: 991px) {
-
-            .main-content {
-                margin-left: 0;
-                padding: 20px;
-            }
-
-            .page-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
             .image-manager {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
 
         @media (max-width: 576px) {
-
-            .main-content {
-                padding: 15px;
-            }
-
             .image-manager {
                 grid-template-columns: repeat(2, 1fr);
             }
-
-            .table-responsive {
-                font-size: 13px;
-            }
         }
-
     </style>
 
 </head>
 
 <body>
 
-<?php include __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
 
 
 <main class="main-content">
 
-    <!-- Header -->
-    <div class="page-header">
+    <!-- TOPBAR -->
 
-        <div class="page-title">
+    <div class="topbar">
 
-            <h1>
-                <i class="bi bi-box-seam-fill me-2"></i>
-                Products
-            </h1>
+        <div class="topbar-left">
+
+            <button
+                class="sidebar-toggle"
+                id="sidebarToggle"
+                type="button"
+            >
+                <i class="bi bi-list"></i>
+            </button>
+
+            <div>
+                <h1 class="topbar-title">
+                    Products Management
+                </h1>
+
+                <p class="topbar-subtitle">
+                    Add, edit, and manage grocery items in your store inventory.
+                </p>
+            </div>
+
+        </div>
+
+        <div>
+            <button
+                class="btn btn-success"
+                data-bs-toggle="modal"
+                data-bs-target="#addProductModal"
+                type="button"
+            >
+                <i class="bi bi-plus-lg me-1"></i>
+                Add Product
+            </button>
+        </div>
+
+    </div>
 
             <p>
                 Manage grocery products, inventory and product galleries.

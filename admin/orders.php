@@ -366,95 +366,21 @@ $totalRevenue = (float) $conn->query("
         rel="stylesheet">
 
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+
+    <link
+        href="../assets/css/admin.css"
         rel="stylesheet">
 
     <style>
-
-        :root {
-            --navy: #07182d;
-            --navy-light: #0d2747;
-            --green: #20c997;
-            --green-dark: #12a67e;
-            --bg: #f5f7fb;
-            --text: #172033;
-            --muted: #718096;
+        .order-number {
+            font-weight: 700;
+            color: #111827;
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: Inter, Arial, sans-serif;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            padding: 30px;
-            min-height: 100vh;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-        }
-
-        .page-title h1 {
-            font-size: 28px;
-            font-weight: 800;
-            margin: 0;
-        }
-
-        .page-title p {
-            color: var(--muted);
-            margin: 6px 0 0;
-        }
-
-        .stat-card {
-            background: white;
-            border: none;
-            border-radius: 16px;
-            padding: 22px;
-            box-shadow: 0 5px 20px rgba(0,0,0,.04);
-            height: 100%;
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #e9faf5;
-            color: var(--green-dark);
-            font-size: 21px;
-            margin-bottom: 15px;
-        }
-
-        .stat-number {
-            font-size: 27px;
-            font-weight: 800;
-        }
-
-        .stat-label {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .content-card {
-            background: white;
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,.04);
+        .customer-name {
+            font-weight: 600;
         }
 
         .filters {
@@ -462,83 +388,10 @@ $totalRevenue = (float) $conn->query("
             border-bottom: 1px solid #edf0f5;
         }
 
-        .form-control,
-        .form-select {
-            border-radius: 9px;
-            padding: 10px 12px;
-        }
-
-        .btn-primary-custom {
-            background: var(--green);
-            border: none;
-            color: #062018;
-            font-weight: 700;
-            padding: 11px 18px;
-            border-radius: 10px;
-        }
-
-        .btn-primary-custom:hover {
-            background: var(--green-dark);
-            color: white;
-        }
-
-        .order-table {
-            vertical-align: middle;
-        }
-
-        .order-number {
-            font-weight: 700;
-            color: var(--navy);
-        }
-
-        .customer-name {
-            font-weight: 600;
-        }
-
-        .badge-pill {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .badge-pending      { background: #fff3cd; color: #997404; }
-        .badge-confirmed    { background: #e0edff; color: #1d4fa3; }
-        .badge-preparing    { background: #fde8cc; color: #b5590a; }
-        .badge-ready        { background: #e2e3ff; color: #4338ca; }
-        .badge-out          { background: #dcecff; color: #075985; }
-        .badge-delivered    { background: #dff8ef; color: #087f5b; }
-        .badge-cancelled    { background: #ffe3e3; color: #c92a2a; }
-
         .status-form select {
             font-size: 13px;
             padding: 6px 10px;
         }
-
-        @media (max-width: 991px) {
-
-            .main-content {
-                margin-left: 0;
-                padding: 20px;
-            }
-
-            .page-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-        }
-
-        @media (max-width: 576px) {
-
-            .main-content {
-                padding: 15px;
-            }
-
-            .table-responsive {
-                font-size: 13px;
-            }
-        }
-
     </style>
 
 </head>
@@ -550,19 +403,29 @@ $totalRevenue = (float) $conn->query("
 
 <main class="main-content">
 
-    <!-- Header -->
-    <div class="page-header">
+    <!-- TOPBAR -->
 
-        <div class="page-title">
+    <div class="topbar">
 
-            <h1>
-                <i class="bi bi-cart-check-fill me-2"></i>
-                Orders
-            </h1>
+        <div class="topbar-left">
 
-            <p>
-                Monitor, filter and manage every customer order.
-            </p>
+            <button
+                class="sidebar-toggle"
+                id="sidebarToggle"
+                type="button"
+            >
+                <i class="bi bi-list"></i>
+            </button>
+
+            <div>
+                <h1 class="topbar-title">
+                    Orders Management
+                </h1>
+
+                <p class="topbar-subtitle">
+                    Monitor, filter, and manage every customer order.
+                </p>
+            </div>
 
         </div>
 
