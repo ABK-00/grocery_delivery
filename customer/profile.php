@@ -359,12 +359,13 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
     </style>
 
+    <link href="../assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include "../includes/customer_sidebar.php"; ?>
-
+<?php include __DIR__ . '/../includes/loader.php'; ?>
 <div class="main">
 
     <div class="topbar d-flex align-items-center justify-content-between">

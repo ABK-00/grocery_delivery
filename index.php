@@ -1,3 +1,26 @@
-<?php $page_title="GroceryGo"; require "includes/header.php"; ?>
-<section class="hero text-center"><h1 class="display-4 fw-bold">Fresh groceries. Delivered.</h1><p class="lead">Shop, pay and track your delivery in one place.</p><a class="btn btn-light btn-lg" href="products.php">Explore groceries</a></section>
-<div class="row g-4 mt-3"><div class="col-md-4"><div class="card p-4"><h4>Easy shopping</h4><p>Browse and search products.</p></div></div><div class="col-md-4"><div class="card p-4"><h4>Secure checkout</h4><p>Place and manage orders.</p></div></div><div class="col-md-4"><div class="card p-4"><h4>Live tracking</h4><p>Track deliveries with GPS.</p></div></div></div><?php require "includes/footer.php"; ?>
+<?php $page_title = "GroceryGo";
+require "includes/header.php"; ?>
+<section class="hero text-center">
+    <h1 class="display-4 fw-bold">Fresh groceries. Delivered.</h1>
+    <p class="lead">Shop, pay and track your delivery in one place.</p><a class="btn btn-light btn-lg" href="products.php">Explore groceries</a>
+</section>
+<div class="row g-4 mt-3">
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h4>Easy shopping</h4>
+            <p>Browse and search products.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h4>Secure checkout</h4>
+            <p>Place and manage orders.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4">
+            <h4>Live tracking</h4>
+            <p>Track deliveries with GPS.</p>
+        </div>
+    </div>
+</div><?php require "includes/footer.php"; ?>

@@ -109,10 +109,14 @@ if (!$order) {
 
     </style>
 
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
-
+    <?php include __DIR__ . '/includes/loader.php'; ?>
+<?php include __DIR__ . '/includes/customer_sidebar.php'; ?>
+<main class="customer-main">
 <div class="container">
 
     <div class="success-wrapper">

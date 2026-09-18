@@ -1,0 +1,179 @@
+/* GroceryDelivery shared customer UI + theme */
+:root {
+    --gd-bg: #f4f7f6;
+    --gd-surface: #fff;
+    --gd-surface-2: #f8fafc;
+    --gd-text: #1f2937;
+    --gd-muted: #6b7280;
+    --gd-border: #e5e7eb;
+    --gd-green: #22c55e;
+    --gd-navy: #111827;
+    --gd-shadow: 0 5px 20px rgba(0, 0, 0, .05)
+}
+
+html[data-theme="dark"] {
+    --gd-bg: #0b1220;
+    --gd-surface: #111827;
+    --gd-surface-2: #182233;
+    --gd-text: #e5e7eb;
+    --gd-muted: #94a3b8;
+    --gd-border: #273449;
+    --gd-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+    color-scheme: dark
+}
+
+body {
+    background: var(--gd-bg) !important;
+    color: var(--gd-text) !important;
+    transition: background .2s, color .2s
+}
+
+.customer-main {
+    margin-left: 250px;
+    min-height: 100vh
+}
+
+.customer-main .container {
+    max-width: 1180px
+}
+
+.customer-page-header {
+    background: var(--gd-surface);
+    border: 1px solid var(--gd-border);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--gd-shadow)
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .section-card,
+html[data-theme="dark"] .delivery-card,
+html[data-theme="dark"] .profile-card,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .card-box,
+html[data-theme="dark"] .checkout-card,
+html[data-theme="dark"] .order-card,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .success-card,
+html[data-theme="dark"] .product-card,
+html[data-theme="dark"] .filter-card {
+    background: var(--gd-surface) !important;
+    color: var(--gd-text) !important;
+    border-color: var(--gd-border) !important;
+    box-shadow: var(--gd-shadow) !important
+}
+
+html[data-theme="dark"] .text-dark,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6 {
+    color: var(--gd-text) !important
+}
+
+html[data-theme="dark"] .text-muted,
+html[data-theme="dark"] .form-text {
+    color: var(--gd-muted) !important
+}
+
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .input-group-text {
+    background: #0f172a;
+    color: var(--gd-text);
+    border-color: var(--gd-border)
+}
+
+html[data-theme="dark"] .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--gd-text);
+    --bs-table-border-color: var(--gd-border)
+}
+
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .dropdown-menu {
+    background: var(--gd-surface);
+    color: var(--gd-text);
+    border-color: var(--gd-border)
+}
+
+.theme-toggle {
+    width: 100%;
+    border: 0;
+    background: transparent
+}
+
+.theme-toggle .theme-label {
+    flex: 1;
+    text-align: left
+}
+
+.theme-toggle .theme-state {
+    font-size: 11px;
+    opacity: .7
+}
+
+.sidebar .theme-toggle {
+    color: #cbd5e1
+}
+
+.sidebar .theme-toggle:hover {
+    background: rgba(34, 197, 94, .10);
+    color: #fff
+}
+
+.product-thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    background: var(--gd-surface-2)
+}
+
+.product-placeholder {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gd-surface-2);
+    color: var(--gd-muted);
+    font-size: 44px
+}
+
+.price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #16a34a
+}
+
+.filter-card,
+.product-card {
+    background: var(--gd-surface);
+    border: 1px solid var(--gd-border);
+    border-radius: 16px;
+    box-shadow: var(--gd-shadow)
+}
+
+.product-card {
+    overflow: hidden;
+    height: 100%;
+    transition: transform .18s ease
+}
+
+.product-card:hover {
+    transform: translateY(-3px)
+}
+
+@media(max-width:900px) {
+    .customer-main {
+        margin-left: 0
+    }
+
+    .main-content.customer-main {
+        margin-left: 0 !important
+    }
+}

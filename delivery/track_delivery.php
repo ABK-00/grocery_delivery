@@ -5,6 +5,8 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole("delivery_partner");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $deliveryId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
@@ -50,10 +52,11 @@ $stmt = $conn->prepare("
 
     WHERE d.id = ?
       AND dp.user_id = ?
+      AND o.company_id = ?
     LIMIT 1
 ");
 
-$stmt->execute([$deliveryId, $userId]);
+$stmt->execute([$deliveryId, $userId, $companyId]);
 $delivery = $stmt->fetch();
 
 if (!$delivery) {
@@ -257,6 +260,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 <main class="main-content">
 

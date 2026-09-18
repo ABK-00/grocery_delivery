@@ -1,1 +1,8 @@
-<?php require "../includes/functions.php"; require "../includes/auth.php"; require_role("staff"); $page_title="Staff Dashboard"; require "../includes/header.php"; ?><div class="card p-4"><h2>Staff Dashboard</h2><p>Manage stock, orders and preparation.</p></div><?php require "../includes/footer.php"; ?>
+<?php require "../includes/functions.php";
+require "../includes/auth.php";
+requireRole("staff");
+$page_title = "Staff Dashboard";
+require "../includes/header.php"; ?><div class="card p-4">
+    <h2>Staff Dashboard</h2>
+    <p>Manage stock, orders and preparation.</p>
+</div><?php require "../includes/footer.php"; ?>

@@ -4,6 +4,8 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $message = "";
 $messageType = "success";
@@ -61,11 +63,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_staff"])) {
 
             $stmt = $conn->prepare("
                 INSERT INTO users
-                (name, email, phone, whatsapp, password, role, status)
-                VALUES (?, ?, ?, ?, ?, 'staff', 'active')
+                (company_id, name, email, phone, whatsapp, password, role, status)
+                VALUES (?, ?, ?, ?, ?, ?, 'staff', 'active')
             ");
 
             $stmt->execute([
+                $companyId,
                 $name,
                 $email,
                 $phone,
@@ -164,10 +167,11 @@ if (isset($_GET["toggle"])) {
         SELECT status
         FROM users
         WHERE id = ?
+        AND company_id = ?
         AND role = 'staff'
     ");
 
-    $stmt->execute([$staffId]);
+    $stmt->execute([$staffId, $companyId]);
 
     $staff = $stmt->fetch();
 
@@ -181,6 +185,7 @@ if (isset($_GET["toggle"])) {
             UPDATE users
             SET status = ?
             WHERE id = ?
+            AND company_id = ?
             AND role = 'staff'
         ");
 
@@ -208,10 +213,11 @@ if (isset($_GET["delete"])) {
     $stmt = $conn->prepare("
         DELETE FROM users
         WHERE id = ?
+        AND company_id = ?
         AND role = 'staff'
     ");
 
-    $stmt->execute([$staffId]);
+    $stmt->execute([$staffId, $companyId]);
 
     header("Location: staff.php");
     exit;
@@ -224,7 +230,7 @@ if (isset($_GET["delete"])) {
 |--------------------------------------------------------------------------
 */
 
-$stmt = $conn->query("
+$stmt = $conn->prepare("
     SELECT
         id,
         name,
@@ -235,9 +241,11 @@ $stmt = $conn->query("
         created_at
     FROM users
     WHERE role = 'staff'
+      AND company_id = ?
     ORDER BY id DESC
 ");
 
+$stmt->execute([$companyId]);
 $staffMembers = $stmt->fetchAll();
 
 ?>
@@ -297,6 +305,7 @@ $staffMembers = $stmt->fetchAll();
 <!-- SIDEBAR -->
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 
 <!-- MAIN -->

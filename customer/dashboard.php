@@ -506,6 +506,7 @@ function orderStatusLabel($status)
 
     </style>
 
+    <link href="../assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>

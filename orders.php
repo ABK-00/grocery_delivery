@@ -5,6 +5,8 @@ require_once __DIR__ . "/includes/auth.php";
 require_once __DIR__ . "/includes/functions.php";
 
 requireLogin();
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 
@@ -16,11 +18,11 @@ $stmt = $conn->prepare("
         status,
         created_at
     FROM orders
-    WHERE user_id = ?
+    WHERE user_id = ? AND company_id = ?
     ORDER BY created_at DESC
 ");
 
-$stmt->execute([$userId]);
+$stmt->execute([$userId, $companyId]);
 $orders = $stmt->fetchAll();
 
 function statusBadge($status)
@@ -122,10 +124,14 @@ function statusBadge($status)
 
     </style>
 
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
-
+    <?php include __DIR__ . '/includes/loader.php'; ?>
+<?php include __DIR__ . '/includes/customer_sidebar.php'; ?>
+<main class="customer-main">
 <header class="page-header">
 
     <div class="container">

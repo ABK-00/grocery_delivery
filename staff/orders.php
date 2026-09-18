@@ -5,13 +5,15 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole('staff');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $success = $_SESSION['order_success'] ?? null;
 $error   = $_SESSION['order_error'] ?? null;
 
 unset($_SESSION['order_success'], $_SESSION['order_error']);
 
-$stmt = $conn->query("
+$stmt = $conn->prepare("
     SELECT
         o.id,
         o.order_number,
@@ -23,10 +25,12 @@ $stmt = $conn->query("
         u.name AS customer_name,
         u.email AS customer_email
     FROM orders o
-    INNER JOIN users u ON u.id = o.user_id
+    INNER JOIN users u ON u.id = o.user_id AND u.company_id = o.company_id
+    WHERE o.company_id = ?
     ORDER BY o.created_at DESC
 ");
 
+$stmt->execute([$companyId]);
 $orders = $stmt->fetchAll();
 
 function orderStatusBadge($status)
@@ -122,7 +126,7 @@ body {
 <body>
 
 <?php require_once __DIR__ . "/../includes/staff_sidebar.php"; ?>
-
+<?php include "../includes/loader.php"; ?>
 <main class="main">
 
 <div class="d-flex justify-content-between align-items-center mb-4">

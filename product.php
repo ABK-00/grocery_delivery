@@ -1,6 +1,10 @@
 <?php
 
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/auth.php';
+requireRole('customer');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $productId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
@@ -29,11 +33,12 @@ $stmt = $conn->prepare("
     LEFT JOIN categories c
         ON p.category_id = c.id
     WHERE p.id = ?
+      AND p.company_id = ?
       AND p.status = 'active'
     LIMIT 1
 ");
 
-$stmt->execute([$productId]);
+$stmt->execute([$productId, $companyId]);
 $product = $stmt->fetch();
 
 if (!$product) {
@@ -96,12 +101,13 @@ $relatedStmt = $conn->prepare("
         p.image
     FROM products p
     WHERE p.status = 'active'
+      AND p.company_id = ?
       AND p.id != ?
       AND (
           p.category_id = (
               SELECT category_id
               FROM products
-              WHERE id = ?
+              WHERE id = ? AND company_id = ?
           )
           OR p.category_id IS NULL
       )
@@ -109,7 +115,7 @@ $relatedStmt = $conn->prepare("
     LIMIT 4
 ");
 
-$relatedStmt->execute([$productId, $productId]);
+$relatedStmt->execute([$companyId, $productId, $productId, $companyId]);
 $relatedProducts = $relatedStmt->fetchAll();
 
 /*
@@ -158,23 +164,19 @@ $maxQuantity = max(1, (int)floor($stock));
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        content="width=device-width, initial-scale=1.0">
 
     <title><?= e($product['name']) ?> | GroceryDelivery</title>
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+        rel="stylesheet">
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-        rel="stylesheet"
-    >
+        rel="stylesheet">
 
     <style>
-
         :root {
             --green: #16a34a;
             --dark-green: #15803d;
@@ -573,128 +575,157 @@ $maxQuantity = max(1, (int)floor($stock));
             }
 
         }
-
     </style>
 
+    <link href="assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
+    <?php include __DIR__ . '/includes/loader.php'; ?>
 
-<!-- NAVBAR -->
+    <!-- NAVBAR -->
 
-<nav class="navbar navbar-expand-lg sticky-top">
+    <nav class="navbar navbar-expand-lg sticky-top">
 
-    <div class="container">
+        <div class="container">
 
-        <a class="navbar-brand" href="index.php">
-            Grocery<span>Delivery</span>
-        </a>
+            <a class="navbar-brand" href="index.php">
+                Grocery<span>Delivery</span>
+            </a>
 
-        <button
-            class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#mainNavbar"
-        >
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mainNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div
-            class="collapse navbar-collapse"
-            id="mainNavbar"
-        >
+            <div
+                class="collapse navbar-collapse"
+                id="mainNavbar">
 
-            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
 
-                <li class="nav-item">
-                    <a class="nav-link" href="index.php">
-                        Home
-                    </a>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php">
+                            Home
+                        </a>
+                    </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="products.php">
-                        Products
-                    </a>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.php">
+                            Products
+                        </a>
+                    </li>
 
-                <li class="nav-item">
+                    <li class="nav-item">
 
-                    <a
-                        class="nav-link cart-btn"
-                        href="cart.php"
-                    >
+                        <a
+                            class="nav-link cart-btn"
+                            href="cart.php">
 
-                        <i class="bi bi-cart3 fs-5"></i>
+                            <i class="bi bi-cart3 fs-5"></i>
 
-                        <span
-                            class="cart-badge"
-                            id="cartBadge"
-                        >0</span>
+                            <span
+                                class="cart-badge"
+                                id="cartBadge">0</span>
 
-                    </a>
+                        </a>
 
-                </li>
+                    </li>
 
-            </ul>
+                </ul>
+
+            </div>
 
         </div>
 
-    </div>
-
-</nav>
+    </nav>
 
 
-<!-- PRODUCT -->
+    <!-- PRODUCT -->
 
-<main class="product-section">
+    <main class="product-section">
 
-    <div class="container">
+        <div class="container">
 
-        <nav aria-label="breadcrumb" class="mb-4">
+            <nav aria-label="breadcrumb" class="mb-4">
 
-            <ol class="breadcrumb">
+                <ol class="breadcrumb">
 
-                <li class="breadcrumb-item">
-                    <a href="index.php">Home</a>
-                </li>
+                    <li class="breadcrumb-item">
+                        <a href="index.php">Home</a>
+                    </li>
 
-                <li class="breadcrumb-item">
-                    <a href="products.php">Products</a>
-                </li>
+                    <li class="breadcrumb-item">
+                        <a href="products.php">Products</a>
+                    </li>
 
-                <li class="breadcrumb-item active">
-                    <?= e($product['name']) ?>
-                </li>
+                    <li class="breadcrumb-item active">
+                        <?= e($product['name']) ?>
+                    </li>
 
-            </ol>
+                </ol>
 
-        </nav>
+            </nav>
 
 
-        <div class="product-card">
+            <div class="product-card">
 
-            <div class="row g-4">
+                <div class="row g-4">
 
-                <!-- IMAGES -->
+                    <!-- IMAGES -->
 
-                <div class="col-lg-6">
+                    <div class="col-lg-6">
 
-                    <div class="main-image-box">
+                        <div class="main-image-box">
 
-                        <?php if ($mainImage): ?>
+                            <?php if ($mainImage): ?>
 
-                            <img
-                                src="<?= e(productImage($mainImage)) ?>"
-                                alt="<?= e($product['name']) ?>"
-                                class="main-image"
-                                id="mainProductImage"
-                            >
+                                <img
+                                    src="<?= e(productImage($mainImage)) ?>"
+                                    alt="<?= e($product['name']) ?>"
+                                    class="main-image"
+                                    id="mainProductImage">
 
-                        <?php else: ?>
+                            <?php else: ?>
 
-                            <div class="placeholder-image">
-                                <i class="bi bi-image"></i>
+                                <div class="placeholder-image">
+                                    <i class="bi bi-image"></i>
+                                </div>
+
+                            <?php endif; ?>
+
+                        </div>
+
+
+                        <?php if (count($images) > 1): ?>
+
+                            <div class="thumbnail-container">
+
+                                <?php foreach ($images as $index => $img): ?>
+
+                                    <?php if (!empty($img['image'])): ?>
+
+                                        <button
+                                            type="button"
+                                            class="thumbnail <?= $index === 0 ? 'active' : '' ?>"
+                                            onclick="changeImage(
+                                            this,
+                                            '<?= e(productImage($img['image'])) ?>'
+                                        )">
+
+                                            <img
+                                                src="<?= e(productImage($img['image'])) ?>"
+                                                alt="<?= e($product['name']) ?>">
+
+                                        </button>
+
+                                    <?php endif; ?>
+
+                                <?php endforeach; ?>
+
                             </div>
 
                         <?php endif; ?>
@@ -702,200 +733,162 @@ $maxQuantity = max(1, (int)floor($stock));
                     </div>
 
 
-                    <?php if (count($images) > 1): ?>
+                    <!-- DETAILS -->
 
-                        <div class="thumbnail-container">
+                    <div class="col-lg-6">
 
-                            <?php foreach ($images as $index => $img): ?>
+                        <?php if (!empty($product['category_name'])): ?>
 
-                                <?php if (!empty($img['image'])): ?>
+                            <div class="category-label">
+
+                                <i class="bi bi-tag-fill"></i>
+
+                                <?= e($product['category_name']) ?>
+
+                            </div>
+
+                        <?php endif; ?>
+
+
+                        <h1 class="product-title">
+                            <?= e($product['name']) ?>
+                        </h1>
+
+
+                        <?php if (!empty($product['description'])): ?>
+
+                            <p class="product-description">
+                                <?= nl2br(e($product['description'])) ?>
+                            </p>
+
+                        <?php endif; ?>
+
+
+                        <div class="mt-4">
+
+                            <span class="price">
+                                GH₵ <?= $formattedPrice ?>
+                            </span>
+
+                            <span class="unit">
+                                / <?= e($product['unit']) ?>
+                            </span>
+
+                        </div>
+
+
+                        <div class="stock-status <?= $stockClass ?>">
+
+                            <?php if ($stockClass === 'available'): ?>
+
+                                <i class="bi bi-check-circle-fill"></i>
+
+                            <?php elseif ($stockClass === 'low'): ?>
+
+                                <i class="bi bi-exclamation-circle-fill"></i>
+
+                            <?php else: ?>
+
+                                <i class="bi bi-x-circle-fill"></i>
+
+                            <?php endif; ?>
+
+                            <?= e($stockText) ?>
+
+                        </div>
+
+
+                        <?php if ($stock > 0): ?>
+
+                            <div class="quantity-wrapper">
+
+                                <strong>Quantity:</strong>
+
+                                <div class="quantity-control">
 
                                     <button
                                         type="button"
-                                        class="thumbnail <?= $index === 0 ? 'active' : '' ?>"
-                                        onclick="changeImage(
-                                            this,
-                                            '<?= e(productImage($img['image'])) ?>'
-                                        )"
-                                    >
-
-                                        <img
-                                            src="<?= e(productImage($img['image'])) ?>"
-                                            alt="<?= e($product['name']) ?>"
-                                        >
-
+                                        onclick="decreaseQuantity()">
+                                        −
                                     </button>
 
-                                <?php endif; ?>
+                                    <input
+                                        type="number"
+                                        id="quantity"
+                                        value="1"
+                                        min="1"
+                                        max="<?= $maxQuantity ?>"
+                                        readonly>
 
-                            <?php endforeach; ?>
+                                    <button
+                                        type="button"
+                                        onclick="increaseQuantity()">
+                                        +
+                                    </button>
 
-                        </div>
-
-                    <?php endif; ?>
-
-                </div>
-
-
-                <!-- DETAILS -->
-
-                <div class="col-lg-6">
-
-                    <?php if (!empty($product['category_name'])): ?>
-
-                        <div class="category-label">
-
-                            <i class="bi bi-tag-fill"></i>
-
-                            <?= e($product['category_name']) ?>
-
-                        </div>
-
-                    <?php endif; ?>
-
-
-                    <h1 class="product-title">
-                        <?= e($product['name']) ?>
-                    </h1>
-
-
-                    <?php if (!empty($product['description'])): ?>
-
-                        <p class="product-description">
-                            <?= nl2br(e($product['description'])) ?>
-                        </p>
-
-                    <?php endif; ?>
-
-
-                    <div class="mt-4">
-
-                        <span class="price">
-                            GH₵ <?= $formattedPrice ?>
-                        </span>
-
-                        <span class="unit">
-                            / <?= e($product['unit']) ?>
-                        </span>
-
-                    </div>
-
-
-                    <div class="stock-status <?= $stockClass ?>">
-
-                        <?php if ($stockClass === 'available'): ?>
-
-                            <i class="bi bi-check-circle-fill"></i>
-
-                        <?php elseif ($stockClass === 'low'): ?>
-
-                            <i class="bi bi-exclamation-circle-fill"></i>
-
-                        <?php else: ?>
-
-                            <i class="bi bi-x-circle-fill"></i>
-
-                        <?php endif; ?>
-
-                        <?= e($stockText) ?>
-
-                    </div>
-
-
-                    <?php if ($stock > 0): ?>
-
-                        <div class="quantity-wrapper">
-
-                            <strong>Quantity:</strong>
-
-                            <div class="quantity-control">
-
-                                <button
-                                    type="button"
-                                    onclick="decreaseQuantity()"
-                                >
-                                    −
-                                </button>
-
-                                <input
-                                    type="number"
-                                    id="quantity"
-                                    value="1"
-                                    min="1"
-                                    max="<?= $maxQuantity ?>"
-                                    readonly
-                                >
-
-                                <button
-                                    type="button"
-                                    onclick="increaseQuantity()"
-                                >
-                                    +
-                                </button>
+                                </div>
 
                             </div>
 
-                        </div>
+
+                            <button
+                                type="button"
+                                class="add-cart-btn"
+                                onclick="addToCart()">
+
+                                <i class="bi bi-cart-plus me-2"></i>
+
+                                Add to Cart
+
+                            </button>
+
+                        <?php else: ?>
+
+                            <button
+                                type="button"
+                                class="add-cart-btn"
+                                disabled>
+
+                                <i class="bi bi-x-circle me-2"></i>
+
+                                Out of Stock
+
+                            </button>
+
+                        <?php endif; ?>
 
 
-                        <button
-                            type="button"
-                            class="add-cart-btn"
-                            onclick="addToCart()"
-                        >
+                        <div class="product-features">
 
-                            <i class="bi bi-cart-plus me-2"></i>
+                            <div class="feature">
 
-                            Add to Cart
+                                <i class="bi bi-truck"></i>
 
-                        </button>
+                                <span>
+                                    Fast Delivery
+                                </span>
 
-                    <?php else: ?>
+                            </div>
 
-                        <button
-                            type="button"
-                            class="add-cart-btn"
-                            disabled
-                        >
+                            <div class="feature">
 
-                            <i class="bi bi-x-circle me-2"></i>
+                                <i class="bi bi-shield-check"></i>
 
-                            Out of Stock
+                                <span>
+                                    Quality Products
+                                </span>
 
-                        </button>
+                            </div>
 
-                    <?php endif; ?>
+                            <div class="feature">
 
+                                <i class="bi bi-headset"></i>
 
-                    <div class="product-features">
+                                <span>
+                                    Customer Support
+                                </span>
 
-                        <div class="feature">
-
-                            <i class="bi bi-truck"></i>
-
-                            <span>
-                                Fast Delivery
-                            </span>
-
-                        </div>
-
-                        <div class="feature">
-
-                            <i class="bi bi-shield-check"></i>
-
-                            <span>
-                                Quality Products
-                            </span>
-
-                        </div>
-
-                        <div class="feature">
-
-                            <i class="bi bi-headset"></i>
-
-                            <span>
-                                Customer Support
-                            </span>
+                            </div>
 
                         </div>
 
@@ -905,68 +898,64 @@ $maxQuantity = max(1, (int)floor($stock));
 
             </div>
 
-        </div>
 
+            <!-- RELATED PRODUCTS -->
 
-        <!-- RELATED PRODUCTS -->
+            <?php if (!empty($relatedProducts)): ?>
 
-        <?php if (!empty($relatedProducts)): ?>
+                <section class="related-section">
 
-            <section class="related-section">
+                    <h2 class="section-title">
+                        You May Also Like
+                    </h2>
 
-                <h2 class="section-title">
-                    You May Also Like
-                </h2>
+                    <div class="row g-4">
 
-                <div class="row g-4">
+                        <?php foreach ($relatedProducts as $related): ?>
 
-                    <?php foreach ($relatedProducts as $related): ?>
+                            <div class="col-6 col-md-4 col-lg-3">
 
-                        <div class="col-6 col-md-4 col-lg-3">
-
-                            <div class="related-card">
-
-                                <a
-                                    href="product.php?id=<?= (int)$related['id'] ?>"
-                                    class="text-decoration-none"
-                                >
-
-                                    <div class="related-image">
-
-                                        <?php if (!empty($related['image'])): ?>
-
-                                            <img
-                                                src="<?= e(productImage($related['image'])) ?>"
-                                                alt="<?= e($related['name']) ?>"
-                                            >
-
-                                        <?php else: ?>
-
-                                            <i
-                                                class="bi bi-image"
-                                                style="font-size:50px;color:#cbd5e1;"
-                                            ></i>
-
-                                        <?php endif; ?>
-
-                                    </div>
-
-                                </a>
-
-
-                                <div class="related-body">
+                                <div class="related-card">
 
                                     <a
                                         href="product.php?id=<?= (int)$related['id'] ?>"
-                                        class="related-name"
-                                    >
-                                        <?= e($related['name']) ?>
+                                        class="text-decoration-none">
+
+                                        <div class="related-image">
+
+                                            <?php if (!empty($related['image'])): ?>
+
+                                                <img
+                                                    src="<?= e(productImage($related['image'])) ?>"
+                                                    alt="<?= e($related['name']) ?>">
+
+                                            <?php else: ?>
+
+                                                <i
+                                                    class="bi bi-image"
+                                                    style="font-size:50px;color:#cbd5e1;"></i>
+
+                                            <?php endif; ?>
+
+                                        </div>
+
                                     </a>
 
-                                    <div class="related-price">
 
-                                        GH₵
-                                        <?= number_format((float)$related['price'], 2) ?>
+                                    <div class="related-body">
+
+                                        <a
+                                            href="product.php?id=<?= (int)$related['id'] ?>"
+                                            class="related-name">
+                                            <?= e($related['name']) ?>
+                                        </a>
+
+                                        <div class="related-price">
+
+                                            GH₵
+                                            <?= number_format((float)$related['price'], 2) ?>
+
+                                        </div>
 
                                     </div>
 
@@ -974,192 +963,182 @@ $maxQuantity = max(1, (int)floor($stock));
 
                             </div>
 
-                        </div>
+                        <?php endforeach; ?>
 
-                    <?php endforeach; ?>
+                    </div>
 
-                </div>
+                </section>
 
-            </section>
+            <?php endif; ?>
 
-        <?php endif; ?>
+        </div>
 
-    </div>
-
-</main>
+    </main>
 
 
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 
-<script>
-
-/*
+    <script>
+        /*
 |--------------------------------------------------------------------------
 | Image Gallery
 |--------------------------------------------------------------------------
 */
 
-function changeImage(button, imageUrl)
-{
-    const mainImage = document.getElementById('mainProductImage');
+        function changeImage(button, imageUrl) {
+            const mainImage = document.getElementById('mainProductImage');
 
-    if (mainImage) {
-        mainImage.src = imageUrl;
-    }
+            if (mainImage) {
+                mainImage.src = imageUrl;
+            }
 
-    document
-        .querySelectorAll('.thumbnail')
-        .forEach(function(item) {
-            item.classList.remove('active');
-        });
+            document
+                .querySelectorAll('.thumbnail')
+                .forEach(function(item) {
+                    item.classList.remove('active');
+                });
 
-    button.classList.add('active');
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Quantity
-|--------------------------------------------------------------------------
-*/
-
-function increaseQuantity()
-{
-    const input = document.getElementById('quantity');
-
-    if (!input) {
-        return;
-    }
-
-    let quantity = parseInt(input.value) || 1;
-
-    const max = parseInt(input.max) || 999999;
-
-    if (quantity < max) {
-        quantity++;
-    }
-
-    input.value = quantity;
-}
+            button.classList.add('active');
+        }
 
 
-function decreaseQuantity()
-{
-    const input = document.getElementById('quantity');
+        /*
+        |--------------------------------------------------------------------------
+        | Quantity
+        |--------------------------------------------------------------------------
+        */
 
-    if (!input) {
-        return;
-    }
+        function increaseQuantity() {
+            const input = document.getElementById('quantity');
 
-    let quantity = parseInt(input.value) || 1;
+            if (!input) {
+                return;
+            }
 
-    if (quantity > 1) {
-        quantity--;
-    }
+            let quantity = parseInt(input.value) || 1;
 
-    input.value = quantity;
-}
+            const max = parseInt(input.max) || 999999;
 
+            if (quantity < max) {
+                quantity++;
+            }
 
-/*
-|--------------------------------------------------------------------------
-| Cart
-|--------------------------------------------------------------------------
-|
-| For now this stores the cart in localStorage.
-| We will replace this with the MySQL cart system when cart.php
-| and the cart API are connected.
-|
-*/
-
-function addToCart()
-{
-    const quantityInput = document.getElementById('quantity');
-
-    if (!quantityInput) {
-        return;
-    }
-
-    const quantity = parseInt(quantityInput.value) || 1;
-
-    const product = {
-        id: <?= (int)$product['id'] ?>,
-        name: <?= json_encode($product['name']) ?>,
-        price: <?= (float)$product['price'] ?>,
-        unit: <?= json_encode($product['unit']) ?>,
-        image: <?= json_encode($mainImage) ?>,
-        quantity: quantity
-    };
-
-    let cart = JSON.parse(
-        localStorage.getItem('grocery_cart') || '[]'
-    );
-
-    const existingIndex = cart.findIndex(function(item) {
-        return parseInt(item.id) === product.id;
-    });
-
-    if (existingIndex !== -1) {
-
-        cart[existingIndex].quantity += quantity;
-
-    } else {
-
-        cart.push(product);
-
-    }
-
-    localStorage.setItem(
-        'grocery_cart',
-        JSON.stringify(cart)
-    );
-
-    updateCartBadge();
-
-    alert(
-        product.name +
-        ' has been added to your cart.'
-    );
-}
+            input.value = quantity;
+        }
 
 
-/*
-|--------------------------------------------------------------------------
-| Cart Badge
-|--------------------------------------------------------------------------
-*/
+        function decreaseQuantity() {
+            const input = document.getElementById('quantity');
 
-function updateCartBadge()
-{
-    const badge = document.getElementById('cartBadge');
+            if (!input) {
+                return;
+            }
 
-    if (!badge) {
-        return;
-    }
+            let quantity = parseInt(input.value) || 1;
 
-    const cart = JSON.parse(
-        localStorage.getItem('grocery_cart') || '[]'
-    );
+            if (quantity > 1) {
+                quantity--;
+            }
 
-    let total = 0;
-
-    cart.forEach(function(item) {
-        total += parseInt(item.quantity) || 0;
-    });
-
-    badge.textContent = total;
-}
+            input.value = quantity;
+        }
 
 
-document.addEventListener(
-    'DOMContentLoaded',
-    updateCartBadge
-);
+        /*
+        |--------------------------------------------------------------------------
+        | Cart
+        |--------------------------------------------------------------------------
+        |
+        | For now this stores the cart in localStorage.
+        | We will replace this with the MySQL cart system when cart.php
+        | and the cart API are connected.
+        |
+        */
 
-</script>
+        function addToCart() {
+            const quantityInput = document.getElementById('quantity');
+
+            if (!quantityInput) {
+                return;
+            }
+
+            const quantity = parseInt(quantityInput.value) || 1;
+
+            const product = {
+                id: <?= (int)$product['id'] ?>,
+                name: <?= json_encode($product['name']) ?>,
+                price: <?= (float)$product['price'] ?>,
+                unit: <?= json_encode($product['unit']) ?>,
+                image: <?= json_encode($mainImage) ?>,
+                quantity: quantity
+            };
+
+            let cart = JSON.parse(
+                localStorage.getItem('grocery_cart') || '[]'
+            );
+
+            const existingIndex = cart.findIndex(function(item) {
+                return parseInt(item.id) === product.id;
+            });
+
+            if (existingIndex !== -1) {
+
+                cart[existingIndex].quantity += quantity;
+
+            } else {
+
+                cart.push(product);
+
+            }
+
+            localStorage.setItem(
+                'grocery_cart',
+                JSON.stringify(cart)
+            );
+
+            updateCartBadge();
+
+            alert(
+                product.name +
+                ' has been added to your cart.'
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cart Badge
+        |--------------------------------------------------------------------------
+        */
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cartBadge');
+
+            if (!badge) {
+                return;
+            }
+
+            const cart = JSON.parse(
+                localStorage.getItem('grocery_cart') || '[]'
+            );
+
+            let total = 0;
+
+            cart.forEach(function(item) {
+                total += parseInt(item.quantity) || 0;
+            });
+
+            badge.textContent = total;
+        }
+
+
+        document.addEventListener(
+            'DOMContentLoaded',
+            updateCartBadge
+        );
+    </script>
 
 </body>
 

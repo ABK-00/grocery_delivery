@@ -12,10 +12,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name = trim($_POST["name"] ?? "");
     $email = trim($_POST["email"] ?? "");
     $phone = trim($_POST["phone"] ?? "");
+    $companyCode = strtoupper(trim($_POST["company_code"] ?? ""));
     $password = $_POST["password"] ?? "";
     $confirmPassword = $_POST["confirm_password"] ?? "";
 
-    if ($name === "" || $email === "" || $phone === "" || $password === "") {
+    if ($name === "" || $email === "" || $phone === "" || $companyCode === "" || $password === "") {
 
         $message = "Please fill in all fields.";
         $messageType = "danger";
@@ -37,6 +38,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else {
 
+        $companyStmt = $conn->prepare("SELECT id FROM companies WHERE company_code=? AND status='active' AND ((subscription_plan='trial' AND trial_ends_at>=NOW()) OR (subscription_plan<>'trial' AND subscription_ends_at>=NOW())) LIMIT 1");
+        $companyStmt->execute([$companyCode]);
+        $companyId = $companyStmt->fetchColumn();
+
+        if (!$companyId) {
+            $message = "Invalid company code, or this company does not currently have platform access.";
+            $messageType = "danger";
+        } else {
+
         $check = $conn->prepare(
             "SELECT id FROM users WHERE email = ?"
         );
@@ -57,11 +67,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $stmt = $conn->prepare(
                 "INSERT INTO users
-                (name, email, phone, password, role, status)
-                VALUES (?, ?, ?, ?, 'customer', 'active')"
+                (company_id, name, email, phone, password, role, status)
+                VALUES (?, ?, ?, ?, ?, 'customer', 'active')"
             );
 
             $stmt->execute([
+                $companyId,
                 $name,
                 $email,
                 $phone,
@@ -70,6 +81,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $message = "Registration successful! You can now log in.";
             $messageType = "success";
+        }
         }
     }
 }
@@ -98,7 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body class="bg-light">
-
+<?php include __DIR__ . '/includes/loader.php'; ?>
 <div class="container">
 
     <div class="row justify-content-center align-items-center"
@@ -127,6 +139,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <?php endif; ?>
 
                     <form method="POST">
+
+                        <div class="mb-3">
+                            <label class="form-label">Company Code</label>
+                            <input type="text" name="company_code" class="form-control" placeholder="e.g. DEFAULT001" required>
+                            <div class="form-text">Enter the code provided by your grocery company.</div>
+                        </div>
 
                         <div class="mb-3">
 

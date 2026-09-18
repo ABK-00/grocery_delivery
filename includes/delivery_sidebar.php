@@ -9,88 +9,86 @@ if (!isset($_SESSION['user_name'])) {
 ?>
 
 <style>
-
-.delivery-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 250px;
-    height: 100vh;
-    background: #101827;
-    color: white;
-    z-index: 1000;
-    overflow-y: auto;
-}
-
-.delivery-brand {
-    padding: 25px 20px;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-}
-
-.delivery-brand h4 {
-    margin: 0;
-    font-weight: 700;
-}
-
-.delivery-profile {
-    padding: 20px;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-}
-
-.delivery-avatar {
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: #198754;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-}
-
-.delivery-nav {
-    padding: 20px 12px;
-}
-
-.delivery-nav a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 15px;
-    color: #adb5bd;
-    text-decoration: none;
-    border-radius: 10px;
-    margin-bottom: 5px;
-    transition: .2s;
-}
-
-.delivery-nav a:hover,
-.delivery-nav a.active {
-    background: #198754;
-    color: white;
-}
-
-.delivery-nav i {
-    font-size: 18px;
-}
-
-.delivery-logout {
-    margin-top: 30px;
-}
-
-@media(max-width: 991px) {
-
     .delivery-sidebar {
-        transform: translateX(-100%);
-        transition: .3s;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 250px;
+        height: 100vh;
+        background: #101827;
+        color: white;
+        z-index: 1000;
+        overflow-y: auto;
     }
 
-    .delivery-sidebar.show {
-        transform: translateX(0);
+    .delivery-brand {
+        padding: 25px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, .08);
     }
 
-}
+    .delivery-brand h4 {
+        margin: 0;
+        font-weight: 700;
+    }
 
+    .delivery-profile {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .delivery-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: #198754;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .delivery-nav {
+        padding: 20px 12px;
+    }
+
+    .delivery-nav a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 15px;
+        color: #adb5bd;
+        text-decoration: none;
+        border-radius: 10px;
+        margin-bottom: 5px;
+        transition: .2s;
+    }
+
+    .delivery-nav a:hover,
+    .delivery-nav a.active {
+        background: #198754;
+        color: white;
+    }
+
+    .delivery-nav i {
+        font-size: 18px;
+    }
+
+    .delivery-logout {
+        margin-top: 30px;
+    }
+
+    @media(max-width: 991px) {
+
+        .delivery-sidebar {
+            transform: translateX(-100%);
+            transition: .3s;
+        }
+
+        .delivery-sidebar.show {
+            transform: translateX(0);
+        }
+
+    }
 </style>
 
 <div class="delivery-sidebar" id="deliverySidebar">
@@ -140,8 +138,7 @@ if (!isset($_SESSION['user_name'])) {
 
         <a
             href="dashboard.php"
-            class="<?= $currentPage === 'dashboard.php' ? 'active' : '' ?>"
-        >
+            class="<?= $currentPage === 'dashboard.php' ? 'active' : '' ?>">
             <i class="bi bi-grid"></i>
             Dashboard
         </a>
@@ -149,8 +146,7 @@ if (!isset($_SESSION['user_name'])) {
 
         <a
             href="orders.php"
-            class="<?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>"
-        >
+            class="<?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>">
             <i class="bi bi-box-seam"></i>
             My Deliveries
         </a>
@@ -199,37 +195,37 @@ if (!isset($_SESSION['user_name'])) {
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const sidebar = document.getElementById("deliverySidebar") || document.getElementById("adminSidebar");
-    const toggleBtns = [
-        document.getElementById("sidebarToggle"),
-        document.getElementById("deliveryMenuBtn")
-    ];
-    const overlay = document.getElementById("sidebarOverlay");
+    document.addEventListener("DOMContentLoaded", function() {
+        const sidebar = document.getElementById("deliverySidebar") || document.getElementById("adminSidebar");
+        const toggleBtns = [
+            document.getElementById("sidebarToggle"),
+            document.getElementById("deliveryMenuBtn")
+        ];
+        const overlay = document.getElementById("sidebarOverlay");
 
-    toggleBtns.forEach(function(btn) {
-        if (btn && sidebar && overlay) {
-            btn.addEventListener("click", function () {
-                sidebar.classList.toggle("show");
-                overlay.classList.toggle("show");
-            });
-        }
-    });
-
-    if (overlay && sidebar) {
-        overlay.addEventListener("click", function () {
-            sidebar.classList.remove("show");
-            overlay.classList.remove("show");
-        });
-    }
-
-    document.querySelectorAll(".delivery-sidebar a").forEach(function(link) {
-        link.addEventListener("click", function() {
-            if (window.innerWidth <= 991 && sidebar && overlay) {
-                sidebar.classList.remove("show");
-                overlay.classList.remove("show");
+        toggleBtns.forEach(function(btn) {
+            if (btn && sidebar && overlay) {
+                btn.addEventListener("click", function() {
+                    sidebar.classList.toggle("show");
+                    overlay.classList.toggle("show");
+                });
             }
         });
+
+        if (overlay && sidebar) {
+            overlay.addEventListener("click", function() {
+                sidebar.classList.remove("show");
+                overlay.classList.remove("show");
+            });
+        }
+
+        document.querySelectorAll(".delivery-sidebar a").forEach(function(link) {
+            link.addEventListener("click", function() {
+                if (window.innerWidth <= 991 && sidebar && overlay) {
+                    sidebar.classList.remove("show");
+                    overlay.classList.remove("show");
+                }
+            });
+        });
     });
-});
 </script>

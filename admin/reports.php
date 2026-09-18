@@ -5,9 +5,11 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 /* =========================================================
-   STATS CALCULATIONS
+   COMPANY-SCOPED REPORTS
    ========================================================= */
 
 $totalRevenue = 0;
@@ -16,51 +18,44 @@ $deliveredOrders = 0;
 $avgOrderValue = 0;
 
 try {
-    $totalRevenue = (float)$conn->query("
-        SELECT COALESCE(SUM(total_amount), 0)
-        FROM orders
-        WHERE status = 'delivered'
-    ")->fetchColumn();
+    $stmt = $conn->prepare("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE company_id = ? AND status = 'delivered'");
+    $stmt->execute([$companyId]);
+    $totalRevenue = (float)$stmt->fetchColumn();
 
-    $totalOrders = (int)$conn->query("SELECT COUNT(*) FROM orders")->fetchColumn();
-    $deliveredOrders = (int)$conn->query("SELECT COUNT(*) FROM orders WHERE status = 'delivered'")->fetchColumn();
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ?");
+    $stmt->execute([$companyId]);
+    $totalOrders = (int)$stmt->fetchColumn();
 
-    if ($deliveredOrders > 0) {
-        $avgOrderValue = $totalRevenue / $deliveredOrders;
-    }
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ? AND status = 'delivered'");
+    $stmt->execute([$companyId]);
+    $deliveredOrders = (int)$stmt->fetchColumn();
+
+    if ($deliveredOrders > 0) $avgOrderValue = $totalRevenue / $deliveredOrders;
 } catch (PDOException $e) {}
 
-// Top products
 $topProducts = [];
 try {
-    $topProducts = $conn->query("
-        SELECT
-            p.name,
-            c.name AS category_name,
-            COUNT(oi.id) AS total_sold,
-            SUM(oi.subtotal) AS revenue
+    $stmt = $conn->prepare("
+        SELECT p.name, c.name AS category_name, COALESCE(SUM(oi.quantity),0) AS total_sold, COALESCE(SUM(oi.subtotal),0) AS revenue
         FROM order_items oi
-        JOIN products p ON p.id = oi.product_id
-        LEFT JOIN categories c ON c.id = p.category_id
+        JOIN orders o ON o.id = oi.order_id
+        JOIN products p ON p.id = oi.product_id AND p.company_id = o.company_id
+        LEFT JOIN categories c ON c.id = p.category_id AND c.company_id = o.company_id
+        WHERE o.company_id = ?
         GROUP BY p.id, p.name, c.name
         ORDER BY total_sold DESC
         LIMIT 5
-    ")->fetchAll();
-} catch (PDOException $e) {
-    $topProducts = [];
-}
+    ");
+    $stmt->execute([$companyId]);
+    $topProducts = $stmt->fetchAll();
+} catch (PDOException $e) { $topProducts = []; }
 
-// Order status breakdown
 $statusBreakdown = [];
 try {
-    $statusBreakdown = $conn->query("
-        SELECT status, COUNT(*) AS count
-        FROM orders
-        GROUP BY status
-    ")->fetchAll();
-} catch (PDOException $e) {
-    $statusBreakdown = [];
-}
+    $stmt = $conn->prepare("SELECT status, COUNT(*) AS count FROM orders WHERE company_id = ? GROUP BY status");
+    $stmt->execute([$companyId]);
+    $statusBreakdown = $stmt->fetchAll();
+} catch (PDOException $e) { $statusBreakdown = []; }
 
 ?>
 <!DOCTYPE html>
@@ -76,6 +71,7 @@ try {
 <body>
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 <main class="main-content">
 

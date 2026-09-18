@@ -5,6 +5,8 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $message = "";
 $messageType = "success";
@@ -41,11 +43,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["add_user"])) {
         } else {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $conn->prepare("
-                INSERT INTO users (name, email, phone, whatsapp, password, role, status)
-                VALUES (?, ?, ?, ?, ?, ?, 'active')
+                INSERT INTO users (company_id, name, email, phone, whatsapp, password, role, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
             ");
 
             $stmt->execute([
+                $companyId,
                 $name,
                 $email,
                 $phone !== "" ? $phone : null,
@@ -64,13 +67,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["add_user"])) {
    ========================================================= */
 if (isset($_GET["toggle"]) && is_numeric($_GET["toggle"])) {
     $userId = (int)$_GET["toggle"];
-    $stmt = $conn->prepare("SELECT status FROM users WHERE id = ?");
-    $stmt->execute([$userId]);
+    $stmt = $conn->prepare("SELECT status FROM users WHERE id = ? AND company_id = ? AND role <> 'super_admin'");
+    $stmt->execute([$userId, $companyId]);
     $user = $stmt->fetch();
 
     if ($user) {
         $newStatus = ($user["status"] === "active") ? "inactive" : "active";
-        $conn->prepare("UPDATE users SET status = ? WHERE id = ?")->execute([$newStatus, $userId]);
+        $conn->prepare("UPDATE users SET status = ? WHERE id = ? AND company_id = ?")->execute([$newStatus, $userId, $companyId]);
         $message = "User status updated.";
     }
 }
@@ -82,8 +85,8 @@ $search = trim($_GET["search"] ?? "");
 $roleFilter = trim($_GET["role"] ?? "");
 $statusFilter = trim($_GET["status"] ?? "");
 
-$sql = "SELECT * FROM users WHERE 1=1";
-$params = [];
+$sql = "SELECT * FROM users WHERE company_id = ? AND role <> 'super_admin'";
+$params = [$companyId];
 
 if ($search !== "") {
     $sql .= " AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)";
@@ -109,10 +112,21 @@ $stmt->execute($params);
 $users = $stmt->fetchAll();
 
 // Stats
-$totalCount = (int)$conn->query("SELECT COUNT(*) FROM users")->fetchColumn();
-$customerCount = (int)$conn->query("SELECT COUNT(*) FROM users WHERE role = 'customer'")->fetchColumn();
-$staffCount = (int)$conn->query("SELECT COUNT(*) FROM users WHERE role = 'staff'")->fetchColumn();
-$partnerCount = (int)$conn->query("SELECT COUNT(*) FROM users WHERE role = 'delivery_partner'")->fetchColumn();
+$statsStmt = $conn->prepare("
+    SELECT
+        COUNT(*) AS total_count,
+        SUM(role = 'customer') AS customer_count,
+        SUM(role = 'staff') AS staff_count,
+        SUM(role = 'delivery_partner') AS partner_count
+    FROM users
+    WHERE company_id = ? AND role <> 'super_admin'
+");
+$statsStmt->execute([$companyId]);
+$stats = $statsStmt->fetch();
+$totalCount = (int)($stats['total_count'] ?? 0);
+$customerCount = (int)($stats['customer_count'] ?? 0);
+$staffCount = (int)($stats['staff_count'] ?? 0);
+$partnerCount = (int)($stats['partner_count'] ?? 0);
 
 ?>
 <!DOCTYPE html>
@@ -141,6 +155,7 @@ $partnerCount = (int)$conn->query("SELECT COUNT(*) FROM users WHERE role = 'deli
 <body>
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 <main class="main-content">
 

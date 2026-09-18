@@ -5,6 +5,8 @@ require_once __DIR__ . '/../config/paystack.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 requireLogin();
+requireCompanyAccess();
+$companyId=currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 
@@ -36,12 +38,14 @@ try {
             ON u.id = o.user_id
         WHERE o.id = ?
         AND o.user_id = ?
+        AND o.company_id = ?
         LIMIT 1
     ");
 
     $stmt->execute([
         $orderId,
-        $userId
+        $userId,
+        $companyId
     ]);
 
     $order = $stmt->fetch();

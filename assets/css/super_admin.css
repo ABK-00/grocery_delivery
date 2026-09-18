@@ -1,0 +1,242 @@
+:root {
+    --navy: #071827;
+    --navy2: #0d2438;
+    --green: #198754;
+    --bg: #f4f7f9;
+    --card: #fff;
+    --text: #17212b;
+    --muted: #6c757d;
+    --border: #e8ecef
+}
+
+html[data-theme="dark"] {
+    --bg: #0b1118;
+    --card: #111b25;
+    --text: #edf3f7;
+    --muted: #9ba8b4;
+    --border: #263442
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text)
+}
+
+.sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 250px;
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    z-index: 1040
+}
+
+.sidebar-brand {
+    padding: 22px 18px
+}
+
+.sidebar-brand a {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    text-decoration: none;
+    color: #fff
+}
+
+.brand-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--green);
+    display: grid;
+    place-items: center
+}
+
+.brand-text {
+    font-weight: 800;
+    font-size: 18px
+}
+
+.brand-text span {
+    color: #20c997
+}
+
+.brand-text small {
+    display: block;
+    font-size: 10px;
+    color: #8fa2b4;
+    text-transform: uppercase;
+    letter-spacing: 1px
+}
+
+.sidebar-nav {
+    padding: 5px 12px;
+    flex: 1;
+    overflow: auto
+}
+
+.sidebar-section-title {
+    font-size: 11px;
+    color: #71869a;
+    text-transform: uppercase;
+    padding: 10px 12px
+}
+
+.nav-link {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #b8c5d0 !important;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    margin: 3px 0
+}
+
+.nav-link:hover,
+.nav-link.active {
+    background: #123149;
+    color: #fff !important
+}
+
+.nav-link.active {
+    box-shadow: inset 3px 0 #20c997
+}
+
+.sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid #183044
+}
+
+.main-content {
+    margin-left: 250px;
+    padding: 30px;
+    min-height: 100vh
+}
+
+.panel,
+.metric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .04)
+}
+
+.text-muted {
+    color: var(--muted) !important
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--text);
+    --bs-table-border-color: var(--border)
+}
+
+.form-control,
+.form-select {
+    background: var(--card);
+    color: var(--text);
+    border-color: var(--border)
+}
+
+.sidebar-overlay {
+    display: none
+}
+
+@media(max-width:900px) {
+    .sidebar {
+        transform: translateX(-100%)
+    }
+
+    .sidebar.show {
+        transform: none
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 20px
+    }
+
+    .sidebar-overlay.show {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: #0008;
+        z-index: 1030
+    }
+}
+
+/* Responsive Super Admin sidebar */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: #071827;
+    color: #fff;
+    font-size: 22px;
+    align-items: center;
+    justify-content: center;
+    z-index: 1070;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, .15)
+}
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .3s ease, visibility .3s ease
+}
+
+.sidebar-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto
+}
+
+@media(max-width:900px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform .3s ease;
+        box-shadow: 8px 0 30px rgba(0, 0, 0, .2)
+    }
+
+    .sidebar.show {
+        transform: translateX(0)
+    }
+
+    .sidebar-toggle {
+        display: flex
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 80px 20px 25px !important;
+        width: 100%
+    }
+}
+
+@media(max-width:576px) {
+    .sidebar {
+        width: 280px;
+        max-width: 85vw
+    }
+
+    .main-content {
+        padding: 75px 15px 20px !important
+    }
+}

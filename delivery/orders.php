@@ -5,6 +5,8 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole('delivery_partner');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 
@@ -12,10 +14,11 @@ $stmt = $conn->prepare("
     SELECT id
     FROM delivery_partners
     WHERE user_id = ?
+      AND EXISTS (SELECT 1 FROM users ux WHERE ux.id = delivery_partners.user_id AND ux.company_id = ?)
     LIMIT 1
 ");
 
-$stmt->execute([$userId]);
+$stmt->execute([$userId, $companyId]);
 
 $partner = $stmt->fetch();
 
@@ -49,11 +52,12 @@ $stmt = $conn->prepare("
         ON u.id = o.user_id
 
     WHERE d.delivery_partner_id = ?
+      AND o.company_id = ?
 
     ORDER BY d.created_at DESC
 ");
 
-$stmt->execute([$partnerId]);
+$stmt->execute([$partnerId, $companyId]);
 
 $deliveries = $stmt->fetchAll();
 
@@ -112,6 +116,7 @@ body {
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 <main class="main-content">
 

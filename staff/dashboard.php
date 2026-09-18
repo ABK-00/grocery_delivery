@@ -202,6 +202,7 @@ body {
 <body>
 
 <?php require_once __DIR__ . "/../includes/staff_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 <main class="main">
 

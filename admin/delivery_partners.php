@@ -4,6 +4,8 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $message = "";
 $error = "";
@@ -75,12 +77,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
                         email,
                         phone,
                         whatsapp,
+                        company_id,
                         password,
                         role,
                         status
                     )
                     VALUES
-                    (?, ?, ?, ?, ?, 'delivery_partner', 'active')
+                    (?, ?, ?, ?, ?, ?, 'delivery_partner', 'active')
                 ");
 
                 $stmt->execute([
@@ -88,6 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
                     $email,
                     $phone,
                     $whatsapp !== "" ? $whatsapp : null,
+                    $companyId,
                     $hashedPassword
                 ]);
 
@@ -169,12 +173,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_partner"])) {
                 FROM users
                 WHERE email = ?
                 AND id != ?
+                AND company_id = ?
                 LIMIT 1
             ");
 
             $check->execute([
                 $email,
-                $userId
+                $userId,
+                $companyId
             ]);
 
             if ($check->fetch()) {
@@ -194,6 +200,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_partner"])) {
                         whatsapp = ?
                     WHERE id = ?
                     AND role = 'delivery_partner'
+                    AND company_id = ?
                 ");
 
                 $stmt->execute([
@@ -201,7 +208,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_partner"])) {
                     $email,
                     $phone,
                     $whatsapp !== "" ? $whatsapp : null,
-                    $userId
+                    $userId,
+                    $companyId
                 ]);
 
                 $partnerStmt = $conn->prepare("
@@ -248,13 +256,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_status"])) {
     try {
 
         $stmt = $conn->prepare("
-            SELECT status
-            FROM delivery_partners
-            WHERE id = ?
+            SELECT dp.status
+            FROM delivery_partners dp
+            INNER JOIN users u ON u.id = dp.user_id
+            WHERE dp.id = ? AND u.company_id = ?
             LIMIT 1
         ");
 
-        $stmt->execute([$partnerId]);
+        $stmt->execute([$partnerId, $companyId]);
 
         $partner = $stmt->fetch();
 
@@ -268,12 +277,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_status"])) {
             $update = $conn->prepare("
                 UPDATE delivery_partners
                 SET status = ?
-                WHERE id = ?
+                WHERE id = ? AND user_id IN (SELECT id FROM users WHERE company_id = ?)
             ");
 
             $update->execute([
                 $newStatus,
-                $partnerId
+                $partnerId,
+                $companyId
             ]);
 
             $message = "Partner availability updated.";
@@ -301,10 +311,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_account"])) {
             FROM users
             WHERE id = ?
             AND role = 'delivery_partner'
+            AND company_id = ?
             LIMIT 1
         ");
 
-        $stmt->execute([$userId]);
+        $stmt->execute([$userId, $companyId]);
 
         $user = $stmt->fetch();
 
@@ -324,7 +335,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_account"])) {
 
             $update->execute([
                 $newStatus,
-                $userId
+                $userId,
+                $companyId
             ]);
 
             $message = "Account status updated.";
@@ -351,18 +363,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_partner"])) {
 
         $stmt = $conn->prepare("
             DELETE FROM delivery_partners
-            WHERE user_id = ?
+            WHERE user_id = ? AND user_id IN (SELECT id FROM users WHERE company_id = ?)
         ");
 
-        $stmt->execute([$userId]);
+        $stmt->execute([$userId, $companyId]);
 
         $stmt = $conn->prepare("
             DELETE FROM users
             WHERE id = ?
             AND role = 'delivery_partner'
+            AND company_id = ?
         ");
 
-        $stmt->execute([$userId]);
+        $stmt->execute([$userId, $companyId]);
 
         $conn->commit();
 
@@ -383,7 +396,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_partner"])) {
    GET DELIVERY PARTNERS
    ========================================================= */
 
-$stmt = $conn->query("
+$stmt = $conn->prepare("
     SELECT
         dp.id AS partner_id,
         dp.user_id,
@@ -399,8 +412,10 @@ $stmt = $conn->query("
     FROM delivery_partners dp
     INNER JOIN users u
         ON u.id = dp.user_id
+    WHERE u.company_id = ?
     ORDER BY dp.created_at DESC
 ");
+$stmt->execute([$companyId]);
 
 $partners = $stmt->fetchAll();
 
@@ -454,6 +469,7 @@ $partners = $stmt->fetchAll();
      ===================================================== -->
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 
 <!-- =====================================================

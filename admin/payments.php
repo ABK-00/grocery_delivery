@@ -10,6 +10,8 @@ if (!function_exists("requireRole")) {
 }
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $page_title = "Payments";
 
@@ -226,12 +228,13 @@ if (
             $error_message = "Invalid payment status update.";
         } else {
             try {
-                $sql = "UPDATE orders SET `$payment_status_column` = ? WHERE `$id_column` = ?";
+                $sql = "UPDATE orders SET `$payment_status_column` = ? WHERE `$id_column` = ? AND company_id = ?";
 
                 $stmt = $conn->prepare($sql);
                 $stmt->execute([
                     $new_status,
-                    $order_id
+                    $order_id,
+                    $companyId
                 ]);
 
                 $success_message = "Payment status updated successfully.";
@@ -252,8 +255,8 @@ $search = trim($_GET["search"] ?? "");
 $payment_filter = trim($_GET["payment_status"] ?? "");
 $method_filter = trim($_GET["payment_method"] ?? "");
 
-$where = [];
-$params = [];
+$where = ["o.company_id = ?"];
+$params = [$companyId];
 
 /*
 |--------------------------------------------------------------------------
@@ -464,12 +467,14 @@ if ($payment_method_column) {
         $method_sql = "
             SELECT DISTINCT `$payment_method_column`
             FROM orders
-            WHERE `$payment_method_column` IS NOT NULL
+            WHERE company_id = ?
+              AND `$payment_method_column` IS NOT NULL
               AND `$payment_method_column` <> ''
             ORDER BY `$payment_method_column` ASC
         ";
 
-        $method_stmt = $conn->query($method_sql);
+        $method_stmt = $conn->prepare($method_sql);
+        $method_stmt->execute([$companyId]);
         $payment_methods = $method_stmt->fetchAll(PDO::FETCH_COLUMN);
     } catch (PDOException $e) {
         $payment_methods = [];
@@ -532,6 +537,7 @@ if ($payment_method_column) {
 <!-- SIDEBAR -->
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 
 <!-- MAIN CONTENT -->

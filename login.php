@@ -21,9 +21,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
 
         $stmt = $conn->prepare(
-            "SELECT *
-             FROM users
-             WHERE email = ?
+            "SELECT u.*,
+                    c.company_name,
+                    c.status AS company_status,
+                    c.subscription_plan,
+                    c.trial_ends_at,
+                    c.subscription_ends_at
+             FROM users u
+             LEFT JOIN companies c ON c.id = u.company_id
+             WHERE u.email = ?
              LIMIT 1"
         );
 
@@ -48,8 +54,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $_SESSION["user_name"] = $user["name"];
                 $_SESSION["user_email"] = $user["email"];
                 $_SESSION["user_role"] = $user["role"];
+                $_SESSION["company_id"] = $user["company_id"] ?? null;
+                $_SESSION["company_name"] = $user["company_name"] ?? null;
 
-                redirectByRole();
+                if ($user["role"] !== "super_admin") {
+                    if (!$user["company_id"] || $user["company_status"] !== "active") {
+                        session_unset();
+                        session_destroy();
+                        $message = "Your company account is currently unavailable. Please contact the platform administrator.";
+                    } else {
+                        $now = new DateTime();
+                        $accessUntil = $user["subscription_plan"] === "trial"
+                            ? ($user["trial_ends_at"] ?? null)
+                            : ($user["subscription_ends_at"] ?? null);
+
+                        if ($accessUntil && new DateTime($accessUntil) < $now) {
+                            session_unset();
+                            session_destroy();
+                            $message = "Your company's subscription has expired. Please renew access.";
+                        } else {
+                            $_SESSION["company_access"] = "active";
+                            redirectByRole();
+                        }
+                    }
+                } else {
+                    $_SESSION["company_access"] = "platform";
+                    redirectByRole();
+                }
             }
 
         } else {
@@ -83,7 +114,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body class="bg-light">
-
+<?php include __DIR__ . '/includes/loader.php'; ?>
 <div class="container">
 
     <div class="row justify-content-center align-items-center"

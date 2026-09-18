@@ -509,3 +509,9 @@ body {
         padding: 10px;
     }
 }
+
+
+/* =========================================================
+   SYSTEM DARK THEME
+   ========================================================= */
+html[data-theme="dark"]{color-scheme:dark}html[data-theme="dark"] body{background:#0b1220;color:#e5e7eb}html[data-theme="dark"] .topbar,html[data-theme="dark"] .stat-card,html[data-theme="dark"] .section-card,html[data-theme="dark"] .content-card,html[data-theme="dark"] .report-card,html[data-theme="dark"] .profile-card,html[data-theme="dark"] .card{background:#111827!important;color:#e5e7eb!important;border-color:#273449!important}html[data-theme="dark"] .topbar-title,html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,html[data-theme="dark"] h4,html[data-theme="dark"] h5{color:#e5e7eb!important}html[data-theme="dark"] .text-muted,html[data-theme="dark"] .topbar-subtitle{color:#94a3b8!important}html[data-theme="dark"] .table{--bs-table-bg:transparent;--bs-table-color:#e5e7eb;--bs-table-border-color:#273449}html[data-theme="dark"] .form-control,html[data-theme="dark"] .form-select{background:#0f172a;color:#e5e7eb;border-color:#334155}.theme-toggle{width:100%;border:0;background:transparent}.theme-toggle .theme-label{flex:1;text-align:left}.theme-toggle .theme-state{font-size:11px;opacity:.7}

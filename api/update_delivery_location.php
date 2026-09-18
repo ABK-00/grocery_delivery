@@ -4,6 +4,8 @@ require_once "../config/db.php";
 require_once "../includes/auth.php";
 
 requireRole('delivery_partner');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 header('Content-Type: application/json');
 
@@ -102,13 +104,15 @@ $stmt = $conn->prepare("
 
     WHERE d.id = ?
     AND dp.user_id = ?
+    AND EXISTS (SELECT 1 FROM orders o WHERE o.id=d.order_id AND o.company_id=?)
 
     LIMIT 1
 ");
 
 $stmt->execute([
     $deliveryId,
-    $userId
+    $userId,
+    $companyId
 ]);
 
 $delivery = $stmt->fetch();

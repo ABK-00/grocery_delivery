@@ -5,6 +5,8 @@ require_once __DIR__ . "/includes/auth.php";
 require_once __DIR__ . "/includes/functions.php";
 
 requireLogin();
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 $orderId = (int)($_GET['id'] ?? 0);
@@ -35,6 +37,7 @@ $stmt = $conn->prepare("
     FROM orders
     WHERE id = ?
       AND user_id = ?
+      AND company_id = ?
     LIMIT 1
 ");
 
@@ -263,10 +266,14 @@ if ($currentIndex === false) {
 
     </style>
 
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
-
+<?php include __DIR__ . '/includes/loader.php'; ?>
+<?php include __DIR__ . '/includes/customer_sidebar.php'; ?>
+<main class="customer-main">
 <header class="page-header">
 
     <div class="container">

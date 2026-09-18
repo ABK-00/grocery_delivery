@@ -5,6 +5,8 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole("customer");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $orderId = isset($_GET['order']) ? (int) $_GET['order'] : 0;
 
@@ -54,11 +56,12 @@ $stmt = $conn->prepare("
 
     WHERE o.id = ?
       AND o.user_id = ?
+      AND o.company_id = ?
 
     LIMIT 1
 ");
 
-$stmt->execute([$orderId, $userId]);
+$stmt->execute([$orderId, $userId, $companyId]);
 $order = $stmt->fetch();
 
 if (!$order) {
@@ -350,6 +353,7 @@ $mapLng = $latestLocation
 
     </style>
 
+    <link href="../assets/css/customer.css" rel="stylesheet">
 </head>
 
 
@@ -357,8 +361,7 @@ $mapLng = $latestLocation
 
 
 <?php include "../includes/customer_sidebar.php"; ?>
-
-
+<?php include __DIR__ . '/../includes/loader.php'; ?>
 <div class="main-content">
 
 

@@ -4,6 +4,8 @@ require_once "../config/db.php";
 require_once "../includes/auth.php";
 
 requireRole('customer');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 header('Content-Type: application/json');
 
@@ -41,13 +43,15 @@ $stmt = $conn->prepare("
 
     WHERE d.id = ?
       AND o.user_id = ?
+      AND o.company_id = ?
 
     LIMIT 1
 ");
 
 $stmt->execute([
     $deliveryId,
-    $userId
+    $userId,
+    $companyId
 ]);
 
 if (!$stmt->fetch()) {

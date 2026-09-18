@@ -5,6 +5,8 @@ require_once __DIR__ . "/includes/auth.php";
 require_once __DIR__ . "/includes/functions.php";
 
 requireLogin();
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 
@@ -30,11 +32,12 @@ $stmt = $conn->prepare("
     FROM cart c
     INNER JOIN products p ON p.id = c.product_id
     WHERE c.user_id = ?
+      AND p.company_id = ?
       AND p.status = 'active'
     ORDER BY c.created_at DESC
 ");
 
-$stmt->execute([$userId]);
+$stmt->execute([$userId, $companyId]);
 $cartItems = $stmt->fetchAll();
 
 if (!$cartItems) {
@@ -169,10 +172,14 @@ unset($_SESSION['checkout_error']);
 
     </style>
 
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
-
+<?php include __DIR__ . '/includes/loader.php'; ?>
+<?php include __DIR__ . '/includes/customer_sidebar.php'; ?>
+<main class="customer-main">
 <header class="checkout-header">
 
     <div class="container">

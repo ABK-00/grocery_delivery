@@ -4,6 +4,8 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 requireLogin();
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 
@@ -43,10 +45,11 @@ try {
         INNER JOIN products p
             ON p.id = c.product_id
         WHERE c.user_id = ?
+          AND p.company_id = ?
         FOR UPDATE
     ");
 
-    $stmt->execute([$userId]);
+    $stmt->execute([$userId, $companyId]);
 
     $cartItems = $stmt->fetchAll();
 
@@ -108,6 +111,7 @@ try {
     $insertOrder = $conn->prepare("
         INSERT INTO orders
         (
+            company_id,
             user_id,
             order_number,
             subtotal,
@@ -120,10 +124,11 @@ try {
             payment_status
         )
         VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
     ");
 
     $insertOrder->execute([
+        $companyId,
         $userId,
         $orderNumber,
         $subtotal,
@@ -174,12 +179,14 @@ try {
             UPDATE products
             SET stock = stock - ?
             WHERE id = ?
+            AND company_id = ?
             AND stock >= ?
         ");
 
         $updateStock->execute([
             $item['quantity'],
             $item['product_id'],
+            $companyId,
             $item['quantity']
         ]);
 

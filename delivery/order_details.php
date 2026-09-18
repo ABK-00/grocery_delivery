@@ -5,16 +5,19 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole('delivery_partner');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $userId = $_SESSION['user_id'];
 
 $stmt = $conn->prepare("
     SELECT id, vehicle_type, vehicle_registration
-    FROM delivery_partners
-    WHERE user_id = ?
+    FROM delivery_partners dp
+    INNER JOIN users ux ON ux.id=dp.user_id
+    WHERE dp.user_id = ? AND ux.company_id = ?
     LIMIT 1
 ");
-$stmt->execute([$userId]);
+$stmt->execute([$userId,$companyId]);
 
 $partner = $stmt->fetch();
 
@@ -318,13 +321,15 @@ $stmt = $conn->prepare("
 
     WHERE d.id = ?
     AND d.delivery_partner_id = ?
+    AND o.company_id = ?
 
     LIMIT 1
 ");
 
 $stmt->execute([
     $deliveryId,
-    $partnerId
+    $partnerId,
+    $companyId
 ]);
 
 $delivery = $stmt->fetch();
@@ -447,6 +452,7 @@ body {
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 <main class="main-content">
 

@@ -4,6 +4,8 @@ require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 // Statistics
 $totalUsers = $conn->query("
@@ -135,6 +137,8 @@ try {
 <!-- SIDEBAR -->
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
+
 
 
 <!-- MAIN CONTENT -->

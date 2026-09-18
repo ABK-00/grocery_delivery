@@ -5,6 +5,8 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $uploadDir = __DIR__ . "/../assets/images/products/";
 $uploadUrl = "../assets/images/products/";
@@ -252,10 +254,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 SELECT id
                 FROM products
                 WHERE LOWER(name) = LOWER(?)
+                AND company_id = ?
                 LIMIT 1
             ");
 
-            $check->execute([$name]);
+            $check->execute([$name, $companyId]);
 
             if ($check->fetch()) {
                 throw new Exception("A product with this name already exists.");
@@ -267,6 +270,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt = $conn->prepare("
                 INSERT INTO products
                 (
+                    company_id,
                     category_id,
                     name,
                     description,
@@ -275,10 +279,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     unit,
                     status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, 'active')
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
             ");
 
             $stmt->execute([
+                $companyId,
                 $categoryId,
                 $name,
                 $description,
@@ -658,11 +663,14 @@ $statusFilter = $_GET["status"] ?? "";
 | CATEGORIES
 |--------------------------------------------------------------------------
 */
-$categories = $conn->query("
+$categoryStmt = $conn->prepare("
     SELECT *
     FROM categories
+    WHERE company_id = ?
     ORDER BY name ASC
-")->fetchAll();
+");
+$categoryStmt->execute([$companyId]);
+$categories = $categoryStmt->fetchAll();
 
 /*
 |--------------------------------------------------------------------------
@@ -676,10 +684,10 @@ $sql = "
     FROM products p
     LEFT JOIN categories c
         ON p.category_id = c.id
-    WHERE 1=1
+    WHERE p.company_id = ?
 ";
 
-$params = [];
+$params = [$companyId];
 
 if ($search !== "") {
 
@@ -726,11 +734,14 @@ $products = $stmt->fetchAll();
 | PRODUCT IMAGES
 |--------------------------------------------------------------------------
 */
-$imageStmt = $conn->query("
-    SELECT *
-    FROM product_images
-    ORDER BY product_id ASC, sort_order ASC, id ASC
+$imageStmt = $conn->prepare("
+    SELECT pi.*
+    FROM product_images pi
+    INNER JOIN products p ON p.id = pi.product_id
+    WHERE p.company_id = ?
+    ORDER BY pi.product_id ASC, pi.sort_order ASC, pi.id ASC
 ");
+$imageStmt->execute([$companyId]);
 
 $productImages = [];
 
@@ -744,27 +755,13 @@ foreach ($imageStmt->fetchAll() as $image) {
 | STATS
 |--------------------------------------------------------------------------
 */
-$totalProducts = (int) $conn->query("
-    SELECT COUNT(*)
-    FROM products
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ?"); $stat->execute([$companyId]); $totalProducts = (int)$stat->fetchColumn();
 
-$activeProducts = (int) $conn->query("
-    SELECT COUNT(*)
-    FROM products
-    WHERE status = 'active'
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ? AND status = 'active'"); $stat->execute([$companyId]); $activeProducts = (int)$stat->fetchColumn();
 
-$inactiveProducts = (int) $conn->query("
-    SELECT COUNT(*)
-    FROM products
-    WHERE status = 'inactive'
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ? AND status = 'inactive'"); $stat->execute([$companyId]); $inactiveProducts = (int)$stat->fetchColumn();
 
-$totalStock = (float) $conn->query("
-    SELECT COALESCE(SUM(stock), 0)
-    FROM products
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COALESCE(SUM(stock), 0) FROM products WHERE company_id = ?"); $stat->execute([$companyId]); $totalStock = (float)$stat->fetchColumn();
 
 ?>
 
@@ -903,6 +900,7 @@ $totalStock = (float) $conn->query("
 <body>
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 
 <main class="main-content">

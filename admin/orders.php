@@ -5,6 +5,8 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $message = "";
 $messageType = "success";
@@ -89,11 +91,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt = $conn->prepare("
                 SELECT id
                 FROM orders
-                WHERE id = ?
+                WHERE id = ? AND company_id = ?
                 FOR UPDATE
             ");
 
-            $stmt->execute([$orderId]);
+            $stmt->execute([$orderId, $companyId]);
 
             if (!$stmt->fetch()) {
                 throw new Exception("Order not found.");
@@ -102,10 +104,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt = $conn->prepare("
                 UPDATE orders
                 SET status = ?
-                WHERE id = ?
+                WHERE id = ? AND company_id = ?
             ");
 
-            $stmt->execute([$newStatus, $orderId]);
+            $stmt->execute([$newStatus, $orderId, $companyId]);
 
             /*
             | Keep linked delivery record in sync
@@ -226,8 +228,8 @@ $offset = ($page - 1) * $perPage;
 | BUILD WHERE CLAUSE
 |--------------------------------------------------------------------------
 */
-$where = " WHERE 1=1 ";
-$params = [];
+$where = " WHERE o.company_id = ? ";
+$params = [$companyId];
 
 if ($search !== "") {
 
@@ -328,24 +330,21 @@ $orders = $stmt->fetchAll();
 | STATS
 |--------------------------------------------------------------------------
 */
-$totalOrders = (int) $conn->query("
-    SELECT COUNT(*) FROM orders
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ?");
+$stat->execute([$companyId]);
+$totalOrders = (int)$stat->fetchColumn();
 
-$pendingOrders = (int) $conn->query("
-    SELECT COUNT(*) FROM orders WHERE status = 'pending'
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ? AND status = 'pending'");
+$stat->execute([$companyId]);
+$pendingOrders = (int)$stat->fetchColumn();
 
-$activeOrders = (int) $conn->query("
-    SELECT COUNT(*) FROM orders
-    WHERE status IN ('confirmed','preparing','ready','out_for_delivery')
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ? AND status IN ('confirmed','preparing','ready','out_for_delivery')");
+$stat->execute([$companyId]);
+$activeOrders = (int)$stat->fetchColumn();
 
-$totalRevenue = (float) $conn->query("
-    SELECT COALESCE(SUM(total_amount), 0)
-    FROM orders
-    WHERE status = 'delivered'
-")->fetchColumn();
+$stat = $conn->prepare("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE company_id = ? AND status = 'delivered'");
+$stat->execute([$companyId]);
+$totalRevenue = (float)$stat->fetchColumn();
 
 ?>
 
@@ -399,6 +398,7 @@ $totalRevenue = (float) $conn->query("
 <body>
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
 
 
 <main class="main-content">

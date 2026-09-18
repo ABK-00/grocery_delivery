@@ -5,114 +5,85 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $message = "";
 $messageType = "success";
 
-/* =========================================================
-   ASSIGN OR UPDATE DELIVERY
-   ========================================================= */
+/* Company-safe delivery update */
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_delivery"])) {
     $deliveryId = (int)($_POST["delivery_id"] ?? 0);
     $partnerId = (int)($_POST["partner_id"] ?? 0);
     $status = trim($_POST["status"] ?? "");
+    $allowedStatuses = ['assigned','picked_up','out_for_delivery','delivered','cancelled'];
 
-    if ($deliveryId > 0) {
+    if ($deliveryId > 0 && in_array($status, $allowedStatuses, true)) {
         try {
             $conn->beginTransaction();
 
-            $stmt = $conn->prepare("UPDATE deliveries SET delivery_partner_id = ?, status = ? WHERE id = ?");
-            $stmt->execute([$partnerId > 0 ? $partnerId : null, $status, $deliveryId]);
+            $ownStmt = $conn->prepare("SELECT d.id, d.delivery_partner_id FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE d.id=? AND o.company_id=? FOR UPDATE");
+            $ownStmt->execute([$deliveryId, $companyId]);
+            $ownedDelivery = $ownStmt->fetch();
+            if (!$ownedDelivery) throw new RuntimeException("Delivery does not belong to your company.");
 
             if ($partnerId > 0) {
-                if ($status === "out_for_delivery" || $status === "assigned") {
-                    $conn->prepare("UPDATE delivery_partners SET status = 'busy' WHERE id = ?")->execute([$partnerId]);
-                } elseif ($status === "delivered" || $status === "cancelled") {
-                    $conn->prepare("UPDATE delivery_partners SET status = 'available' WHERE id = ?")->execute([$partnerId]);
-                }
+                $partnerStmt = $conn->prepare("SELECT dp.id FROM delivery_partners dp JOIN users u ON u.id=dp.user_id WHERE dp.id=? AND u.company_id=? AND u.role='delivery_partner' AND u.status='active' LIMIT 1");
+                $partnerStmt->execute([$partnerId, $companyId]);
+                if (!$partnerStmt->fetch()) throw new RuntimeException("Invalid delivery partner for this company.");
+            }
+
+            $oldPartnerId = (int)($ownedDelivery['delivery_partner_id'] ?? 0);
+            $stmt = $conn->prepare("UPDATE deliveries SET delivery_partner_id=?, status=? WHERE id=?");
+            $stmt->execute([$partnerId ?: null, $status, $deliveryId]);
+
+            if ($oldPartnerId && $oldPartnerId !== $partnerId) {
+                $conn->prepare("UPDATE delivery_partners dp JOIN users u ON u.id=dp.user_id SET dp.status='available' WHERE dp.id=? AND u.company_id=?")->execute([$oldPartnerId, $companyId]);
+            }
+            if ($partnerId > 0) {
+                $partnerStatus = in_array($status, ['delivered','cancelled'], true) ? 'available' : 'busy';
+                $conn->prepare("UPDATE delivery_partners dp JOIN users u ON u.id=dp.user_id SET dp.status=? WHERE dp.id=? AND u.company_id=?")->execute([$partnerStatus, $partnerId, $companyId]);
             }
 
             $conn->commit();
             $message = "Delivery status updated successfully.";
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if ($conn->inTransaction()) $conn->rollBack();
-            $message = "Failed to update delivery.";
+            $message = $e instanceof RuntimeException ? $e->getMessage() : "Failed to update delivery.";
             $messageType = "danger";
         }
+    } else {
+        $message = "Invalid delivery update.";
+        $messageType = "danger";
     }
 }
 
-/* =========================================================
-   FETCH DELIVERIES & STATS
-   ========================================================= */
 $statusFilter = trim($_GET["status"] ?? "");
 $search = trim($_GET["search"] ?? "");
-
-$sql = "
-    SELECT
-        d.*,
-        o.order_number,
-        o.total_amount,
-        o.delivery_address,
-        o.delivery_phone,
-        u.name AS customer_name,
-        pu.name AS partner_name
-    FROM deliveries d
-    LEFT JOIN orders o ON o.id = d.order_id
-    LEFT JOIN users u ON u.id = o.user_id
-    LEFT JOIN delivery_partners dp ON dp.id = d.delivery_partner_id
-    LEFT JOIN users pu ON pu.id = dp.user_id
-    WHERE 1=1
-";
-
-$params = [];
-
-if ($search !== "") {
-    $sql .= " AND (o.order_number LIKE ? OR u.name LIKE ? OR pu.name LIKE ?)";
-    $params[] = "%{$search}%";
-    $params[] = "%{$search}%";
-    $params[] = "%{$search}%";
-}
-
-if ($statusFilter !== "") {
-    $sql .= " AND d.status = ?";
-    $params[] = $statusFilter;
-}
-
+$sql = "SELECT d.*, o.order_number,o.total_amount,o.delivery_address,o.delivery_phone,u.name AS customer_name,pu.name AS partner_name
+        FROM deliveries d
+        JOIN orders o ON o.id=d.order_id
+        JOIN users u ON u.id=o.user_id
+        LEFT JOIN delivery_partners dp ON dp.id=d.delivery_partner_id
+        LEFT JOIN users pu ON pu.id=dp.user_id
+        WHERE o.company_id=?";
+$params = [$companyId];
+if ($search !== '') { $sql .= " AND (o.order_number LIKE ? OR u.name LIKE ? OR pu.name LIKE ?)"; $like="%{$search}%"; array_push($params,$like,$like,$like); }
+if ($statusFilter !== '') { $sql .= " AND d.status=?"; $params[]=$statusFilter; }
 $sql .= " ORDER BY d.id DESC";
+$stmt=$conn->prepare($sql); $stmt->execute($params); $deliveries=$stmt->fetchAll();
 
-$deliveries = [];
-try {
-    $stmt = $conn->prepare($sql);
-    $stmt->execute($params);
-    $deliveries = $stmt->fetchAll();
-} catch (PDOException $e) {
-    $deliveries = [];
+function companyDeliveryCount(PDO $conn, int $companyId, ?string $where=null): int {
+    $sql="SELECT COUNT(*) FROM deliveries d JOIN orders o ON o.id=d.order_id WHERE o.company_id=?" . ($where ? " AND $where" : "");
+    $st=$conn->prepare($sql); $st->execute([$companyId]); return (int)$st->fetchColumn();
 }
+$totalDeliveries=companyDeliveryCount($conn,$companyId);
+$pendingDeliveries=companyDeliveryCount($conn,$companyId,"d.status IN ('pending','assigned')");
+$outDeliveries=companyDeliveryCount($conn,$companyId,"d.status='out_for_delivery'");
+$completedDeliveries=companyDeliveryCount($conn,$companyId,"d.status='delivered'");
 
-// Stats
-$totalDeliveries = 0;
-$pendingDeliveries = 0;
-$outDeliveries = 0;
-$completedDeliveries = 0;
-
-try {
-    $totalDeliveries = (int)$conn->query("SELECT COUNT(*) FROM deliveries")->fetchColumn();
-    $pendingDeliveries = (int)$conn->query("SELECT COUNT(*) FROM deliveries WHERE status IN ('pending', 'assigned')")->fetchColumn();
-    $outDeliveries = (int)$conn->query("SELECT COUNT(*) FROM deliveries WHERE status = 'out_for_delivery'")->fetchColumn();
-    $completedDeliveries = (int)$conn->query("SELECT COUNT(*) FROM deliveries WHERE status = 'delivered'")->fetchColumn();
-} catch (PDOException $e) {}
-
-// Fetch available partners for modals
-$partners = [];
-try {
-    $partners = $conn->query("
-        SELECT dp.id, u.name
-        FROM delivery_partners dp
-        JOIN users u ON u.id = dp.user_id
-        ORDER BY u.name ASC
-    ")->fetchAll();
-} catch (PDOException $e) {}
+$partnersStmt=$conn->prepare("SELECT dp.id,u.name FROM delivery_partners dp JOIN users u ON u.id=dp.user_id WHERE u.company_id=? AND u.role='delivery_partner' AND u.status='active' ORDER BY u.name ASC");
+$partnersStmt->execute([$companyId]); $partners=$partnersStmt->fetchAll();
 
 ?>
 <!DOCTYPE html>
@@ -128,6 +99,8 @@ try {
 <body>
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
+
 
 <main class="main-content">
 

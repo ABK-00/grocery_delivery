@@ -5,6 +5,8 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole('staff');
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $orderId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -58,11 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("
                     SELECT *
                     FROM orders
-                    WHERE id = ?
+                    WHERE id = ? AND company_id = ?
                     FOR UPDATE
                 ");
 
-                $stmt->execute([$orderId]);
+                $stmt->execute([$orderId, $companyId]);
 
                 $orderCheck = $stmt->fetch();
 
@@ -85,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         LIMIT 1
                     ");
 
-                    $stmt->execute([$orderId]);
+                    $stmt->execute([$orderId, $companyId]);
 
                     $delivery = $stmt->fetch();
 
@@ -238,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $conn->prepare("
                     SELECT *
                     FROM orders
-                    WHERE id = ?
+                    WHERE id = ? AND company_id = ?
                     FOR UPDATE
                 ");
 
@@ -283,12 +285,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     INNER JOIN users u
                         ON u.id = dp.user_id
                     WHERE dp.id = ?
+                      AND u.company_id = ?
                       AND u.role = 'delivery_partner'
                     LIMIT 1
                     FOR UPDATE
                 ");
 
-                $stmt->execute([$partnerId]);
+                $stmt->execute([$partnerId, $companyId]);
 
                 $partner = $stmt->fetch();
 
@@ -454,11 +457,11 @@ $stmt = $conn->prepare("
     FROM orders o
     INNER JOIN users u
         ON u.id = o.user_id
-    WHERE o.id = ?
+    WHERE o.id = ? AND o.company_id = ?
     LIMIT 1
 ");
 
-$stmt->execute([$orderId]);
+$stmt->execute([$orderId, $companyId]);
 
 $order = $stmt->fetch();
 
@@ -528,7 +531,7 @@ $delivery = $stmt->fetch();
 |--------------------------------------------------------------------------
 */
 
-$stmt = $conn->query("
+$stmt = $conn->prepare("
     SELECT
         dp.id,
         dp.vehicle_type,
@@ -542,12 +545,14 @@ $stmt = $conn->query("
         ON u.id = dp.user_id
 
     WHERE u.role = 'delivery_partner'
+      AND u.company_id = ?
       AND u.status = 'active'
       AND dp.status = 'available'
 
     ORDER BY u.name ASC
 ");
 
+$stmt->execute([$companyId]);
 $availablePartners = $stmt->fetchAll();
 
 
@@ -711,7 +716,7 @@ $currentStatus = $order['status'];
 <body>
 
 <?php include "../includes/staff_sidebar.php"; ?>
-
+<?php include "../includes/loader.php"; ?>
 
 <div class="main-content">
 

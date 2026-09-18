@@ -151,12 +151,15 @@ body {
 
 }
 
+</style>
 <link href="../assets/css/admin.css" rel="stylesheet">
 </head>
 
 <body>
 
 <?php include "../includes/delivery_sidebar.php"; ?>
+<?php include "../includes/loader.php"; ?>
+
 
 <main class="main-content">
 

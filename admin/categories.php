@@ -5,6 +5,8 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
+requireCompanyAccess();
+$companyId = currentCompanyId();
 
 $message = "";
 $messageType = "success";
@@ -29,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["add_category"])) {
             LIMIT 1
         ");
 
-        $check->execute([$name]);
+        $check->execute([$companyId, $name]);
 
         if ($check->fetch()) {
 
@@ -39,8 +41,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["add_category"])) {
         } else {
 
             $stmt = $conn->prepare("
-                INSERT INTO categories (name, description, status)
-                VALUES (?, ?, 'active')
+                INSERT INTO categories (company_id, name, description, status)
+                VALUES (?, ?, ?, 'active')
             ");
 
             $stmt->execute([
@@ -159,7 +161,7 @@ if (isset($_GET["delete"])) {
         $checkProducts = $conn->prepare("
             SELECT COUNT(*) 
             FROM products
-            WHERE category_id = ?
+            WHERE category_id = ? AND company_id = ?
         ");
         $checkProducts->execute([$id]);
         $productCount = (int)$checkProducts->fetchColumn();
@@ -179,7 +181,7 @@ if (isset($_GET["delete"])) {
 
         $delete = $conn->prepare("
             DELETE FROM categories
-            WHERE id = ?
+            WHERE id = ? AND company_id = ?
         ");
 
         $delete->execute([$id]);
@@ -195,7 +197,7 @@ if (isset($_GET["delete"])) {
 
 $categories = [];
 try {
-    $stmt = $conn->query("
+    $stmt = $conn->prepare("
         SELECT
             c.id,
             c.name,
@@ -205,7 +207,8 @@ try {
             COUNT(p.id) AS product_count
         FROM categories c
         LEFT JOIN products p
-            ON p.category_id = c.id
+            ON p.category_id = c.id AND p.company_id = c.company_id
+        WHERE c.company_id = ?
         GROUP BY
             c.id,
             c.name,
@@ -214,9 +217,11 @@ try {
             c.created_at
         ORDER BY c.created_at DESC
     ");
+    $stmt->execute([$companyId]);
+    $stmt->execute([$companyId]);
     $categories = $stmt->fetchAll();
 } catch (PDOException $e) {
-    $stmt = $conn->query("
+    $stmt = $conn->prepare("
         SELECT
             c.id,
             c.name,
@@ -225,6 +230,7 @@ try {
             c.created_at,
             0 AS product_count
         FROM categories c
+        WHERE c.company_id = ?
         ORDER BY c.created_at DESC
     ");
     $categories = $stmt->fetchAll();
@@ -423,6 +429,8 @@ try {
 
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+
+<?php include "../includes/loader.php"; ?>
 
 
 <!-- =========================
