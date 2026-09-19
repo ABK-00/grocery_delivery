@@ -1,114 +1,907 @@
 <?php
+
+session_start();
+
 require_once __DIR__ . '/config/db.php';
-require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
-requireRole('customer');
-requireCompanyAccess();
+
+
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER / COMPANY
+|--------------------------------------------------------------------------
+*/
+
+if (
+    empty($_SESSION['user_id']) ||
+    ($_SESSION['user_role'] ?? '') !== 'customer'
+) {
+    header('Location: login.php');
+    exit;
+}
+
 $userId = (int)$_SESSION['user_id'];
-$companyId = currentCompanyId();
-$q = trim($_GET['q'] ?? '');
-$category = (int)($_GET['category'] ?? 0);
-$st = $conn->prepare("SELECT id,name FROM categories WHERE company_id=? AND status='active' ORDER BY name");
-$st->execute([$companyId]);
-$cats = $st->fetchAll();
-$sql = "SELECT p.id,p.name,p.description,p.price,p.stock,p.unit,p.image,c.name category_name,(SELECT pi.image FROM product_images pi WHERE pi.product_id=p.id ORDER BY pi.is_primary DESC,pi.sort_order,pi.id LIMIT 1) primary_image FROM products p LEFT JOIN categories c ON c.id=p.category_id AND c.company_id=p.company_id WHERE p.company_id=? AND p.status='active'";
+
+$companyId =
+    isset($_SESSION['company_id'])
+        ? (int)$_SESSION['company_id']
+        : 0;
+
+
+/*
+|--------------------------------------------------------------------------
+| RECOVER COMPANY ID IF SESSION DOES NOT HAVE IT
+|--------------------------------------------------------------------------
+*/
+
+if ($companyId <= 0) {
+
+    $stmt = $conn->prepare("
+        SELECT company_id
+        FROM users
+        WHERE id = ?
+          AND role = 'customer'
+        LIMIT 1
+    ");
+
+    $stmt->execute([$userId]);
+
+    $customer = $stmt->fetch();
+
+    if (!$customer || empty($customer['company_id'])) {
+        die(
+            'Your customer account is not associated '
+            . 'with a company storefront.'
+        );
+    }
+
+    $companyId = (int)$customer['company_id'];
+
+    $_SESSION['company_id'] = $companyId;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| COMPANY
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare("
+    SELECT
+        id,
+        company_name,
+        company_code,
+        logo,
+        status,
+        subscription_plan,
+        trial_ends_at,
+        subscription_ends_at
+    FROM companies
+    WHERE id = ?
+    LIMIT 1
+");
+
+$stmt->execute([$companyId]);
+
+$company = $stmt->fetch();
+
+if (!$company) {
+    die('Storefront not found.');
+}
+
+if ($company['status'] !== 'active') {
+    die('This storefront is currently unavailable.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SEARCH / FILTERS
+|--------------------------------------------------------------------------
+*/
+
+$search =
+    trim($_GET['search'] ?? '');
+
+$categoryId =
+    isset($_GET['category'])
+        ? (int)$_GET['category']
+        : 0;
+
+
+/*
+|--------------------------------------------------------------------------
+| CATEGORIES
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare("
+    SELECT
+        id,
+        name
+    FROM categories
+    WHERE company_id = ?
+      AND status = 'active'
+    ORDER BY name ASC
+");
+
+$stmt->execute([$companyId]);
+
+$categories = $stmt->fetchAll();
+
+
+/*
+|--------------------------------------------------------------------------
+| PRODUCTS
+|--------------------------------------------------------------------------
+*/
+
+$sql = "
+    SELECT
+        p.id,
+        p.company_id,
+        p.category_id,
+        p.name,
+        p.description,
+        p.price,
+        p.stock,
+        p.unit,
+        p.image,
+        p.status,
+        c.name AS category_name,
+
+        (
+            SELECT pi.image
+            FROM product_images pi
+            WHERE pi.product_id = p.id
+            ORDER BY
+                pi.is_primary DESC,
+                pi.sort_order ASC,
+                pi.id ASC
+            LIMIT 1
+        ) AS primary_image
+
+    FROM products p
+
+    LEFT JOIN categories c
+        ON c.id = p.category_id
+       AND c.company_id = p.company_id
+
+    WHERE p.company_id = ?
+      AND p.status = 'active'
+";
+
 $params = [$companyId];
-if ($q !== '') {
-    $sql .= " AND (p.name LIKE ? OR p.description LIKE ?)";
-    $params[] = "%$q%";
-    $params[] = "%$q%";
+
+
+if ($search !== '') {
+
+    $sql .= "
+        AND (
+            p.name LIKE ?
+            OR p.description LIKE ?
+            OR c.name LIKE ?
+        )
+    ";
+
+    $searchValue = '%' . $search . '%';
+
+    $params[] = $searchValue;
+    $params[] = $searchValue;
+    $params[] = $searchValue;
 }
-if ($category > 0) {
-    $sql .= " AND p.category_id=?";
-    $params[] = $category;
+
+
+if ($categoryId > 0) {
+
+    $sql .= "
+        AND p.category_id = ?
+    ";
+
+    $params[] = $categoryId;
 }
-$sql .= " ORDER BY p.created_at DESC";
-$st = $conn->prepare($sql);
-$st->execute($params);
-$products = $st->fetchAll();
-$st = $conn->prepare("SELECT COALESCE(SUM(c.quantity),0) FROM cart c INNER JOIN products p ON p.id=c.product_id WHERE c.user_id=? AND p.company_id=?");
-$st->execute([$userId, $companyId]);
-$cartCount = (float)$st->fetchColumn();
+
+
+$sql .= "
+    ORDER BY
+        p.created_at DESC,
+        p.name ASC
+";
+
+
+$stmt = $conn->prepare($sql);
+
+$stmt->execute($params);
+
+$products = $stmt->fetchAll();
+
+
+/*
+|--------------------------------------------------------------------------
+| CART COUNT
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare("
+    SELECT
+        COALESCE(SUM(c.quantity), 0)
+    FROM cart c
+
+    INNER JOIN products p
+        ON p.id = c.product_id
+
+    WHERE c.user_id = ?
+      AND p.company_id = ?
+");
+
+$stmt->execute([
+    $userId,
+    $companyId
+]);
+
+$cartCount =
+    (float)$stmt->fetchColumn();
+
 ?>
-<!doctype html>
+
+<!DOCTYPE html>
+
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Shop Products | GroceryDelivery</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="assets/css/admin.css" rel="stylesheet">
-    <link href="assets/css/customer.css" rel="stylesheet">
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>
+        Shop |
+        <?= e($company['company_name']) ?>
+    </title>
+
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
+
+
+    <style>
+
+        :root {
+            --navy: #071827;
+            --green: #198754;
+            --background: #f5f7f9;
+            --card: #ffffff;
+            --text: #17212b;
+            --muted: #6c757d;
+            --border: #e5e9ed;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--text);
+        }
+
+        .store-navbar {
+            background: var(--navy);
+        }
+
+        .store-brand {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .store-brand span {
+            color: #20c997;
+        }
+
+        .hero {
+            background:
+                linear-gradient(
+                    135deg,
+                    #071827,
+                    #0b2d3c
+                );
+
+            color: #fff;
+
+            border-radius: 22px;
+
+            padding: 35px;
+
+            margin-top: 25px;
+            margin-bottom: 28px;
+        }
+
+        .hero p {
+            color: rgba(255,255,255,.7);
+            margin-bottom: 0;
+        }
+
+        .search-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow:
+                0 5px 20px rgba(0,0,0,.04);
+        }
+
+        .product-card {
+            height: 100%;
+
+            background: var(--card);
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 18px;
+
+            overflow: hidden;
+
+            transition:
+                transform .2s ease,
+                box-shadow .2s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+
+            box-shadow:
+                0 12px 30px rgba(0,0,0,.08);
+        }
+
+        .product-image-wrap {
+            position: relative;
+
+            height: 220px;
+
+            background: #eef1f3;
+
+            overflow: hidden;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+        }
+
+        .stock-badge {
+            position: absolute;
+
+            top: 12px;
+            right: 12px;
+
+            padding: 7px 10px;
+
+            border-radius: 30px;
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .product-body {
+            padding: 18px;
+        }
+
+        .product-category {
+            color: var(--green);
+
+            font-size: 12px;
+            font-weight: 700;
+
+            text-transform: uppercase;
+
+            letter-spacing: .4px;
+        }
+
+        .product-name {
+            margin-top: 5px;
+            margin-bottom: 5px;
+
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .product-description {
+            color: var(--muted);
+
+            font-size: 13px;
+
+            min-height: 40px;
+        }
+
+        .product-price {
+            color: var(--navy);
+
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .product-unit {
+            color: var(--muted);
+
+            font-size: 12px;
+        }
+
+        .btn-green {
+            background: var(--green);
+            border-color: var(--green);
+            color: #fff;
+        }
+
+        .btn-green:hover {
+            background: #146c43;
+            border-color: #146c43;
+            color: #fff;
+        }
+
+        .empty-state {
+            padding: 70px 20px;
+
+            text-align: center;
+
+            color: var(--muted);
+        }
+
+        .empty-state i {
+            display: block;
+
+            margin-bottom: 15px;
+
+            font-size: 50px;
+
+            color: #adb5bd;
+        }
+
+        @media (max-width: 576px) {
+
+            .hero {
+                padding: 25px 20px;
+            }
+
+            .product-image-wrap {
+                height: 190px;
+            }
+
+        }
+
+    </style>
+
 </head>
 
+
 <body>
-    <?php include __DIR__ . '/includes/loader.php';
-    include __DIR__ . '/includes/customer_sidebar.php'; ?>
-    <main class="main-content customer-main">
-        <div class="topbar">
-            <div class="topbar-left"><button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
-                <div>
-                    <h1 class="topbar-title">Shop Products</h1>
-                    <p class="topbar-subtitle">Fresh groceries ready for delivery.</p>
-                </div>
-            </div><a href="cart.php" class="btn btn-success"><i class="bi bi-cart3 me-1"></i> Cart <span class="badge text-bg-light ms-1"><?= number_format($cartCount, 2) ?></span></a>
+
+
+<!-- =========================================================
+     NAVIGATION
+========================================================= -->
+
+<nav class="navbar store-navbar">
+
+    <div class="container">
+
+        <a
+            href="products.php"
+            class="store-brand"
+        >
+
+            <i class="bi bi-basket2-fill me-2"></i>
+
+            <?= e($company['company_name']) ?>
+
+        </a>
+
+
+        <div class="d-flex gap-2">
+
+            <a
+                href="customer/dashboard.php"
+                class="btn btn-outline-light btn-sm"
+            >
+                <i class="bi bi-grid me-1"></i>
+
+                Dashboard
+            </a>
+
+
+            <a
+                href="cart.php"
+                class="btn btn-success btn-sm"
+            >
+
+                <i class="bi bi-cart3 me-1"></i>
+
+                Cart
+
+                <?php if ($cartCount > 0): ?>
+
+                    <span
+                        class="badge bg-light text-dark ms-1"
+                    >
+                        <?= e($cartCount) ?>
+                    </span>
+
+                <?php endif; ?>
+
+            </a>
+
         </div>
-        <div class="filter-card p-3 mb-4">
-            <form class="row g-2">
-                <div class="col-md-7">
-                    <div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" name="q" value="<?= e($q) ?>" placeholder="Search groceries..."></div>
-                </div>
-                <div class="col-md-3"><select class="form-select" name="category">
-                        <option value="0">All categories</option><?php foreach ($cats as $c): ?><option value="<?= (int)$c['id'] ?>" <?= $category === $c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option><?php endforeach; ?>
-                    </select></div>
-                <div class="col-md-2 d-grid"><button class="btn btn-success">Filter</button></div>
-            </form>
+
+    </div>
+
+</nav>
+
+
+<main class="container pb-5">
+
+
+    <!-- =====================================================
+         HERO
+    ====================================================== -->
+
+    <section class="hero">
+
+        <div class="row align-items-center">
+
+            <div class="col-lg-8">
+
+                <span
+                    class="badge bg-success mb-3"
+                >
+                    Online Store
+                </span>
+
+                <h1 class="fw-bold mb-2">
+
+                    Shop
+                    <?= e($company['company_name']) ?>
+
+                </h1>
+
+                <p>
+
+                    Browse available groceries,
+                    add items to your cart and
+                    have them delivered to you.
+
+                </p>
+
+            </div>
+
         </div>
-        <div class="row g-4"><?php if (!$products): ?><div class="col-12">
-                    <div class="filter-card p-5 text-center"><i class="bi bi-basket fs-1 text-muted"></i>
-                        <h4 class="mt-3">No products found</h4>
-                        <p class="text-muted mb-0">Try another search or category.</p>
-                    </div>
-                </div><?php endif; ?><?php foreach ($products as $p): ?><div class="col-xl-3 col-lg-4 col-md-6">
-                    <div class="product-card"><?php if (img($p)): ?><img src="<?= e(img($p)) ?>" class="product-thumb" alt="<?= e($p['name']) ?>"><?php else: ?><div class="product-placeholder"><i class="bi bi-image"></i></div><?php endif; ?><div class="p-3">
-                            <div class="small text-muted mb-1"><?= e($p['category_name'] ?? 'Uncategorized') ?></div>
-                            <h5 class="fw-bold text-truncate"><?= e($p['name']) ?></h5>
-                            <div class="price mb-2">GH₵<?= number_format($p['price'], 2) ?></div>
-                            <div class="small text-muted mb-3"><?= $p['stock'] > 0 ? e(number_format($p['stock'], 2) . ' ' . $p['unit'] . ' available') : 'Out of stock' ?></div>
-                            <div class="d-flex gap-2"><a class="btn btn-outline-secondary flex-fill" href="product.php?id=<?= (int)$p['id'] ?>">View</a><button class="btn btn-success flex-fill add-cart" data-id="<?= (int)$p['id'] ?>" <?= $p['stock'] <= 0 ? 'disabled' : '' ?>><i class="bi bi-cart-plus"></i> Add</button></div>
+
+    </section>
+
+
+    <!-- =====================================================
+         FILTERS
+    ====================================================== -->
+
+    <section class="search-box mb-4">
+
+        <form
+            method="GET"
+            action="products.php"
+            class="row g-3"
+        >
+
+            <div class="col-md-7">
+
+                <div class="input-group">
+
+                    <span class="input-group-text bg-white">
+
+                        <i class="bi bi-search"></i>
+
+                    </span>
+
+                    <input
+                        type="search"
+                        name="search"
+                        class="form-control"
+                        placeholder="Search groceries..."
+                        value="<?= e($search) ?>"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <select
+                    name="category"
+                    class="form-select"
+                >
+
+                    <option value="0">
+                        All Categories
+                    </option>
+
+
+                    <?php foreach ($categories as $category): ?>
+
+                        <option
+                            value="<?= (int)$category['id'] ?>"
+                            <?= (
+                                $categoryId
+                                === (int)$category['id']
+                            ) ? 'selected' : '' ?>
+                        >
+
+                            <?= e($category['name']) ?>
+
+                        </option>
+
+                    <?php endforeach; ?>
+
+                </select>
+
+            </div>
+
+
+            <div class="col-md-2">
+
+                <button
+                    class="btn btn-green w-100"
+                    type="submit"
+                >
+
+                    Filter
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+    <!-- =====================================================
+         PRODUCTS
+    ====================================================== -->
+
+    <div class="row g-4">
+
+
+        <?php if ($products): ?>
+
+
+            <?php foreach ($products as $product): ?>
+
+
+                <?php
+
+                $imageUrl =
+                    getProductImage(
+                        $product,
+                        0
+                    );
+
+                $inStock =
+                    (float)$product['stock'] > 0;
+
+                ?>
+
+
+                <div
+                    class="col-12 col-sm-6 col-lg-4 col-xl-3"
+                >
+
+                    <article class="product-card">
+
+
+                        <!-- IMAGE -->
+
+                        <a
+                            href="product.php?id=<?= (int)$product['id'] ?>"
+                            class="text-decoration-none"
+                        >
+
+                            <div class="product-image-wrap">
+
+                                <img
+                                    src="<?= e($imageUrl) ?>"
+                                    alt="<?= e($product['name']) ?>"
+                                    class="product-image"
+                                    loading="lazy"
+                                >
+
+
+                                <?php if ($inStock): ?>
+
+                                    <span
+                                        class="stock-badge bg-success text-white"
+                                    >
+                                        In Stock
+                                    </span>
+
+                                <?php else: ?>
+
+                                    <span
+                                        class="stock-badge bg-danger text-white"
+                                    >
+                                        Out of Stock
+                                    </span>
+
+                                <?php endif; ?>
+
+                            </div>
+
+                        </a>
+
+
+                        <!-- BODY -->
+
+                        <div class="product-body">
+
+
+                            <div class="product-category">
+
+                                <?= e(
+                                    $product['category_name']
+                                    ?? 'Grocery'
+                                ) ?>
+
+                            </div>
+
+
+                            <h2 class="product-name">
+
+                                <?= e($product['name']) ?>
+
+                            </h2>
+
+
+                            <p class="product-description">
+
+                                <?php
+
+                                $description =
+                                    trim(
+                                        (string)(
+                                            $product['description']
+                                            ?? ''
+                                        )
+                                    );
+
+                                if ($description === '') {
+
+                                    echo 'Fresh grocery item available for delivery.';
+
+                                } else {
+
+                                    echo e(
+                                        mb_strimwidth(
+                                            $description,
+                                            0,
+                                            90,
+                                            '...'
+                                        )
+                                    );
+                                }
+
+                                ?>
+
+                            </p>
+
+
+                            <div
+                                class="d-flex
+                                       justify-content-between
+                                       align-items-end
+                                       gap-2
+                                       mt-3"
+                            >
+
+                                <div>
+
+                                    <div class="product-price">
+
+                                        <?= money(
+                                            $product['price']
+                                        ) ?>
+
+                                    </div>
+
+                                    <div class="product-unit">
+
+                                        per
+                                        <?= e(
+                                            $product['unit']
+                                            ?? 'piece'
+                                        ) ?>
+
+                                    </div>
+
+                                </div>
+
+
+                                <a
+                                    href="product.php?id=<?= (int)$product['id'] ?>"
+                                    class="btn btn-green"
+                                >
+
+                                    View
+
+                                </a>
+
+                            </div>
+
                         </div>
-                    </div>
-                </div><?php endforeach; ?></div>
-    </main>
-    <script>
-        document.querySelectorAll('.add-cart').forEach(function(b) {
-            b.addEventListener('click', async function() {
-                b.disabled = true;
-                var fd = new FormData();
-                fd.append('product_id', b.dataset.id);
-                fd.append('quantity', '1');
-                try {
-                    var r = await fetch('api/add_to_cart.php', {
-                        method: 'POST',
-                        body: fd
-                    });
-                    var j = await r.json();
-                    if (j.success) {
-                        location.href = 'cart.php'
-                    } else {
-                        alert(j.message || 'Could not add product.');
-                        b.disabled = false
-                    }
-                } catch (e) {
-                    alert('Could not add product.');
-                    b.disabled = false
-                }
-            })
-        });
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+                    </article>
+
+                </div>
+
+
+            <?php endforeach; ?>
+
+
+        <?php else: ?>
+
+
+            <div class="col-12">
+
+                <div class="empty-state">
+
+                    <i class="bi bi-basket"></i>
+
+                    <h4>
+                        No products found
+                    </h4>
+
+                    <p>
+
+                        Try another search or
+                        product category.
+
+                    </p>
+
+
+                    <a
+                        href="products.php"
+                        class="btn btn-green"
+                    >
+                        View All Products
+                    </a>
+
+                </div>
+
+            </div>
+
+
+        <?php endif; ?>
+
+
+    </div>
+
+</main>
+
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
 </body>
 
 </html>
