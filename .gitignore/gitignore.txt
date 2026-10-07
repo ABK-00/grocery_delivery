@@ -1,0 +1,25 @@
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+config/secrets.php
+config/local.php
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# User uploads
+uploads/*
+!uploads/.gitkeep
