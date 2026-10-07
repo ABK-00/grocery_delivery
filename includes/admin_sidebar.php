@@ -12,7 +12,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="sidebar-nav">
         <div class="sidebar-section-title">Main Menu</div>
 
-        <a href="dashboard.php" class="nav-link <?= in_array($currentPage, ['dashboard.php','index.php']) ? 'active' : '' ?>">
+        <a href="dashboard.php" class="nav-link <?= in_array($currentPage, ['dashboard.php', 'index.php']) ? 'active' : '' ?>">
             <i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
         </a>
         <a href="users.php" class="nav-link <?= $currentPage === 'users.php' ? 'active' : '' ?>">
@@ -27,16 +27,20 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <a href="products.php" class="nav-link <?= $currentPage === 'products.php' ? 'active' : '' ?>">
             <i class="bi bi-box-seam-fill"></i><span>Products</span>
         </a>
+        <a href="storefront.php" class="nav-link <?= $currentPage === 'storefront.php' ? 'active' : '' ?>">
+            <i class="bi bi-shop-window"></i>
+            <span>Storefront</span>
+        </a>
         <a href="categories.php" class="nav-link <?= $currentPage === 'categories.php' ? 'active' : '' ?>">
             <i class="bi bi-tags-fill"></i><span>Categories</span>
         </a>
-        <a href="orders.php" class="nav-link <?= in_array($currentPage, ['orders.php','order_details.php']) ? 'active' : '' ?>">
+        <a href="orders.php" class="nav-link <?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>">
             <i class="bi bi-cart-check-fill"></i><span>Orders</span>
         </a>
         <a href="payments.php" class="nav-link <?= $currentPage === 'payments.php' ? 'active' : '' ?>">
             <i class="bi bi-credit-card-fill"></i><span>Payments</span>
         </a>
-        <a href="deliveries.php" class="nav-link <?= in_array($currentPage, ['deliveries.php','delivery_details.php']) ? 'active' : '' ?>">
+        <a href="deliveries.php" class="nav-link <?= in_array($currentPage, ['deliveries.php', 'delivery_details.php']) ? 'active' : '' ?>">
             <i class="bi bi-truck"></i><span>Deliveries</span>
         </a>
         <a href="reports.php" class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>">
@@ -60,16 +64,25 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 </aside>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const sidebar = document.getElementById('adminSidebar');
-    const toggle = document.getElementById('sidebarToggle');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (toggle && sidebar && overlay) {
-        toggle.addEventListener('click', () => { sidebar.classList.toggle('show'); overlay.classList.toggle('show'); });
-        overlay.addEventListener('click', () => { sidebar.classList.remove('show'); overlay.classList.remove('show'); });
-        document.querySelectorAll('.sidebar .nav-link').forEach(link => link.addEventListener('click', () => {
-            if (window.innerWidth <= 900) { sidebar.classList.remove('show'); overlay.classList.remove('show'); }
-        }));
-    }
-});
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebar = document.getElementById('adminSidebar');
+        const toggle = document.getElementById('sidebarToggle');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (toggle && sidebar && overlay) {
+            toggle.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+                overlay.classList.toggle('show');
+            });
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            });
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => link.addEventListener('click', () => {
+                if (window.innerWidth <= 900) {
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
+                }
+            }));
+        }
+    });
 </script>
