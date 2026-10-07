@@ -1,88 +1,288 @@
 <?php
 
-if (session_status() === PHP_SESSION_NONE) {
+/*
+|--------------------------------------------------------------------------
+| SESSION
+|--------------------------------------------------------------------------
+*/
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-function isLoggedIn()
-{
-    return isset($_SESSION['user_id']);
+
+/*
+|--------------------------------------------------------------------------
+| APPLICATION BASE URL
+|--------------------------------------------------------------------------
+|
+| Your project is:
+| C:\xampppp\htdocs\somame_ent
+|
+| Browser:
+| http://localhost/somame_ent/
+|--------------------------------------------------------------------------
+*/
+
+if (!defined('BASE_URL')) {
+    define('BASE_URL', '/somame_ent');
 }
 
-function requireLogin()
+
+/*
+|--------------------------------------------------------------------------
+| LOGIN CHECK
+|--------------------------------------------------------------------------
+*/
+
+function isLoggedIn(): bool
+{
+    return isset(
+        $_SESSION['user_id'],
+        $_SESSION['role']
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| REQUIRE LOGIN
+|--------------------------------------------------------------------------
+*/
+
+function requireLogin(): void
 {
     if (!isLoggedIn()) {
-        header("Location: ../login.php");
+
+        header(
+            'Location: '
+                . BASE_URL
+                . '/login.php'
+        );
+
         exit;
     }
 }
 
-function requireRole($role)
+
+/*
+|--------------------------------------------------------------------------
+| REQUIRE ROLE
+|--------------------------------------------------------------------------
+*/
+
+function requireRole(string $role): void
 {
     requireLogin();
 
-    if ($_SESSION['user_role'] !== $role) {
-        header("Location: ../index.php");
-        exit;
+    if (
+        !isset($_SESSION['role'])
+        || $_SESSION['role'] !== $role
+    ) {
+
+        redirectByRole();
     }
 }
 
-function currentCompanyId()
-{
-    return isset($_SESSION['company_id']) ? (int) $_SESSION['company_id'] : null;
-}
 
-function isSuperAdmin()
-{
-    return ($_SESSION['user_role'] ?? null) === 'super_admin';
-}
+/*
+|--------------------------------------------------------------------------
+| CURRENT USER ID
+|--------------------------------------------------------------------------
+*/
 
-function requireCompanyAccess()
+function currentUserId(): ?int
 {
-    if (isSuperAdmin()) {
-        return;
+    if (!isset($_SESSION['user_id'])) {
+        return null;
     }
 
-    if (empty($_SESSION['company_id'])) {
+    return (int)$_SESSION['user_id'];
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| CURRENT COMPANY ID
+|--------------------------------------------------------------------------
+|
+| Returns NULL for:
+|
+| - super_admin
+| - customer
+|
+| Returns company ID for:
+|
+| - admin
+| - staff
+| - delivery_partner
+|--------------------------------------------------------------------------
+*/
+
+function currentCompanyId(): ?int
+{
+    if (
+        !isset($_SESSION['company_id'])
+        || $_SESSION['company_id'] === null
+        || $_SESSION['company_id'] === ''
+    ) {
+        return null;
+    }
+
+    return (int)$_SESSION['company_id'];
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| REQUIRE COMPANY ACCESS
+|--------------------------------------------------------------------------
+|
+| Only company-side users should call this.
+|--------------------------------------------------------------------------
+*/
+
+function requireCompanyAccess(): void
+{
+    requireLogin();
+
+    $companyRoles = [
+        'admin',
+        'staff',
+        'delivery_partner'
+    ];
+
+    $role =
+        $_SESSION['role']
+        ?? '';
+
+    if (
+        !in_array(
+            $role,
+            $companyRoles,
+            true
+        )
+    ) {
+
+        redirectByRole();
+    }
+
+
+    if (!currentCompanyId()) {
+
         session_unset();
         session_destroy();
-        header("Location: ../login.php?access=company");
-        exit;
-    }
 
-    if (isset($_SESSION['company_access']) && $_SESSION['company_access'] !== 'active') {
-        header("Location: ../company_access.php");
+        header(
+            'Location: '
+                . BASE_URL
+                . '/login.php?error=company'
+        );
+
         exit;
     }
 }
 
-function redirectByRole()
+
+/*
+|--------------------------------------------------------------------------
+| REDIRECT BY ROLE
+|--------------------------------------------------------------------------
+*/
+
+function redirectByRole(): void
 {
-    switch ($_SESSION['user_role']) {
+    if (!isLoggedIn()) {
 
-        case 'super_admin':
-            header("Location: super_admin/dashboard.php");
-            break;
+        header(
+            'Location: '
+                . BASE_URL
+                . '/login.php'
+        );
 
-        case 'admin':
-            header("Location: admin/dashboard.php");
-            break;
-
-        case 'staff':
-            header("Location: staff/dashboard.php");
-            break;
-
-        case 'customer':
-            header("Location: customer/dashboard.php");
-            break;
-
-        case 'delivery_partner':
-            header("Location: delivery/dashboard.php");
-            break;
-
-        default:
-            header("Location: index.php");
+        exit;
     }
 
-    exit;
+
+    $role =
+        $_SESSION['role']
+        ?? '';
+
+
+    switch ($role) {
+
+        case 'super_admin':
+
+            header(
+                'Location: '
+                    . BASE_URL
+                    . '/super_admin/dashboard.php'
+            );
+
+            exit;
+
+
+        case 'admin':
+
+            header(
+                'Location: '
+                    . BASE_URL
+                    . '/admin/dashboard.php'
+            );
+
+            exit;
+
+
+        case 'staff':
+
+            header(
+                'Location: '
+                    . BASE_URL
+                    . '/staff/dashboard.php'
+            );
+
+            exit;
+
+
+        case 'delivery_partner':
+
+            header(
+                'Location: '
+                    . BASE_URL
+                    . '/delivery/dashboard.php'
+            );
+
+            exit;
+
+
+        case 'customer':
+
+            /*
+             * IMPORTANT:
+             *
+             * Customers are marketplace users.
+             * They DO NOT need company_id.
+             */
+            header(
+                'Location: '
+                    . BASE_URL
+                    . '/marketplace.php'
+            );
+
+            exit;
+
+
+        default:
+
+            session_unset();
+            session_destroy();
+
+            header(
+                'Location: '
+                    . BASE_URL
+                    . '/login.php'
+            );
+
+            exit;
+    }
 }

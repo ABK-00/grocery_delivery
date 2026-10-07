@@ -24,6 +24,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <a href="delivery_partners.php" class="nav-link <?= $currentPage === 'delivery_partners.php' ? 'active' : '' ?>">
             <i class="bi bi-bicycle"></i><span>Delivery Partners</span>
         </a>
+
+        <a
+            href="customers.php"
+            class="<?= basename($_SERVER['PHP_SELF']) === 'customers.php'
+                        ? 'active'
+                        : '' ?>">
+            <i class="bi bi-people"></i>
+            <span>Customers</span>
+        </a>
         <a href="products.php" class="nav-link <?= $currentPage === 'products.php' ? 'active' : '' ?>">
             <i class="bi bi-box-seam-fill"></i><span>Products</span>
         </a>

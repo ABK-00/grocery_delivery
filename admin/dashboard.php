@@ -173,7 +173,7 @@ try {
 
         <div>
             <span class="badge bg-success px-3 py-2">
-                Super Admin
+                Admin
             </span>
         </div>
 
