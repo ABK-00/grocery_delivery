@@ -583,4 +583,237 @@ document.addEventListener(
 );
 </script>
 
-<script src="<?= BASE_URL ?>/assets/js/theme.js?v=20261009-2"></script>
+<script>
+(function () {
+    'use strict';
+
+    const THEME_KEY = 'gd-theme';
+    const ACCENT_KEY = 'gd-accent-theme';
+
+    const allowedThemes = ['light', 'dark'];
+    const allowedAccents = ['sapphire', 'teal', 'coral', 'slate'];
+
+    function readStorage(key) {
+        try {
+            return window.localStorage.getItem(key);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeStorage(key, value) {
+        try {
+            window.localStorage.setItem(key, value);
+        } catch (error) {
+            // Keep the UI working even if storage is unavailable.
+        }
+    }
+
+    function currentTheme() {
+        const saved = readStorage(THEME_KEY);
+
+        if (allowedThemes.includes(saved)) {
+            return saved;
+        }
+
+        return 'light';
+    }
+
+    function currentAccent() {
+        const saved = readStorage(ACCENT_KEY);
+
+        return allowedAccents.includes(saved)
+            ? saved
+            : 'sapphire';
+    }
+
+    function refreshThemeControls(theme) {
+        const isDark = theme === 'dark';
+
+        document
+            .querySelectorAll('[data-theme-toggle]')
+            .forEach(function (button) {
+
+                const icon =
+                    button.querySelector('.theme-icon, i');
+
+                const label =
+                    button.querySelector('.theme-label');
+
+                const state =
+                    button.querySelector('.theme-state');
+
+                if (icon) {
+                    icon.className =
+                        isDark
+                        ? 'bi bi-sun-fill theme-icon'
+                        : 'bi bi-moon-stars-fill theme-icon';
+                }
+
+                if (label) {
+                    label.textContent =
+                        isDark
+                        ? 'Light Theme'
+                        : 'Dark Theme';
+                }
+
+                if (state) {
+                    state.textContent =
+                        isDark
+                        ? 'On'
+                        : 'Off';
+                }
+
+                button.setAttribute(
+                    'aria-pressed',
+                    isDark ? 'true' : 'false'
+                );
+            });
+    }
+
+    function applyTheme(theme) {
+        const safeTheme =
+            allowedThemes.includes(theme)
+            ? theme
+            : 'light';
+
+        document.documentElement.setAttribute(
+            'data-theme',
+            safeTheme
+        );
+
+        document.body.setAttribute(
+            'data-theme',
+            safeTheme
+        );
+
+        writeStorage(
+            THEME_KEY,
+            safeTheme
+        );
+
+        refreshThemeControls(
+            safeTheme
+        );
+    }
+
+    function toggleTheme(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const current =
+            document.documentElement.getAttribute(
+                'data-theme'
+            )
+            || currentTheme();
+
+        applyTheme(
+            current === 'dark'
+                ? 'light'
+                : 'dark'
+        );
+    }
+
+    function applyAccent(accent) {
+        const safeAccent =
+            allowedAccents.includes(accent)
+            ? accent
+            : 'sapphire';
+
+        document.documentElement.setAttribute(
+            'data-accent-theme',
+            safeAccent
+        );
+
+        document.body.setAttribute(
+            'data-accent-theme',
+            safeAccent
+        );
+
+        writeStorage(
+            ACCENT_KEY,
+            safeAccent
+        );
+
+        document
+            .querySelectorAll('[data-accent-option]')
+            .forEach(function (button) {
+
+                const selected =
+                    button.dataset.accentOption
+                    === safeAccent;
+
+                button.classList.toggle(
+                    'active',
+                    selected
+                );
+
+                button.setAttribute(
+                    'aria-pressed',
+                    selected
+                        ? 'true'
+                        : 'false'
+                );
+            });
+
+        const labels = {
+            sapphire: 'Sapphire',
+            teal: 'Teal',
+            coral: 'Coral',
+            slate: 'Slate Grey'
+        };
+
+        document
+            .querySelectorAll('[data-accent-label]')
+            .forEach(function (element) {
+                element.textContent =
+                    labels[safeAccent]
+                    || 'Sapphire';
+            });
+    }
+
+    applyTheme(
+        currentTheme()
+    );
+
+    applyAccent(
+        currentAccent()
+    );
+
+    document.addEventListener(
+        'click',
+        function (event) {
+
+            const themeToggle =
+                event.target.closest(
+                    '[data-theme-toggle]'
+                );
+
+            if (themeToggle) {
+                toggleTheme(event);
+                return;
+            }
+
+            const accentOption =
+                event.target.closest(
+                    '[data-accent-option]'
+                );
+
+            if (accentOption) {
+                event.preventDefault();
+
+                applyAccent(
+                    accentOption.dataset.accentOption
+                );
+            }
+        },
+        true
+    );
+
+    window.gdToggleTheme = toggleTheme;
+    window.gdApplyTheme = applyTheme;
+    window.gdApplyAccent = applyAccent;
+})();
+</script>
