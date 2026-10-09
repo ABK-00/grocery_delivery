@@ -93,3 +93,4 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         }
     });
 </script>
+<script src="../assets/js/theme.js"></script>
