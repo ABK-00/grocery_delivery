@@ -1,12 +1,30 @@
 (function () {
+    'use strict';
+
     const THEME_KEY = 'gd-theme';
     const ACCENT_KEY = 'gd-accent-theme';
 
     const allowedThemes = ['light', 'dark'];
     const allowedAccents = ['sapphire', 'teal', 'coral', 'slate'];
 
+    function storageGet(key) {
+        try {
+            return window.localStorage.getItem(key);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function storageSet(key, value) {
+        try {
+            window.localStorage.setItem(key, value);
+        } catch (error) {
+            // Theme still works for the current page even if storage is blocked.
+        }
+    }
+
     function preferredTheme() {
-        const saved = localStorage.getItem(THEME_KEY);
+        const saved = storageGet(THEME_KEY);
 
         if (allowedThemes.includes(saved)) {
             return saved;
@@ -19,36 +37,21 @@
     }
 
     function preferredAccent() {
-        const saved = localStorage.getItem(ACCENT_KEY);
+        const saved = storageGet(ACCENT_KEY);
 
         return allowedAccents.includes(saved)
             ? saved
             : 'sapphire';
     }
 
-    function applyTheme(theme) {
-        const safeTheme =
-            allowedThemes.includes(theme)
-            ? theme
-            : 'light';
-
-        document.documentElement.setAttribute(
-            'data-theme',
-            safeTheme
-        );
-
-        localStorage.setItem(
-            THEME_KEY,
-            safeTheme
-        );
+    function updateThemeControls(theme) {
+        const isDark = theme === 'dark';
 
         document
             .querySelectorAll('[data-theme-toggle]')
             .forEach(function (button) {
                 const icon =
-                    button.querySelector(
-                        '.theme-icon, i'
-                    );
+                    button.querySelector('.theme-icon, i');
 
                 const label =
                     button.querySelector(
@@ -56,12 +59,7 @@
                     );
 
                 const state =
-                    button.querySelector(
-                        '.theme-state'
-                    );
-
-                const isDark =
-                    safeTheme === 'dark';
+                    button.querySelector('.theme-state');
 
                 if (icon) {
                     icon.className =
@@ -86,9 +84,7 @@
 
                 button.setAttribute(
                     'aria-pressed',
-                    isDark
-                        ? 'true'
-                        : 'false'
+                    isDark ? 'true' : 'false'
                 );
 
                 button.setAttribute(
@@ -100,18 +96,45 @@
             });
     }
 
+    function applyTheme(theme) {
+        const safeTheme =
+            allowedThemes.includes(theme)
+            ? theme
+            : 'light';
+
+        document.documentElement.dataset.theme =
+            safeTheme;
+
+        if (document.body) {
+            document.body.dataset.theme =
+                safeTheme;
+        }
+
+        storageSet(
+            THEME_KEY,
+            safeTheme
+        );
+
+        updateThemeControls(
+            safeTheme
+        );
+    }
+
     function applyAccent(accent) {
         const safeAccent =
             allowedAccents.includes(accent)
             ? accent
             : 'sapphire';
 
-        document.documentElement.setAttribute(
-            'data-accent-theme',
-            safeAccent
-        );
+        document.documentElement.dataset.accentTheme =
+            safeAccent;
 
-        localStorage.setItem(
+        if (document.body) {
+            document.body.dataset.accentTheme =
+                safeAccent;
+        }
+
+        storageSet(
             ACCENT_KEY,
             safeAccent
         );
@@ -152,56 +175,72 @@
             });
     }
 
+    function initializeThemeSystem() {
+        applyTheme(
+            preferredTheme()
+        );
+
+        applyAccent(
+            preferredAccent()
+        );
+    }
+
+    /*
+     * Event delegation makes the controls work even when
+     * a page renders buttons after this script is loaded.
+     */
     document.addEventListener(
-        'DOMContentLoaded',
-        function () {
+        'click',
+        function (event) {
+            const themeButton =
+                event.target.closest(
+                    '[data-theme-toggle]'
+                );
 
-            applyTheme(
-                preferredTheme()
-            );
+            if (themeButton) {
+                event.preventDefault();
 
-            applyAccent(
-                preferredAccent()
-            );
+                const current =
+                    document.documentElement
+                        .dataset.theme
+                    || preferredTheme();
 
-            document
-                .querySelectorAll('[data-theme-toggle]')
-                .forEach(function (button) {
+                applyTheme(
+                    current === 'dark'
+                        ? 'light'
+                        : 'dark'
+                );
 
-                    button.addEventListener(
-                        'click',
-                        function () {
+                return;
+            }
 
-                            const current =
-                                document.documentElement
-                                    .getAttribute(
-                                        'data-theme'
-                                    )
-                                || 'light';
+            const accentButton =
+                event.target.closest(
+                    '[data-accent-option]'
+                );
 
-                            applyTheme(
-                                current === 'dark'
-                                ? 'light'
-                                : 'dark'
-                            );
-                        }
-                    );
-                });
+            if (accentButton) {
+                event.preventDefault();
 
-            document
-                .querySelectorAll('[data-accent-option]')
-                .forEach(function (button) {
-
-                    button.addEventListener(
-                        'click',
-                        function () {
-
-                            applyAccent(
-                                button.dataset.accentOption
-                            );
-                        }
-                    );
-                });
+                applyAccent(
+                    accentButton.dataset.accentOption
+                );
+            }
         }
     );
+
+    /*
+     * Apply once immediately for pages that load this
+     * script near the end of the document, then refresh
+     * controls after DOM parsing is complete.
+     */
+    initializeThemeSystem();
+
+    if (document.readyState === 'loading') {
+        document.addEventListener(
+            'DOMContentLoaded',
+            initializeThemeSystem,
+            { once: true }
+        );
+    }
 })();
