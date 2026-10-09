@@ -343,6 +343,7 @@ $joinedDate = !empty($admin['created_at'])
 
     <!-- SHARED ADMIN UI -->
     <link href="../assets/css/admin.css" rel="stylesheet">
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 
 
     <style>
@@ -705,7 +706,7 @@ $joinedDate = !empty($admin['created_at'])
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 
 <?php include "../includes/admin_sidebar.php"; ?>
