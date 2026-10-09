@@ -18,11 +18,11 @@ $error = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
 
     $name = trim($_POST["name"] ?? "");
-    $email = trim($_POST["email"] ?? "");
+    $email = strtolower(trim($_POST["email"] ?? ""));
     $phone = trim($_POST["phone"] ?? "");
     $whatsapp = trim($_POST["whatsapp"] ?? "");
-    $vehicle_type = trim($_POST["vehicle_type"] ?? "");
-    $vehicle_registration = trim($_POST["vehicle_registration"] ?? "");
+    $vehicle_type = strtolower(trim($_POST["vehicle_type"] ?? ""));
+    $vehicle_registration = strtoupper(trim($_POST["vehicle_registration"] ?? ""));
     $password = $_POST["password"] ?? "";
 
     if (
@@ -44,6 +44,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
 
         $error = "Password must be at least 6 characters.";
 
+    } elseif (!in_array(
+        $vehicle_type,
+        ['motorcycle', 'car', 'bicycle', 'van', 'truck'],
+        true
+    )) {
+
+        $error = "Please select a valid vehicle type.";
+
     } else {
 
         try {
@@ -62,6 +70,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
                 $error = "An account with this email already exists.";
 
             } else {
+
+                $vehicleCheck = $conn->prepare("
+                    SELECT dp.id
+                    FROM delivery_partners dp
+                    INNER JOIN users u
+                        ON u.id = dp.user_id
+                    WHERE UPPER(dp.vehicle_registration) = UPPER(?)
+                      AND u.company_id = ?
+                    LIMIT 1
+                ");
+
+                $vehicleCheck->execute([
+                    $vehicle_registration,
+                    $companyId
+                ]);
+
+                if ($vehicleCheck->fetch()) {
+                    throw new RuntimeException(
+                        "A delivery partner with this vehicle registration already exists."
+                    );
+                }
 
                 $conn->beginTransaction();
 
@@ -95,7 +124,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
                     $hashedPassword
                 ]);
 
-                $userId = $conn->lastInsertId();
+                $userId = (int) $conn->lastInsertId();
 
                 $partnerStmt = $conn->prepare("
                     INSERT INTO delivery_partners
@@ -120,13 +149,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
                 $message = "Delivery partner added successfully.";
             }
 
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
 
             if ($conn->inTransaction()) {
                 $conn->rollBack();
             }
 
-            $error = "Unable to add delivery partner.";
+            if ($e instanceof RuntimeException) {
+                $error = $e->getMessage();
+            } else {
+                $error =
+                    "Unable to add delivery partner. "
+                    . "Database error: "
+                    . $e->getMessage();
+            }
         }
     }
 }
@@ -142,11 +178,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_partner"])) {
     $userId = (int)($_POST["user_id"] ?? 0);
 
     $name = trim($_POST["edit_name"] ?? "");
-    $email = trim($_POST["edit_email"] ?? "");
+    $email = strtolower(trim($_POST["edit_email"] ?? ""));
     $phone = trim($_POST["edit_phone"] ?? "");
     $whatsapp = trim($_POST["edit_whatsapp"] ?? "");
-    $vehicle_type = trim($_POST["edit_vehicle_type"] ?? "");
-    $vehicle_registration = trim($_POST["edit_vehicle_registration"] ?? "");
+    $vehicle_type = strtolower(trim($_POST["edit_vehicle_type"] ?? ""));
+    $vehicle_registration = strtoupper(trim($_POST["edit_vehicle_registration"] ?? ""));
 
     if (
         $partnerId <= 0 ||
@@ -736,7 +772,13 @@ $partners = $stmt->fetchAll();
                                 <div class="fw-semibold">
 
                                     <?= htmlspecialchars(
-                                        $partner["vehicle_type"]
+                                        ucwords(
+                                            str_replace(
+                                                '_',
+                                                ' ',
+                                                $partner["vehicle_type"]
+                                            )
+                                        )
                                     ) ?>
 
                                 </div>
@@ -1136,35 +1178,35 @@ $partners = $stmt->fetchAll();
                                                     >
 
                                                         <option
-                                                            value="Motorcycle"
+                                                            value="motorcycle"
                                                             <?= $partner["vehicle_type"] === "Motorcycle" ? "selected" : "" ?>
                                                         >
                                                             Motorcycle
                                                         </option>
 
                                                         <option
-                                                            value="Car"
+                                                            value="car"
                                                             <?= $partner["vehicle_type"] === "Car" ? "selected" : "" ?>
                                                         >
                                                             Car
                                                         </option>
 
                                                         <option
-                                                            value="Bicycle"
+                                                            value="bicycle"
                                                             <?= $partner["vehicle_type"] === "Bicycle" ? "selected" : "" ?>
                                                         >
                                                             Bicycle
                                                         </option>
 
                                                         <option
-                                                            value="Van"
+                                                            value="van"
                                                             <?= $partner["vehicle_type"] === "Van" ? "selected" : "" ?>
                                                         >
                                                             Van
                                                         </option>
 
                                                         <option
-                                                            value="Truck"
+                                                            value="truck"
                                                             <?= $partner["vehicle_type"] === "Truck" ? "selected" : "" ?>
                                                         >
                                                             Truck
@@ -1380,23 +1422,23 @@ $partners = $stmt->fetchAll();
                                     Select vehicle
                                 </option>
 
-                                <option value="Motorcycle">
+                                <option value="motorcycle">
                                     Motorcycle
                                 </option>
 
-                                <option value="Car">
+                                <option value="car">
                                     Car
                                 </option>
 
-                                <option value="Bicycle">
+                                <option value="bicycle">
                                     Bicycle
                                 </option>
 
-                                <option value="Van">
+                                <option value="van">
                                     Van
                                 </option>
 
-                                <option value="Truck">
+                                <option value="truck">
                                     Truck
                                 </option>
 
