@@ -532,7 +532,7 @@ $storeUrl =
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 <?php
 
