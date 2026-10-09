@@ -2788,3 +2788,76 @@ body.admin-farvist .admin-mobile-sidebar-toggle {
         padding-top: 58px !important;
     }
 }
+
+
+/* =========================================================
+   FINAL SIDEBAR STROKE CONTRACT
+   Resting/hovered buttons: only TOP edge carries accent.
+   This intentionally overrides older dark-mode border rules.
+   ========================================================= */
+
+body.admin-farvist .sidebar .nav-link:not(.active),
+body.admin-farvist .sidebar-footer .nav-link:not(.active),
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    border-left-color:
+        rgba(148,163,184,.14) !important;
+    border-right-color:
+        rgba(148,163,184,.14) !important;
+    border-bottom-color:
+        rgba(148,163,184,.14) !important;
+    border-top:
+        2px solid
+        rgba(var(--fv-primary-rgb), .96) !important;
+}
+
+body.admin-farvist .sidebar .nav-link:not(.active):hover,
+body.admin-farvist .sidebar-footer .nav-link:not(.active):hover,
+body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    border-left-color:
+        rgba(148,163,184,.18) !important;
+    border-right-color:
+        rgba(148,163,184,.18) !important;
+    border-bottom-color:
+        rgba(148,163,184,.18) !important;
+    border-top-color:
+        rgba(var(--fv-primary-rgb), 1) !important;
+}
+
+html[data-theme="dark"]
+body.admin-farvist .sidebar .nav-link:not(.active),
+html[data-theme="dark"]
+body.admin-farvist .sidebar-footer .nav-link:not(.active),
+html[data-theme="dark"]
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    border-left-color:
+        rgba(148,163,184,.14) !important;
+    border-right-color:
+        rgba(148,163,184,.14) !important;
+    border-bottom-color:
+        rgba(148,163,184,.14) !important;
+    border-top:
+        2px solid
+        rgba(var(--fv-primary-rgb), .98) !important;
+}
+
+html[data-theme="dark"]
+body.admin-farvist .sidebar .nav-link:not(.active):hover,
+html[data-theme="dark"]
+body.admin-farvist .sidebar-footer .nav-link:not(.active):hover,
+html[data-theme="dark"]
+body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    border-left-color:
+        rgba(148,163,184,.18) !important;
+    border-right-color:
+        rgba(148,163,184,.18) !important;
+    border-bottom-color:
+        rgba(148,163,184,.18) !important;
+    border-top-color:
+        rgba(var(--fv-primary-rgb), 1) !important;
+}
+
+/* Active/current navigation remains fully highlighted. */
+body.admin-farvist .sidebar .nav-link.active {
+    border-color:
+        rgba(var(--fv-primary-rgb), .98) !important;
+}
