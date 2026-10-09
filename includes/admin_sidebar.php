@@ -27,9 +27,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
         <a
             href="customers.php"
-            class="<?= basename($_SERVER['PHP_SELF']) === 'customers.php'
-                        ? 'active'
-                        : '' ?>">
+            class="nav-link <?= $currentPage === 'customers.php' ? 'active' : '' ?>">
             <i class="bi bi-people"></i>
             <span>Customers</span>
         </a>
