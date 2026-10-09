@@ -271,6 +271,7 @@ $staffMembers = $stmt->fetchAll();
         rel="stylesheet">    <link
         href="../assets/css/admin.css"
         rel="stylesheet">
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 
     <style>
         .table-card {
@@ -299,7 +300,7 @@ $staffMembers = $stmt->fetchAll();
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 
 <!-- SIDEBAR -->
