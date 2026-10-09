@@ -1987,3 +1987,213 @@ html[data-theme="light"] body.admin-farvist .sidebar-collapse-button {
         display: none;
     }
 }
+
+
+/* =========================================================
+   GLASS INTERFACE PASS + EXPLICIT LIGHT/DARK SURFACES
+   ========================================================= */
+
+body.admin-farvist {
+    background-attachment: fixed !important;
+}
+
+body.admin-farvist .topbar,
+body.admin-farvist .stat-card,
+body.admin-farvist .content-card,
+body.admin-farvist .store-card,
+body.admin-farvist .report-card,
+body.admin-farvist .profile-card,
+body.admin-farvist .card,
+body.admin-farvist .fv-card {
+    backdrop-filter:
+        blur(20px) saturate(150%) !important;
+    -webkit-backdrop-filter:
+        blur(20px) saturate(150%) !important;
+}
+
+/* LIGHT: bright translucent glass */
+html[data-theme="light"] body.admin-farvist {
+    --fv-text: #172033;
+    --fv-muted: #64748b;
+
+    background:
+        radial-gradient(
+            34rem 34rem at 92% -5%,
+            rgba(var(--fv-primary-rgb), .15),
+            transparent 64%
+        ),
+        radial-gradient(
+            28rem 28rem at 0% 38%,
+            rgba(var(--fv-primary-rgb), .07),
+            transparent 62%
+        ),
+        linear-gradient(
+            135deg,
+            #f8fbff 0%,
+            #eef4fb 48%,
+            #f8fafc 100%
+        ) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,.66),
+            rgba(244,248,253,.44)
+        ) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .topbar,
+html[data-theme="light"] body.admin-farvist .stat-card,
+html[data-theme="light"] body.admin-farvist .content-card,
+html[data-theme="light"] body.admin-farvist .store-card,
+html[data-theme="light"] body.admin-farvist .report-card,
+html[data-theme="light"] body.admin-farvist .profile-card,
+html[data-theme="light"] body.admin-farvist .card,
+html[data-theme="light"] body.admin-farvist .fv-card {
+    color: #172033 !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.70),
+            rgba(255,255,255,.42)
+        ) !important;
+
+    border-color:
+        rgba(148,163,184,.18) !important;
+
+    box-shadow:
+        0 18px 45px rgba(51,65,85,.08),
+        inset 0 1px 0 rgba(255,255,255,.76) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .topbar-title,
+html[data-theme="light"] body.admin-farvist h1,
+html[data-theme="light"] body.admin-farvist h2,
+html[data-theme="light"] body.admin-farvist h3,
+html[data-theme="light"] body.admin-farvist h4,
+html[data-theme="light"] body.admin-farvist h5 {
+    color: #172033 !important;
+}
+
+html[data-theme="light"] body.admin-farvist .form-control,
+html[data-theme="light"] body.admin-farvist .form-select,
+html[data-theme="light"] body.admin-farvist .input-group-text {
+    color: #172033 !important;
+
+    background:
+        rgba(255,255,255,.52) !important;
+
+    border-color:
+        rgba(148,163,184,.20) !important;
+
+    backdrop-filter:
+        blur(14px) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .modal-content,
+html[data-theme="light"] body.admin-farvist .dropdown-menu {
+    color: #172033 !important;
+
+    background:
+        rgba(255,255,255,.78) !important;
+
+    border-color:
+        rgba(148,163,184,.20) !important;
+
+    backdrop-filter:
+        blur(24px) saturate(150%) !important;
+    -webkit-backdrop-filter:
+        blur(24px) saturate(150%) !important;
+}
+
+/* DARK: smoky translucent glass, not solid black */
+html[data-theme="dark"] body.admin-farvist {
+    --fv-text: #f7f9fc;
+    --fv-muted: #9aa7b8;
+
+    background:
+        radial-gradient(
+            36rem 36rem at 90% -8%,
+            rgba(var(--fv-primary-rgb), .20),
+            transparent 62%
+        ),
+        radial-gradient(
+            30rem 30rem at -4% 40%,
+            rgba(var(--fv-primary-rgb), .09),
+            transparent 62%
+        ),
+        linear-gradient(
+            135deg,
+            #101827 0%,
+            #162033 50%,
+            #101827 100%
+        ) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(21,31,48,.58),
+            rgba(15,23,42,.40)
+        ) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .topbar,
+html[data-theme="dark"] body.admin-farvist .stat-card,
+html[data-theme="dark"] body.admin-farvist .content-card,
+html[data-theme="dark"] body.admin-farvist .store-card,
+html[data-theme="dark"] body.admin-farvist .report-card,
+html[data-theme="dark"] body.admin-farvist .profile-card,
+html[data-theme="dark"] body.admin-farvist .card,
+html[data-theme="dark"] body.admin-farvist .fv-card {
+    color: #f7f9fc !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(31,43,64,.56),
+            rgba(17,27,44,.34)
+        ) !important;
+
+    border-color:
+        rgba(148,163,184,.14) !important;
+
+    box-shadow:
+        0 20px 50px rgba(2,6,23,.20),
+        inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .form-control,
+html[data-theme="dark"] body.admin-farvist .form-select,
+html[data-theme="dark"] body.admin-farvist .input-group-text {
+    color: #f7f9fc !important;
+
+    background:
+        rgba(15,23,42,.44) !important;
+
+    border-color:
+        rgba(148,163,184,.16) !important;
+
+    backdrop-filter:
+        blur(14px) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .modal-content,
+html[data-theme="dark"] body.admin-farvist .dropdown-menu {
+    color: #f7f9fc !important;
+
+    background:
+        rgba(15,23,42,.76) !important;
+
+    border-color:
+        rgba(148,163,184,.16) !important;
+
+    backdrop-filter:
+        blur(24px) saturate(150%) !important;
+    -webkit-backdrop-filter:
+        blur(24px) saturate(150%) !important;
+}
