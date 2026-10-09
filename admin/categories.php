@@ -267,9 +267,7 @@ try {
         href="../assets/css/admin.css"
         rel="stylesheet"
     >
-    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-
-    <style>
+<style>
         .stat-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -424,6 +422,7 @@ try {
         }
     </style>
 
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
 <body class="admin-farvist">
