@@ -2197,3 +2197,396 @@ html[data-theme="dark"] body.admin-farvist .dropdown-menu {
     -webkit-backdrop-filter:
         blur(24px) saturate(150%) !important;
 }
+
+
+/* =========================================================
+   RESPONSIVE ADMIN PASS
+   Tablet / mobile / narrow phone
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    body.admin-farvist {
+        overflow-x: hidden;
+    }
+
+    body.admin-farvist .sidebar,
+    body.admin-farvist .sidebar.is-collapsed {
+        width: min(82vw, 255px) !important;
+        transform: translateX(-104%);
+        box-shadow:
+            18px 0 48px rgba(15,23,42,.18) !important;
+        z-index: 1055;
+    }
+
+    body.admin-farvist .sidebar.show,
+    body.admin-farvist .sidebar.is-collapsed.show {
+        transform: translateX(0);
+    }
+
+    body.admin-farvist .sidebar-overlay {
+        background:
+            rgba(15,23,42,.28) !important;
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        z-index: 1050;
+    }
+
+    body.admin-farvist .main-content,
+    body.admin-farvist.admin-sidebar-collapsed .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 16px !important;
+    }
+
+    body.admin-farvist .topbar {
+        min-height: 64px !important;
+        padding: 11px 12px !important;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    body.admin-farvist .topbar-left {
+        min-width: 0;
+        flex: 1 1 220px;
+    }
+
+    body.admin-farvist .topbar-title {
+        font-size: 1.08rem !important;
+        line-height: 1.2;
+    }
+
+    body.admin-farvist .topbar-subtitle {
+        font-size: .76rem !important;
+        line-height: 1.35;
+    }
+
+    body.admin-farvist .sidebar-toggle {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+        display: inline-grid !important;
+        place-items: center;
+        border-radius: 11px;
+    }
+
+    body.admin-farvist .fv-topbar {
+        display: flex !important;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    body.admin-farvist .fv-topbar .fv-eyebrow {
+        display: none;
+    }
+
+    body.admin-farvist .fv-topbar-spacer {
+        flex: 1;
+    }
+
+    body.admin-farvist .fv-icon-btn,
+    body.admin-farvist .fv-avatar {
+        width: 39px;
+        height: 39px;
+        min-width: 39px;
+    }
+
+    body.admin-farvist .fv-heading-row {
+        align-items: stretch !important;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    body.admin-farvist .fv-heading-row > div:last-child {
+        width: 100%;
+    }
+
+    body.admin-farvist .fv-heading-row > div:last-child .fv-primary-btn,
+    body.admin-farvist .fv-heading-row > div:last-child .fv-glass-btn {
+        flex: 1 1 150px;
+    }
+
+    body.admin-farvist .fv-page-title {
+        font-size: clamp(1.45rem, 6vw, 2rem) !important;
+    }
+
+    body.admin-farvist .fv-page-subtitle {
+        font-size: .84rem;
+    }
+
+    body.admin-farvist .fv-card-body {
+        padding: 17px !important;
+    }
+
+    body.admin-farvist .fv-card-header {
+        padding: 17px 17px 0 !important;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    body.admin-farvist .stat-card,
+    body.admin-farvist .content-card,
+    body.admin-farvist .store-card,
+    body.admin-farvist .report-card,
+    body.admin-farvist .profile-card,
+    body.admin-farvist .card {
+        border-radius: 15px !important;
+    }
+
+    body.admin-farvist .table-responsive,
+    body.admin-farvist .fv-table-wrap {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    body.admin-farvist .table {
+        min-width: 720px;
+    }
+
+    body.admin-farvist .fv-table {
+        min-width: 680px;
+    }
+
+    body.admin-farvist .modal-dialog {
+        margin: 14px;
+        max-width: calc(100vw - 28px);
+    }
+
+    body.admin-farvist .modal-content {
+        border-radius: 15px !important;
+    }
+
+    body.admin-farvist .modal-body {
+        padding: 16px;
+    }
+
+    body.admin-farvist .dropdown-menu {
+        max-width: calc(100vw - 24px);
+    }
+
+    body.admin-farvist .sidebar-collapse-button {
+        display: none !important;
+    }
+
+    body.admin-farvist .sidebar-profile {
+        padding-bottom: 10px;
+    }
+}
+
+
+@media (max-width: 576px) {
+
+    body.admin-farvist .main-content,
+    body.admin-farvist.admin-sidebar-collapsed .main-content {
+        padding: 10px !important;
+    }
+
+    body.admin-farvist .sidebar,
+    body.admin-farvist .sidebar.is-collapsed {
+        width: min(86vw, 242px) !important;
+    }
+
+    body.admin-farvist .topbar {
+        padding: 10px !important;
+        margin-bottom: 12px !important;
+        border-radius: 13px !important;
+    }
+
+    body.admin-farvist .topbar-left {
+        flex-basis: 100%;
+    }
+
+    body.admin-farvist .topbar > .btn,
+    body.admin-farvist .topbar > a.btn {
+        width: 100%;
+        min-height: 38px;
+    }
+
+    body.admin-farvist .topbar-title {
+        font-size: 1rem !important;
+    }
+
+    body.admin-farvist .topbar-subtitle {
+        display: none;
+    }
+
+    body.admin-farvist .fv-heading-row {
+        gap: 12px;
+    }
+
+    body.admin-farvist .fv-heading-row > div:last-child {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 8px !important;
+    }
+
+    body.admin-farvist .fv-heading-row > div:last-child > * {
+        width: 100%;
+    }
+
+    body.admin-farvist .fv-primary-btn,
+    body.admin-farvist .fv-glass-btn {
+        min-height: 40px;
+        padding: 9px 12px;
+        font-size: .8rem;
+    }
+
+    body.admin-farvist .fv-card-body {
+        padding: 15px !important;
+    }
+
+    body.admin-farvist .fv-stat-value {
+        font-size: 1.55rem;
+    }
+
+    body.admin-farvist .fv-icon-tile {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+    }
+
+    body.admin-farvist .fv-chip {
+        font-size: .62rem;
+        padding: 4px 7px;
+    }
+
+    body.admin-farvist .card-header,
+    body.admin-farvist .content-card-header,
+    body.admin-farvist .profile-card-header {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    body.admin-farvist .card-body,
+    body.admin-farvist .content-card-body,
+    body.admin-farvist .profile-card-body {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    body.admin-farvist .form-control,
+    body.admin-farvist .form-select,
+    body.admin-farvist .input-group-text {
+        min-height: 40px;
+        font-size: .86rem;
+    }
+
+    body.admin-farvist .btn {
+        font-size: .82rem;
+    }
+
+    body.admin-farvist .table {
+        min-width: 650px;
+        font-size: .78rem;
+    }
+
+    body.admin-farvist .fv-table {
+        min-width: 620px;
+        font-size: .77rem;
+    }
+
+    body.admin-farvist .sidebar-profile-copy strong {
+        font-size: .74rem;
+    }
+
+    body.admin-farvist .sidebar-profile-copy small {
+        font-size: .6rem;
+    }
+
+    body.admin-farvist .modal-dialog {
+        margin: 8px;
+        max-width: calc(100vw - 16px);
+    }
+
+    body.admin-farvist .modal-header,
+    body.admin-farvist .modal-footer {
+        padding: 12px 14px;
+    }
+
+    body.admin-farvist .modal-footer {
+        gap: 8px;
+    }
+
+    body.admin-farvist .modal-footer .btn {
+        flex: 1 1 auto;
+    }
+}
+
+
+@media (max-width: 420px) {
+
+    body.admin-farvist .main-content,
+    body.admin-farvist.admin-sidebar-collapsed .main-content {
+        padding: 8px !important;
+    }
+
+    body.admin-farvist .sidebar,
+    body.admin-farvist .sidebar.is-collapsed {
+        width: min(88vw, 228px) !important;
+    }
+
+    body.admin-farvist .sidebar-brand {
+        height: 64px !important;
+        min-height: 64px !important;
+    }
+
+    body.admin-farvist .brand-icon {
+        width: 33px !important;
+        height: 33px !important;
+        min-width: 33px !important;
+    }
+
+    body.admin-farvist .brand-text {
+        font-size: .88rem !important;
+    }
+
+    body.admin-farvist .sidebar .nav-link,
+    body.admin-farvist .sidebar-footer .nav-link,
+    body.admin-farvist .sidebar-accent-picker > .nav-link {
+        min-height: 34px !important;
+        padding: 5px 8px !important;
+        font-size: .75rem !important;
+    }
+
+    body.admin-farvist .fv-topbar {
+        margin-bottom: 12px;
+    }
+
+    body.admin-farvist .fv-icon-btn,
+    body.admin-farvist .fv-avatar {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 10px;
+    }
+
+    body.admin-farvist .fv-page-title {
+        font-size: 1.35rem !important;
+    }
+
+    body.admin-farvist .fv-page-subtitle {
+        font-size: .78rem;
+    }
+
+    body.admin-farvist .fv-eyebrow {
+        font-size: .62rem;
+        padding: 5px 8px;
+    }
+
+    body.admin-farvist .fv-card,
+    body.admin-farvist .card,
+    body.admin-farvist .topbar {
+        border-radius: 12px !important;
+    }
+
+    body.admin-farvist .fv-card-body {
+        padding: 13px !important;
+    }
+
+    body.admin-farvist .alert {
+        padding: 10px 12px;
+        font-size: .78rem;
+    }
+}
