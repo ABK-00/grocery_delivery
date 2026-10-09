@@ -238,9 +238,38 @@ $partnersStmt->execute([$companyId]); $partners=$partnersStmt->fetchAll();
                                     <span class="badge <?= $stClass ?>"><?= ucfirst(str_replace('_', ' ', $del["status"])) ?></span>
                                 </td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#editModal<?= $del["id"] ?>">
-                                        <i class="bi bi-pencil-square"></i> Manage
-                                    </button>
+
+                                    <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+
+                                        <?php if ($del["status"] === "out_for_delivery"): ?>
+                                            <a
+                                                href="delivery_details.php?id=<?= (int)$del["id"] ?>#live-tracking"
+                                                class="btn btn-sm btn-success"
+                                            >
+                                                <i class="bi bi-geo-alt-fill"></i>
+                                                Track Live
+                                            </a>
+                                        <?php else: ?>
+                                            <a
+                                                href="delivery_details.php?id=<?= (int)$del["id"] ?>"
+                                                class="btn btn-sm btn-outline-secondary"
+                                            >
+                                                <i class="bi bi-eye"></i>
+                                                Details
+                                            </a>
+                                        <?php endif; ?>
+
+                                        <button
+                                            class="btn btn-sm btn-outline-success"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editModal<?= $del["id"] ?>"
+                                        >
+                                            <i class="bi bi-pencil-square"></i>
+                                            Manage
+                                        </button>
+
+                                    </div>
+
                                 </td>
                             </tr>
 
