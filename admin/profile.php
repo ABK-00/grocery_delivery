@@ -343,10 +343,7 @@ $joinedDate = !empty($admin['created_at'])
 
     <!-- SHARED ADMIN UI -->
     <link href="../assets/css/admin.css" rel="stylesheet">
-    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-
-
-    <style>
+<style>
 
         :root {
             --navy: #071827;
@@ -704,6 +701,7 @@ $joinedDate = !empty($admin['created_at'])
 
     </style>
 
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
 <body class="admin-farvist">
