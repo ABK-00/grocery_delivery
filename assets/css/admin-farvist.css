@@ -2861,3 +2861,24 @@ body.admin-farvist .sidebar .nav-link.active {
     border-color:
         rgba(var(--fv-primary-rgb), .98) !important;
 }
+
+
+/* =========================================================
+   SIDEBAR BUTTON WIDTH TIGHTENING
+   ========================================================= */
+
+body.admin-farvist .sidebar .nav-link,
+body.admin-farvist .sidebar-footer .nav-link,
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    width: calc(100% - 12px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+@media (min-width: 901px) {
+    body.admin-farvist .sidebar.is-collapsed .nav-link,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-footer .nav-link,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-accent-picker > .nav-link {
+        width: 42px !important;
+    }
+}
