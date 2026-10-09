@@ -71,15 +71,33 @@ function requireLogin(): void
 |--------------------------------------------------------------------------
 */
 
+function roleLoginUrl(string $role): string
+{
+    return match ($role) {
+        'super_admin' => BASE_URL . '/super_admin/login.php',
+        'admin' => BASE_URL . '/admin/login.php',
+        'staff' => BASE_URL . '/staff/login.php',
+        'delivery_partner' => BASE_URL . '/delivery/login.php',
+        'customer' => BASE_URL . '/login.php?customer=1',
+        default => BASE_URL . '/login.php?customer=1',
+    };
+}
+
+
 function requireRole(string $role): void
 {
-    requireLogin();
+    if (!isLoggedIn()) {
+        header(
+            'Location: '
+                . roleLoginUrl($role)
+        );
+        exit;
+    }
 
     if (
         !isset($_SESSION['role'])
         || $_SESSION['role'] !== $role
     ) {
-
         redirectByRole();
     }
 }
@@ -175,8 +193,9 @@ function requireCompanyAccess(): void
 
         header(
             'Location: '
-                . BASE_URL
-                . '/login.php?error=company'
+                . roleLoginUrl($role)
+                . (str_contains(roleLoginUrl($role), '?') ? '&' : '?')
+                . 'error=company'
         );
 
         exit;
