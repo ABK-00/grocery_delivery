@@ -911,7 +911,6 @@ $latestLocation = $locations[0] ?? null;
         }
 
     </style>
-
     <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
