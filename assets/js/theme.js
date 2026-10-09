@@ -9,7 +9,7 @@
 
     function storageGet(key) {
         try {
-            return window.localStorage.getItem(key);
+            return localStorage.getItem(key);
         } catch (error) {
             return null;
         }
@@ -17,13 +17,13 @@
 
     function storageSet(key, value) {
         try {
-            window.localStorage.setItem(key, value);
+            localStorage.setItem(key, value);
         } catch (error) {
-            // Theme still works for the current page even if storage is blocked.
+            // Ignore storage failures; current-page theming still works.
         }
     }
 
-    function preferredTheme() {
+    function getTheme() {
         const saved = storageGet(THEME_KEY);
 
         if (allowedThemes.includes(saved)) {
@@ -36,7 +36,7 @@
             : 'light';
     }
 
-    function preferredAccent() {
+    function getAccent() {
         const saved = storageGet(ACCENT_KEY);
 
         return allowedAccents.includes(saved)
@@ -44,12 +44,13 @@
             : 'sapphire';
     }
 
-    function updateThemeControls(theme) {
+    function refreshThemeControls(theme) {
         const isDark = theme === 'dark';
 
         document
             .querySelectorAll('[data-theme-toggle]')
             .forEach(function (button) {
+
                 const icon =
                     button.querySelector('.theme-icon, i');
 
@@ -102,12 +103,16 @@
             ? theme
             : 'light';
 
-        document.documentElement.dataset.theme =
-            safeTheme;
+        document.documentElement.setAttribute(
+            'data-theme',
+            safeTheme
+        );
 
         if (document.body) {
-            document.body.dataset.theme =
-                safeTheme;
+            document.body.setAttribute(
+                'data-theme',
+                safeTheme
+            );
         }
 
         storageSet(
@@ -115,8 +120,22 @@
             safeTheme
         );
 
-        updateThemeControls(
+        refreshThemeControls(
             safeTheme
+        );
+    }
+
+    function toggleTheme() {
+        const current =
+            document.documentElement.getAttribute(
+                'data-theme'
+            )
+            || getTheme();
+
+        applyTheme(
+            current === 'dark'
+                ? 'light'
+                : 'dark'
         );
     }
 
@@ -126,12 +145,16 @@
             ? accent
             : 'sapphire';
 
-        document.documentElement.dataset.accentTheme =
-            safeAccent;
+        document.documentElement.setAttribute(
+            'data-accent-theme',
+            safeAccent
+        );
 
         if (document.body) {
-            document.body.dataset.accentTheme =
-                safeAccent;
+            document.body.setAttribute(
+                'data-accent-theme',
+                safeAccent
+            );
         }
 
         storageSet(
@@ -142,6 +165,7 @@
         document
             .querySelectorAll('[data-accent-option]')
             .forEach(function (button) {
+
                 const selected =
                     button.dataset.accentOption
                     === safeAccent;
@@ -162,6 +186,7 @@
         document
             .querySelectorAll('[data-accent-label]')
             .forEach(function (element) {
+
                 const labels = {
                     sapphire: 'Sapphire',
                     teal: 'Teal',
@@ -175,72 +200,73 @@
             });
     }
 
-    function initializeThemeSystem() {
+    function bindControls() {
+        document
+            .querySelectorAll('[data-theme-toggle]')
+            .forEach(function (button) {
+
+                if (button.dataset.themeBound === '1') {
+                    return;
+                }
+
+                button.dataset.themeBound = '1';
+
+                button.addEventListener(
+                    'click',
+                    function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        toggleTheme();
+                    }
+                );
+            });
+
+        document
+            .querySelectorAll('[data-accent-option]')
+            .forEach(function (button) {
+
+                if (button.dataset.accentBound === '1') {
+                    return;
+                }
+
+                button.dataset.accentBound = '1';
+
+                button.addEventListener(
+                    'click',
+                    function (event) {
+                        event.preventDefault();
+
+                        applyAccent(
+                            button.dataset.accentOption
+                        );
+                    }
+                );
+            });
+    }
+
+    function initialize() {
         applyTheme(
-            preferredTheme()
+            getTheme()
         );
 
         applyAccent(
-            preferredAccent()
+            getAccent()
         );
+
+        bindControls();
     }
 
-    /*
-     * Event delegation makes the controls work even when
-     * a page renders buttons after this script is loaded.
-     */
-    document.addEventListener(
-        'click',
-        function (event) {
-            const themeButton =
-                event.target.closest(
-                    '[data-theme-toggle]'
-                );
-
-            if (themeButton) {
-                event.preventDefault();
-
-                const current =
-                    document.documentElement
-                        .dataset.theme
-                    || preferredTheme();
-
-                applyTheme(
-                    current === 'dark'
-                        ? 'light'
-                        : 'dark'
-                );
-
-                return;
-            }
-
-            const accentButton =
-                event.target.closest(
-                    '[data-accent-option]'
-                );
-
-            if (accentButton) {
-                event.preventDefault();
-
-                applyAccent(
-                    accentButton.dataset.accentOption
-                );
-            }
-        }
-    );
-
-    /*
-     * Apply once immediately for pages that load this
-     * script near the end of the document, then refresh
-     * controls after DOM parsing is complete.
-     */
-    initializeThemeSystem();
+    window.gdApplyTheme = applyTheme;
+    window.gdToggleTheme = toggleTheme;
+    window.gdApplyAccent = applyAccent;
 
     if (document.readyState === 'loading') {
         document.addEventListener(
             'DOMContentLoaded',
-            initializeThemeSystem,
+            initialize,
             { once: true }
         );
+    } else {
+        initialize();
     }
 })();
