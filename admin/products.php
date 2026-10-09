@@ -71,12 +71,19 @@ if (
     $imageId = (int) $_GET["delete_image"];
 
     $stmt = $conn->prepare("
-        SELECT *
-        FROM product_images
-        WHERE id = ?
+        SELECT pi.*
+        FROM product_images pi
+        INNER JOIN products p
+            ON p.id = pi.product_id
+        WHERE pi.id = ?
+          AND p.company_id = ?
+        LIMIT 1
     ");
 
-    $stmt->execute([$imageId]);
+    $stmt->execute([
+        $imageId,
+        $companyId
+    ]);
     $image = $stmt->fetch();
 
     if ($image) {
@@ -147,12 +154,19 @@ if (
     $imageId = (int) $_GET["primary_image"];
 
     $stmt = $conn->prepare("
-        SELECT product_id
-        FROM product_images
-        WHERE id = ?
+        SELECT pi.product_id
+        FROM product_images pi
+        INNER JOIN products p
+            ON p.id = pi.product_id
+        WHERE pi.id = ?
+          AND p.company_id = ?
+        LIMIT 1
     ");
 
-    $stmt->execute([$imageId]);
+    $stmt->execute([
+        $imageId,
+        $companyId
+    ]);
     $productId = $stmt->fetchColumn();
 
     if ($productId) {
@@ -418,12 +432,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 SELECT id
                 FROM products
                 WHERE LOWER(name) = LOWER(?)
-                AND id != ?
+                  AND company_id = ?
+                  AND id != ?
                 LIMIT 1
             ");
 
             $check->execute([
                 $name,
+                $companyId,
                 $productId
             ]);
 
@@ -444,6 +460,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     stock = ?,
                     unit = ?
                 WHERE id = ?
+                  AND company_id = ?
             ");
 
             $stmt->execute([
@@ -453,8 +470,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $price,
                 $stock,
                 $unit,
-                $productId
+                $productId,
+                $companyId
             ]);
+
+            if ($stmt->rowCount() === 0) {
+                $ownershipCheck = $conn->prepare("
+                    SELECT id
+                    FROM products
+                    WHERE id = ?
+                      AND company_id = ?
+                    LIMIT 1
+                ");
+
+                $ownershipCheck->execute([
+                    $productId,
+                    $companyId
+                ]);
+
+                if (!$ownershipCheck->fetchColumn()) {
+                    throw new Exception("Product not found.");
+                }
+            }
 
             /*
             | Count existing images
@@ -579,12 +616,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             | Get all images first
             */
             $stmt = $conn->prepare("
-                SELECT image
-                FROM product_images
-                WHERE product_id = ?
+                SELECT pi.image
+                FROM product_images pi
+                INNER JOIN products p
+                    ON p.id = pi.product_id
+                WHERE pi.product_id = ?
+                  AND p.company_id = ?
             ");
 
-            $stmt->execute([$productId]);
+            $stmt->execute([
+                $productId,
+                $companyId
+            ]);
 
             $images = $stmt->fetchAll();
 
@@ -596,9 +639,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $delete = $conn->prepare("
                 DELETE FROM products
                 WHERE id = ?
+                  AND company_id = ?
             ");
 
-            $delete->execute([$productId]);
+            $delete->execute([
+                $productId,
+                $companyId
+            ]);
+
+            if ($delete->rowCount() === 0) {
+                throw new Exception("Product not found.");
+            }
 
             /*
             | Delete physical files
@@ -634,9 +685,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         ELSE 'active'
                     END
                 WHERE id = ?
+                  AND company_id = ?
             ");
 
-            $stmt->execute([$productId]);
+            $stmt->execute([
+                $productId,
+                $companyId
+            ]);
+
+            if ($stmt->rowCount() === 0) {
+                throw new Exception("Product not found.");
+            }
 
             header("Location: products.php?success=updated");
             exit;
@@ -796,20 +855,24 @@ $totalStock = (float)$stat->fetchColumn();
         href="../assets/css/admin.css"
         rel="stylesheet">
 
+    <link
+        href="../assets/css/admin-farvist.css"
+        rel="stylesheet">
+
     <style>
         .product-image {
             width: 65px;
             height: 65px;
             object-fit: cover;
             border-radius: 12px;
-            background: #f0f2f5;
+            background: rgba(255,255,255,.06);
         }
 
         .image-placeholder {
             width: 65px;
             height: 65px;
             border-radius: 12px;
-            background: #edf1f5;
+            background: rgba(255,255,255,.05);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -832,7 +895,7 @@ $totalStock = (float)$stat->fetchColumn();
         }
 
         .gallery-thumb.primary {
-            border-color: #22c55e;
+            border-color: var(--fv-primary);
         }
 
         .badge-active {
@@ -853,10 +916,10 @@ $totalStock = (float)$stat->fetchColumn();
 
         .image-box {
             position: relative;
-            border: 1px solid #e5e9ef;
+            border: 1px solid var(--fv-border);
             border-radius: 12px;
             padding: 6px;
-            background: #fafbfc;
+            background: rgba(255,255,255,.04);
         }
 
         .image-box img {
@@ -870,8 +933,8 @@ $totalStock = (float)$stat->fetchColumn();
             position: absolute;
             top: 10px;
             left: 10px;
-            background: #22c55e;
-            color: #111827;
+            background: var(--fv-primary);
+            color: var(--fv-text);
             font-size: 11px;
             font-weight: 800;
             padding: 4px 7px;
@@ -900,11 +963,107 @@ $totalStock = (float)$stat->fetchColumn();
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+
+
+        body.admin-products-page .product-stat-card {
+            padding: 20px;
+            overflow: visible;
+        }
+
+        body.admin-products-page .product-stat-card .product-stat-icon {
+            margin-bottom: 18px;
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--fv-primary),
+                    var(--fv-primary-2)
+                ) !important;
+        }
+
+        body.admin-products-page .product-list-card {
+            overflow: visible;
+        }
+
+        body.admin-products-page .filters {
+            padding: 20px;
+            border-bottom: 1px solid var(--fv-border);
+        }
+
+        body.admin-products-page .product-table {
+            color: var(--fv-text);
+        }
+
+        body.admin-products-page .product-table thead th {
+            background: rgba(var(--fv-primary-rgb), .045) !important;
+        }
+
+        body.admin-products-page .product-image,
+        body.admin-products-page .image-placeholder {
+            border: 1px solid var(--fv-border);
+        }
+
+        body.admin-products-page .gallery-thumb.primary {
+            border-color: var(--fv-primary);
+            box-shadow:
+                0 0 0 2px rgba(var(--fv-primary-rgb), .12);
+        }
+
+        body.admin-products-page .badge-active {
+            background: rgba(52,211,153,.12);
+            color: #34d399;
+            border: 1px solid rgba(52,211,153,.16);
+        }
+
+        body.admin-products-page .badge-inactive {
+            background: rgba(251,113,133,.10);
+            color: #fb7185;
+            border: 1px solid rgba(251,113,133,.16);
+        }
+
+        body.admin-products-page .modal-content,
+        body.admin-products-page .dropdown-menu {
+            background: rgba(15,23,42,.94) !important;
+            color: var(--fv-text);
+            border: 1px solid var(--fv-border) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        html[data-theme="light"] body.admin-products-page .modal-content,
+        html[data-theme="light"] body.admin-products-page .dropdown-menu {
+            background: rgba(255,255,255,.96) !important;
+        }
+
+        body.admin-products-page .dropdown-item {
+            color: var(--fv-text);
+            border-radius: 9px;
+        }
+
+        body.admin-products-page .dropdown-item:hover {
+            background: rgba(var(--fv-primary-rgb), .08);
+        }
+
+        body.admin-products-page .image-box {
+            background: rgba(255,255,255,.04);
+            border-color: var(--fv-border);
+        }
+
+        body.admin-products-page .primary-label {
+            background: var(--fv-primary);
+            color: #fff;
+        }
+
+        @media (max-width: 900px) {
+            body.admin-products-page .fv-heading-row {
+                padding-top: 5px;
+            }
+        }
+
     </style>
 
 </head>
 
-<body>
+<body class="admin-farvist admin-products-page">
 
     <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
     <?php include "../includes/loader.php"; ?>
@@ -914,9 +1073,9 @@ $totalStock = (float)$stat->fetchColumn();
 
         <!-- TOPBAR -->
 
-        <div class="topbar">
+        <div class="fv-heading-row">
 
-            <div class="topbar-left">
+            <div class="d-flex align-items-start gap-3">
 
                 <button
                     class="sidebar-toggle"
@@ -926,27 +1085,32 @@ $totalStock = (float)$stat->fetchColumn();
                 </button>
 
                 <div>
-                    <h1 class="topbar-title">
-                        Products Management
+
+                    <div class="fv-eyebrow">
+                        <i class="bi bi-box-seam-fill"></i>
+                        Inventory
+                    </div>
+
+                    <h1 class="fv-page-title">
+                        Products
                     </h1>
 
-                    <p class="topbar-subtitle">
-                        Add, edit, and manage grocery items in your store inventory.
+                    <p class="fv-page-subtitle">
+                        Add, edit and manage the grocery items customers see in your storefront.
                     </p>
+
                 </div>
 
             </div>
 
-            <div>
-                <button
-                    class="btn btn-success"
-                    data-bs-toggle="modal"
-                    data-bs-target="#addProductModal"
-                    type="button">
-                    <i class="bi bi-plus-lg me-1"></i>
-                    Add Product
-                </button>
-            </div>
+            <button
+                class="fv-primary-btn border-0"
+                data-bs-toggle="modal"
+                data-bs-target="#addProductModal"
+                type="button">
+                <i class="bi bi-plus-lg"></i>
+                Add Product
+            </button>
 
         </div>
 
@@ -974,17 +1138,17 @@ $totalStock = (float)$stat->fetchColumn();
 
             <div class="col-md-3">
 
-                <div class="stat-card">
+                <div class="fv-card fv-hover-lift product-stat-card">
 
-                    <div class="stat-icon">
+                    <div class="fv-icon-tile product-stat-icon">
                         <i class="bi bi-box-seam"></i>
                     </div>
 
-                    <div class="stat-number">
+                    <div class="fv-stat-value">
                         <?= number_format($totalProducts) ?>
                     </div>
 
-                    <div class="stat-label">
+                    <div class="fv-stat-label">
                         Total Products
                     </div>
 
@@ -995,17 +1159,17 @@ $totalStock = (float)$stat->fetchColumn();
 
             <div class="col-md-3">
 
-                <div class="stat-card">
+                <div class="fv-card fv-hover-lift product-stat-card">
 
-                    <div class="stat-icon">
+                    <div class="fv-icon-tile product-stat-icon">
                         <i class="bi bi-check-circle"></i>
                     </div>
 
-                    <div class="stat-number">
+                    <div class="fv-stat-value">
                         <?= number_format($activeProducts) ?>
                     </div>
 
-                    <div class="stat-label">
+                    <div class="fv-stat-label">
                         Active Products
                     </div>
 
@@ -1016,17 +1180,17 @@ $totalStock = (float)$stat->fetchColumn();
 
             <div class="col-md-3">
 
-                <div class="stat-card">
+                <div class="fv-card fv-hover-lift product-stat-card">
 
-                    <div class="stat-icon">
+                    <div class="fv-icon-tile product-stat-icon">
                         <i class="bi bi-pause-circle"></i>
                     </div>
 
-                    <div class="stat-number">
+                    <div class="fv-stat-value">
                         <?= number_format($inactiveProducts) ?>
                     </div>
 
-                    <div class="stat-label">
+                    <div class="fv-stat-label">
                         Inactive Products
                     </div>
 
@@ -1037,17 +1201,17 @@ $totalStock = (float)$stat->fetchColumn();
 
             <div class="col-md-3">
 
-                <div class="stat-card">
+                <div class="fv-card fv-hover-lift product-stat-card">
 
-                    <div class="stat-icon">
+                    <div class="fv-icon-tile product-stat-icon">
                         <i class="bi bi-boxes"></i>
                     </div>
 
-                    <div class="stat-number">
+                    <div class="fv-stat-value">
                         <?= number_format($totalStock, 2) ?>
                     </div>
 
-                    <div class="stat-label">
+                    <div class="fv-stat-label">
                         Total Stock
                     </div>
 
@@ -1059,7 +1223,7 @@ $totalStock = (float)$stat->fetchColumn();
 
 
         <!-- Products -->
-        <div class="content-card">
+        <div class="fv-card product-list-card">
 
             <!-- Filters -->
             <div class="filters">
@@ -1149,7 +1313,7 @@ $totalStock = (float)$stat->fetchColumn();
                         <div class="col-lg-2">
 
                             <button
-                                class="btn btn-dark w-100">
+                                class="fv-primary-btn border-0 w-100">
 
                                 <i class="bi bi-funnel me-1"></i>
                                 Filter
