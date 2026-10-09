@@ -4,9 +4,7 @@ require_once __DIR__ . "/config/db.php";
 require_once __DIR__ . "/includes/auth.php";
 require_once __DIR__ . "/includes/functions.php";
 
-requireLogin();
-requireCompanyAccess();
-$companyId = currentCompanyId();
+requireRole('customer');
 
 $userId = $_SESSION['user_id'];
 
@@ -15,6 +13,7 @@ $stmt = $conn->prepare("
         c.id AS cart_id,
         c.product_id,
         c.quantity,
+        p.company_id,
         p.name,
         p.price,
         p.stock,
@@ -32,13 +31,24 @@ $stmt = $conn->prepare("
     FROM cart c
     INNER JOIN products p ON p.id = c.product_id
     WHERE c.user_id = ?
-      AND p.company_id = ?
       AND p.status = 'active'
     ORDER BY c.created_at DESC
 ");
 
-$stmt->execute([$userId, $companyId]);
+$stmt->execute([$userId]);
 $cartItems = $stmt->fetchAll();
+
+$companyIds = array_values(array_unique(array_map(
+    static fn(array $item): int => (int)$item['company_id'],
+    $cartItems
+)));
+
+if (count($companyIds) > 1) {
+    $_SESSION['checkout_error'] = 'Your cart contains products from more than one store. Please start a new store order.';
+    redirect("cart.php");
+}
+
+$companyId = $companyIds[0] ?? null;
 
 if (!$cartItems) {
     redirect("cart.php");
