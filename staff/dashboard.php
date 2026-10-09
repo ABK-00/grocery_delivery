@@ -441,18 +441,7 @@ body {
                 </strong>
 
             </a>
-
-            <a href="../products.php" class="quick-action">
-
-                <i class="bi bi-box-seam quick-icon"></i>
-
-                <strong class="ms-2">
-                    View Products
-                </strong>
-
-            </a>
-
-        </div>
+</div>
 
     </div>
 
