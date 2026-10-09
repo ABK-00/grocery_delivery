@@ -4,9 +4,7 @@ require_once __DIR__ . "/config/db.php";
 require_once __DIR__ . "/includes/auth.php";
 require_once __DIR__ . "/includes/functions.php";
 
-requireLogin();
-requireCompanyAccess();
-$companyId = currentCompanyId();
+requireRole('customer');
 
 $userId = $_SESSION['user_id'];
 $orderId = (int)($_GET['id'] ?? 0);
@@ -37,7 +35,6 @@ $stmt = $conn->prepare("
     FROM orders
     WHERE id = ?
       AND user_id = ?
-      AND company_id = ?
     LIMIT 1
 ");
 
