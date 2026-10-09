@@ -1,3 +1,5 @@
+@import url('./glass.css');
+
 /* GroceryDelivery shared customer UI + theme */
 :root{--gd-bg:#f4f7f6;--gd-surface:#fff;--gd-surface-2:#f8fafc;--gd-text:#1f2937;--gd-muted:#6b7280;--gd-border:#e5e7eb;--gd-green:#22c55e;--gd-navy:#111827;--gd-shadow:0 5px 20px rgba(0,0,0,.05)}
 html[data-theme="dark"]{--gd-bg:#0b1220;--gd-surface:#111827;--gd-surface-2:#182233;--gd-text:#e5e7eb;--gd-muted:#94a3b8;--gd-border:#273449;--gd-shadow:0 8px 24px rgba(0,0,0,.22);color-scheme:dark}
