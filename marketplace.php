@@ -10,7 +10,7 @@ $userId = currentUserId();
 
 if (!$userId) {
     header(
-        'Location: /somame_ent/login.php'
+        'Location: /somame_ent/login.php?customer=1'
     );
     exit;
 }
@@ -42,7 +42,7 @@ if (!$customer) {
     session_unset();
     session_destroy();
 
-    header('Location: login.php');
+    header('Location: /somame_ent/login.php?customer=1');
     exit;
 }
 
