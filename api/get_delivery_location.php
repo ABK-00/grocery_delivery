@@ -4,12 +4,10 @@ require_once "../config/db.php";
 require_once "../includes/auth.php";
 
 requireRole('customer');
-requireCompanyAccess();
-$companyId = currentCompanyId();
 
 header('Content-Type: application/json');
 
-$userId = $_SESSION['user_id'];
+$userId = (int) $_SESSION['user_id'];
 
 $deliveryId = filter_input(
     INPUT_GET,
@@ -43,15 +41,13 @@ $stmt = $conn->prepare("
 
     WHERE d.id = ?
       AND o.user_id = ?
-      AND o.company_id = ?
 
     LIMIT 1
 ");
 
 $stmt->execute([
     $deliveryId,
-    $userId,
-    $companyId
+    $userId
 ]);
 
 if (!$stmt->fetch()) {
