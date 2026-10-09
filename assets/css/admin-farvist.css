@@ -1,0 +1,635 @@
+/*
+ * Admin dashboard concept adapted from the Farvist dashboard template.
+ * Test theme: Graphite + Amber glass.
+ * Scoped to body.admin-farvist so other admin pages remain untouched.
+ */
+
+body.admin-farvist {
+    --fv-primary: #f59e0b;
+    --fv-accent: #fb7185;
+    --fv-info: #38bdf8;
+    --fv-success: #34d399;
+    --fv-danger: #fb7185;
+    --fv-warning: #fbbf24;
+
+    --fv-body-bg: #111217;
+    --fv-surface: rgba(28, 29, 36, .62);
+    --fv-surface-strong: rgba(34, 35, 43, .82);
+    --fv-border: rgba(255, 255, 255, .10);
+    --fv-border-strong: rgba(245, 158, 11, .24);
+    --fv-text: #f6f2e9;
+    --fv-muted: #a6a7b1;
+    --fv-sidebar: rgba(17, 18, 23, .84);
+    --fv-glow: rgba(245, 158, 11, .22);
+
+    min-height: 100vh;
+    color: var(--fv-text) !important;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+        radial-gradient(42rem 42rem at 88% -10%, rgba(245, 158, 11, .16), transparent 62%),
+        radial-gradient(32rem 32rem at -5% 32%, rgba(251, 113, 133, .09), transparent 60%),
+        radial-gradient(38rem 38rem at 58% 115%, rgba(56, 189, 248, .07), transparent 58%),
+        #111217 !important;
+    background-attachment: fixed !important;
+}
+
+body.admin-farvist::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: .22;
+    background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(to bottom, #000, transparent 82%);
+}
+
+/* Sidebar */
+body.admin-farvist .sidebar {
+    width: 264px;
+    background: linear-gradient(180deg, rgba(19,20,26,.91), rgba(13,14,18,.83)) !important;
+    border-right: 1px solid var(--fv-border) !important;
+    box-shadow: 18px 0 55px rgba(0,0,0,.24);
+    backdrop-filter: blur(22px) saturate(135%);
+    -webkit-backdrop-filter: blur(22px) saturate(135%);
+}
+
+body.admin-farvist .sidebar-brand {
+    height: 84px;
+    min-height: 84px;
+    border-bottom-color: var(--fv-border) !important;
+}
+
+body.admin-farvist .brand-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 13px;
+    color: #211706;
+    background: linear-gradient(135deg, #fbbf24, #f97316) !important;
+    box-shadow: 0 0 28px rgba(245,158,11,.22);
+}
+
+body.admin-farvist .brand-text {
+    color: #fff7e6;
+    letter-spacing: -.02em;
+}
+
+body.admin-farvist .brand-text span {
+    color: #fbbf24;
+}
+
+body.admin-farvist .sidebar-section-title {
+    color: #72737e;
+}
+
+body.admin-farvist .sidebar .nav-link {
+    min-height: 46px;
+    border-radius: 13px;
+    color: #aaaab4;
+    border: 1px solid transparent;
+}
+
+body.admin-farvist .sidebar .nav-link:hover {
+    color: #fff7e6;
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.065);
+    transform: translateX(2px);
+}
+
+body.admin-farvist .sidebar .nav-link.active {
+    color: #1d1507 !important;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+    border-color: rgba(255,255,255,.22) !important;
+    box-shadow: 0 10px 28px rgba(245,158,11,.24);
+}
+
+body.admin-farvist .sidebar-footer {
+    border-top-color: var(--fv-border) !important;
+}
+
+/* Main */
+body.admin-farvist .main-content {
+    margin-left: 264px;
+    padding: 28px clamp(18px, 3vw, 42px) 44px;
+    position: relative;
+    z-index: 1;
+}
+
+body.admin-farvist .fv-topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+body.admin-farvist .fv-topbar-spacer {
+    flex: 1;
+}
+
+body.admin-farvist .fv-icon-btn,
+body.admin-farvist .fv-avatar {
+    border: 1px solid var(--fv-border);
+    background: rgba(255,255,255,.055);
+    color: var(--fv-text);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+body.admin-farvist .fv-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: inline-grid;
+    place-items: center;
+    text-decoration: none;
+    transition: .2s ease;
+}
+
+body.admin-farvist .fv-icon-btn:hover {
+    color: #fff;
+    border-color: var(--fv-border-strong);
+    background: rgba(245,158,11,.10);
+}
+
+body.admin-farvist .fv-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    font-weight: 800;
+    color: #211706;
+    background: linear-gradient(135deg, #fbbf24, #f97316);
+    border-color: transparent;
+}
+
+body.admin-farvist .fv-heading-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 22px;
+    margin-bottom: 28px;
+}
+
+body.admin-farvist .fv-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border: 1px solid rgba(245,158,11,.18);
+    border-radius: 999px;
+    color: #fbbf24;
+    background: rgba(245,158,11,.075);
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.admin-farvist .fv-page-title {
+    margin: 0;
+    color: #fffaf0;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+body.admin-farvist .fv-page-subtitle {
+    margin: 7px 0 0;
+    color: var(--fv-muted);
+    font-size: .96rem;
+}
+
+body.admin-farvist .fv-primary-btn,
+body.admin-farvist .fv-glass-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: .88rem;
+    transition: .2s ease;
+}
+
+body.admin-farvist .fv-primary-btn {
+    border: 1px solid rgba(255,255,255,.16);
+    color: #211706;
+    background: linear-gradient(135deg, #fbbf24, #f97316);
+    box-shadow: 0 10px 30px rgba(245,158,11,.20);
+}
+
+body.admin-farvist .fv-primary-btn:hover {
+    color: #120d04;
+    transform: translateY(-1px);
+    box-shadow: 0 14px 34px rgba(245,158,11,.28);
+}
+
+body.admin-farvist .fv-glass-btn {
+    border: 1px solid var(--fv-border);
+    color: #e9e5dd;
+    background: rgba(255,255,255,.055);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+}
+
+body.admin-farvist .fv-glass-btn:hover {
+    color: #fff;
+    border-color: var(--fv-border-strong);
+    background: rgba(245,158,11,.08);
+}
+
+/* Farvist-style glass cards */
+body.admin-farvist .fv-card {
+    height: 100%;
+    border: 1px solid var(--fv-border);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255,255,255,.075), rgba(255,255,255,.035));
+    box-shadow: 0 18px 44px rgba(0,0,0,.20);
+    backdrop-filter: blur(18px) saturate(135%);
+    -webkit-backdrop-filter: blur(18px) saturate(135%);
+    overflow: hidden;
+}
+
+body.admin-farvist .fv-card-glow {
+    position: relative;
+}
+
+body.admin-farvist .fv-card-glow::before {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -42px;
+    top: -48px;
+    border-radius: 50%;
+    background: var(--tile-glow, rgba(245,158,11,.18));
+    filter: blur(12px);
+    pointer-events: none;
+}
+
+body.admin-farvist .fv-card-body {
+    position: relative;
+    padding: 22px;
+    z-index: 1;
+}
+
+body.admin-farvist .fv-hover-lift {
+    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+body.admin-farvist .fv-hover-lift:hover {
+    transform: translateY(-4px);
+    border-color: rgba(245,158,11,.20);
+    box-shadow: 0 24px 55px rgba(0,0,0,.27);
+}
+
+body.admin-farvist .fv-stat-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+body.admin-farvist .fv-icon-tile {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 1.15rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+body.admin-farvist .tile-amber {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+}
+
+body.admin-farvist .tile-rose {
+    background: linear-gradient(135deg, #fb7185, #e11d48);
+}
+
+body.admin-farvist .tile-sky {
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+}
+
+body.admin-farvist .tile-emerald {
+    background: linear-gradient(135deg, #34d399, #059669);
+}
+
+body.admin-farvist .fv-stat-value {
+    color: #fffaf0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -.035em;
+    line-height: 1.1;
+}
+
+body.admin-farvist .fv-stat-label {
+    margin-top: 6px;
+    color: var(--fv-muted);
+    font-size: .84rem;
+}
+
+body.admin-farvist .fv-chip {
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: .69rem;
+    font-weight: 800;
+}
+
+body.admin-farvist .chip-amber {
+    color: #fbbf24;
+    background: rgba(245,158,11,.10);
+    border: 1px solid rgba(245,158,11,.15);
+}
+
+body.admin-farvist .chip-success {
+    color: #6ee7b7;
+    background: rgba(52,211,153,.09);
+    border: 1px solid rgba(52,211,153,.14);
+}
+
+body.admin-farvist .chip-sky {
+    color: #7dd3fc;
+    background: rgba(56,189,248,.09);
+    border: 1px solid rgba(56,189,248,.14);
+}
+
+body.admin-farvist .chip-rose {
+    color: #fda4af;
+    background: rgba(251,113,133,.09);
+    border: 1px solid rgba(251,113,133,.14);
+}
+
+body.admin-farvist .fv-section-title {
+    margin: 0;
+    color: #fff8eb;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+body.admin-farvist .fv-section-subtitle {
+    margin: 4px 0 0;
+    color: var(--fv-muted);
+    font-size: .82rem;
+}
+
+body.admin-farvist .fv-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 20px 22px 0;
+}
+
+body.admin-farvist .fv-action-list {
+    display: grid;
+    gap: 10px;
+}
+
+body.admin-farvist .fv-action {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 13px;
+    border-radius: 14px;
+    color: #e9e5dd;
+    text-decoration: none;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,.035);
+    transition: .2s ease;
+}
+
+body.admin-farvist .fv-action:hover {
+    color: #fff;
+    border-color: rgba(245,158,11,.16);
+    background: rgba(245,158,11,.065);
+    transform: translateX(2px);
+}
+
+body.admin-farvist .fv-action-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    color: #fbbf24;
+    background: rgba(245,158,11,.10);
+    border: 1px solid rgba(245,158,11,.12);
+}
+
+body.admin-farvist .fv-action-title {
+    font-weight: 750;
+    font-size: .87rem;
+}
+
+body.admin-farvist .fv-action-copy {
+    margin-top: 2px;
+    color: var(--fv-muted);
+    font-size: .74rem;
+}
+
+/* Table */
+body.admin-farvist .fv-table-wrap {
+    overflow-x: auto;
+    padding: 10px 20px 20px;
+}
+
+body.admin-farvist .fv-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    color: #e9e5dd;
+    font-size: .83rem;
+}
+
+body.admin-farvist .fv-table th {
+    padding: 12px 10px;
+    color: #7f808a;
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .075em;
+    border-bottom: 1px solid var(--fv-border);
+    white-space: nowrap;
+}
+
+body.admin-farvist .fv-table td {
+    padding: 14px 10px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    vertical-align: middle;
+}
+
+body.admin-farvist .fv-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+body.admin-farvist .fv-table tbody tr {
+    transition: background .18s ease;
+}
+
+body.admin-farvist .fv-table tbody tr:hover {
+    background: rgba(245,158,11,.035);
+}
+
+body.admin-farvist .fv-order-number {
+    color: #fff5dd;
+    font-weight: 750;
+}
+
+body.admin-farvist .fv-customer {
+    color: var(--fv-muted);
+    font-size: .75rem;
+    margin-top: 2px;
+}
+
+body.admin-farvist .fv-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+body.admin-farvist .status-pending {
+    color: #fde68a;
+    background: rgba(245,158,11,.10);
+}
+
+body.admin-farvist .status-confirmed,
+body.admin-farvist .status-preparing {
+    color: #7dd3fc;
+    background: rgba(56,189,248,.09);
+}
+
+body.admin-farvist .status-ready,
+body.admin-farvist .status-out_for_delivery {
+    color: #c4b5fd;
+    background: rgba(139,92,246,.10);
+}
+
+body.admin-farvist .status-delivered {
+    color: #6ee7b7;
+    background: rgba(52,211,153,.09);
+}
+
+body.admin-farvist .status-cancelled {
+    color: #fda4af;
+    background: rgba(251,113,133,.09);
+}
+
+body.admin-farvist .fv-store-panel {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(245,158,11,.10),
+            rgba(255,255,255,.035)
+        );
+}
+
+body.admin-farvist .fv-store-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 7px;
+    background: #34d399;
+    box-shadow: 0 0 14px rgba(52,211,153,.60);
+}
+
+body.admin-farvist .fv-store-status.closed {
+    background: #fb7185;
+    box-shadow: 0 0 14px rgba(251,113,133,.48);
+}
+
+body.admin-farvist .fv-store-name {
+    color: #fff9ec;
+    font-weight: 800;
+    font-size: 1.15rem;
+}
+
+body.admin-farvist .fv-plan {
+    color: #fbbf24;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+body.admin-farvist .text-muted {
+    color: var(--fv-muted) !important;
+}
+
+body.admin-farvist .text-dark {
+    color: inherit !important;
+}
+
+body.admin-farvist .sidebar-toggle {
+    background: rgba(255,255,255,.06) !important;
+    color: #fff !important;
+    border: 1px solid var(--fv-border);
+    backdrop-filter: blur(14px);
+}
+
+@media (max-width: 1100px) {
+    body.admin-farvist .sidebar {
+        width: 244px;
+    }
+
+    body.admin-farvist .main-content {
+        margin-left: 244px;
+    }
+}
+
+@media (max-width: 900px) {
+    body.admin-farvist .sidebar {
+        width: 270px;
+    }
+
+    body.admin-farvist .main-content {
+        margin-left: 0;
+        padding: 82px 16px 34px;
+    }
+
+    body.admin-farvist .fv-topbar {
+        display: none;
+    }
+
+    body.admin-farvist .fv-heading-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 576px) {
+    body.admin-farvist .fv-page-title {
+        font-size: 1.72rem;
+    }
+
+    body.admin-farvist .fv-heading-row {
+        margin-bottom: 22px;
+    }
+
+    body.admin-farvist .fv-card-body {
+        padding: 18px;
+    }
+
+    body.admin-farvist .fv-card-header {
+        padding: 18px 18px 0;
+    }
+
+    body.admin-farvist .fv-table-wrap {
+        padding-inline: 12px;
+    }
+}
