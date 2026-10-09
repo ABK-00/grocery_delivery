@@ -253,7 +253,7 @@ $customers = $stmt->fetchAll();
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
     <?php
 
