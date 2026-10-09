@@ -2,16 +2,438 @@
 
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
-require_once __DIR__ . '/includes/functions.php';
 
 requireLogin();
 
-$slug = trim($_GET['store'] ?? '');
 
-if ($slug === '') {
+/*
+|--------------------------------------------------------------------------
+| HELPERS
+|--------------------------------------------------------------------------
+*/
+
+function h($value): string
+{
+    return htmlspecialchars(
+        (string)$value,
+        ENT_QUOTES,
+        'UTF-8'
+    );
+}
+
+
+function money($amount): string
+{
+    return 'GH₵ ' . number_format(
+        (float)$amount,
+        2
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| RESOLVE STORED FILE
+|--------------------------------------------------------------------------
+|
+| Supports:
+|
+| uploads/products/image.jpg
+| assets/uploads/products/image.jpg
+| products/image.jpg
+| image.jpg
+| absolute HTTP URLs
+|
+|--------------------------------------------------------------------------
+*/
+
+function resolveStoredImage(
+    ?string $stored,
+    string $type = 'product'
+): string {
+
+    $placeholder =
+        '/somame_ent/assets/images/product-placeholder.svg';
+
+    $stored = trim((string)$stored);
+
+    if ($stored === '') {
+        return $placeholder;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | REMOTE URL
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        str_starts_with($stored, 'http://')
+        || str_starts_with($stored, 'https://')
+    ) {
+        return $stored;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NORMALIZE
+    |--------------------------------------------------------------------------
+    */
+
+    $stored = str_replace(
+        '\\',
+        '/',
+        $stored
+    );
+
+
+    /*
+     * Remove localhost/project prefix if it somehow
+     * ended up being stored in the database.
+     */
+    $stored = preg_replace(
+        '#^https?://[^/]+/somame_ent/#i',
+        '',
+        $stored
+    );
+
+
+    /*
+     * Remove Windows project filesystem prefix.
+     */
+    $projectMarker = '/somame_ent/';
+
+    $position = stripos(
+        $stored,
+        $projectMarker
+    );
+
+    if ($position !== false) {
+
+        $stored = substr(
+            $stored,
+            $position
+                + strlen($projectMarker)
+        );
+    }
+
+
+    $stored = ltrim(
+        $stored,
+        '/'
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BUILD CANDIDATES
+    |--------------------------------------------------------------------------
+    */
+
+    $candidates = [];
+
+
+    /*
+     * Already stored as a relative project path.
+     */
+    $candidates[] = $stored;
+
+
+    if ($type === 'product') {
+
+        if (
+            str_starts_with(
+                $stored,
+                'products/'
+            )
+        ) {
+
+            $candidates[] =
+                'uploads/' . $stored;
+
+            $candidates[] =
+                'assets/uploads/' . $stored;
+        }
+
+
+        $filename =
+            basename($stored);
+
+
+        $candidates[] =
+            'uploads/products/' . $filename;
+
+        $candidates[] =
+            'assets/uploads/products/' . $filename;
+
+        $candidates[] =
+            'uploads/' . $filename;
+
+        $candidates[] =
+            'assets/uploads/' . $filename;
+    }
+
+
+    if ($type === 'storefront') {
+
+        $filename =
+            basename($stored);
+
+
+        $candidates[] =
+            'assets/uploads/storefronts/' . $filename;
+
+        $candidates[] =
+            'uploads/storefronts/' . $filename;
+
+        $candidates[] =
+            'assets/uploads/' . $filename;
+
+        $candidates[] =
+            'uploads/' . $filename;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RETURN FIRST FILE THAT ACTUALLY EXISTS
+    |--------------------------------------------------------------------------
+    */
+
+    foreach (
+        array_unique($candidates)
+        as $candidate
+    ) {
+
+        $candidate =
+            ltrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $candidate
+                ),
+                '/'
+            );
+
+
+        $physicalPath =
+            __DIR__
+            . '/'
+            . $candidate;
+
+
+        if (is_file($physicalPath)) {
+
+            return
+                '/somame_ent/'
+                . $candidate;
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FALLBACK
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        str_starts_with(
+            $stored,
+            'assets/'
+        )
+        || str_starts_with(
+            $stored,
+            'uploads/'
+        )
+    ) {
+
+        return
+            '/somame_ent/'
+            . $stored;
+    }
+
+
+    return $placeholder;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| PRODUCT IMAGE
+|--------------------------------------------------------------------------
+*/
+
+function storefrontProductImage(array $product): string
+{
+    $placeholder =
+        '/somame_ent/assets/images/product-placeholder.svg';
+
+    /*
+    |--------------------------------------------------------------------------
+    | PRIMARY IMAGE FIRST
+    |--------------------------------------------------------------------------
+    */
+
+    $image = '';
+
+    if (!empty($product['primary_image'])) {
+
+        $image =
+            $product['primary_image'];
+    } elseif (!empty($product['image'])) {
+
+        $image =
+            $product['image'];
+    }
+
+
+    $image =
+        trim((string)$image);
+
+
+    if ($image === '') {
+        return $placeholder;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | EXTERNAL IMAGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        str_starts_with($image, 'http://')
+        || str_starts_with($image, 'https://')
+    ) {
+        return $image;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NORMALISE
+    |--------------------------------------------------------------------------
+    */
+
+    $image =
+        str_replace(
+            '\\',
+            '/',
+            $image
+        );
+
+    $image =
+        ltrim(
+            $image,
+            '/'
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ALREADY STORED AS FULL PROJECT RELATIVE PATH
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        str_starts_with(
+            $image,
+            'somame_ent/'
+        )
+    ) {
+
+        return '/' . $image;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ALREADY STORED AS ASSETS PATH
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        str_starts_with(
+            $image,
+            'assets/images/products/'
+        )
+    ) {
+
+        return
+            '/somame_ent/'
+            . $image;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN PRODUCT UPLOADER STORES ONLY THE FILENAME
+    |--------------------------------------------------------------------------
+    */
+
+    $filename =
+        basename($image);
+
+
+    $physicalFile =
+        __DIR__
+        . '/assets/images/products/'
+        . $filename;
+
+
+    if (
+        is_file(
+            $physicalFile
+        )
+    ) {
+
+        return
+            '/somame_ent/assets/images/products/'
+            . rawurlencode($filename);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FALLBACK
+    |--------------------------------------------------------------------------
+    */
+
+    return $placeholder;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| REQUEST
+|--------------------------------------------------------------------------
+*/
+
+$storeSlug =
+    trim(
+        $_GET['store'] ?? ''
+    );
+
+if ($storeSlug === '') {
+
     http_response_code(404);
+
     die('Store not found.');
 }
+
+
+$role =
+    $_SESSION['role'] ?? '';
+
+$userId =
+    (int)(
+        $_SESSION['user_id']
+        ?? 0
+    );
 
 
 /*
@@ -22,20 +444,29 @@ if ($slug === '') {
 
 $stmt = $conn->prepare("
     SELECT
+
         c.id AS company_id,
+        c.company_code,
         c.company_name,
         c.storefront_slug,
+        c.email AS company_email,
+        c.phone AS company_phone,
+        c.logo AS company_logo,
+
         c.status AS company_status,
+
         c.subscription_plan,
         c.trial_ends_at,
+        c.subscription_starts_at,
         c.subscription_ends_at,
 
+        s.id AS storefront_id,
         s.display_name,
         s.description,
-        s.logo,
+        s.logo AS storefront_logo,
         s.banner_image,
-        s.email,
-        s.phone,
+        s.email AS storefront_email,
+        s.phone AS storefront_phone,
         s.whatsapp,
         s.address,
         s.primary_color,
@@ -52,61 +483,120 @@ $stmt = $conn->prepare("
     LIMIT 1
 ");
 
-$stmt->execute([$slug]);
+$stmt->execute([
+    $storeSlug
+]);
 
-$store = $stmt->fetch();
+$store =
+    $stmt->fetch();
+
 
 if (!$store) {
+
     http_response_code(404);
+
     die('Store not found.');
 }
 
-$companyId = (int)$store['company_id'];
+
+$companyId =
+    (int)$store['company_id'];
 
 
 /*
 |--------------------------------------------------------------------------
-| ACCESS
+| ACCESS MODE
 |--------------------------------------------------------------------------
 */
 
-$role = $_SESSION['role'] ?? '';
-
 $previewMode = false;
+$previewType = null;
 
 
 /*
- * Customers can browse every active marketplace store.
- */
+|--------------------------------------------------------------------------
+| CUSTOMER
+|--------------------------------------------------------------------------
+*/
+
 if ($role === 'customer') {
 
-    if ($store['company_status'] !== 'active') {
+    if (
+        $store['company_status']
+        !== 'active'
+    ) {
+
         http_response_code(403);
+
         die('This store is currently unavailable.');
     }
 }
 
 
 /*
- * Company admin/staff may preview their own storefront.
- */ elseif (
+|--------------------------------------------------------------------------
+| SUPER ADMIN
+|--------------------------------------------------------------------------
+|
+| Super Admin may preview any storefront regardless of:
+|
+| - company status
+| - subscription status
+| - store open/closed
+|
+|--------------------------------------------------------------------------
+*/ elseif ($role === 'super_admin') {
+
+    $previewMode = true;
+
+    $previewType =
+        'super_admin';
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| COMPANY ADMIN / STAFF
+|--------------------------------------------------------------------------
+*/ elseif (
     in_array(
         $role,
-        ['admin', 'staff'],
+        [
+            'admin',
+            'staff'
+        ],
         true
     )
 ) {
 
+    $loggedCompanyId =
+        (int)(
+            $_SESSION['company_id']
+            ?? 0
+        );
+
+
     if (
-        (int)($_SESSION['company_id'] ?? 0)
+        $loggedCompanyId
         !== $companyId
     ) {
 
         redirectByRole();
     }
 
+
     $previewMode = true;
-} else {
+
+    $previewType =
+        'company';
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| OTHER ROLES
+|--------------------------------------------------------------------------
+*/ else {
 
     redirectByRole();
 }
@@ -118,81 +608,278 @@ if ($role === 'customer') {
 |--------------------------------------------------------------------------
 */
 
-if (!$previewMode) {
+$subscriptionValid = false;
 
-    $now = new DateTime();
+$now =
+    new DateTime();
 
-    $subscriptionValid = false;
+
+if (
+    $store['subscription_plan']
+    === 'trial'
+) {
 
     if (
-        $store['subscription_plan']
-        === 'trial'
+        !empty($store['trial_ends_at'])
     ) {
 
-        if (
-            !empty($store['trial_ends_at'])
-            && new DateTime(
-                $store['trial_ends_at']
-            ) >= $now
-        ) {
+        try {
 
-            $subscriptionValid = true;
-        }
-    } elseif (
-        in_array(
-            $store['subscription_plan'],
-            [
-                'monthly',
-                'quarterly',
-                'yearly'
-            ],
-            true
-        )
-    ) {
+            $trialEnd =
+                new DateTime(
+                    $store['trial_ends_at']
+                );
 
-        if (
-            !empty($store['subscription_ends_at'])
-            && new DateTime(
-                $store['subscription_ends_at']
-            ) >= $now
-        ) {
 
-            $subscriptionValid = true;
+            if (
+                $trialEnd >= $now
+            ) {
+
+                $subscriptionValid =
+                    true;
+            }
+        } catch (Throwable $e) {
+
+            $subscriptionValid =
+                false;
         }
     }
+} elseif (
+    in_array(
+        $store['subscription_plan'],
+        [
+            'monthly',
+            'quarterly',
+            'yearly'
+        ],
+        true
+    )
+) {
+
+    if (
+        !empty($store['subscription_ends_at'])
+    ) {
+
+        try {
+
+            $subscriptionEnd =
+                new DateTime(
+                    $store['subscription_ends_at']
+                );
 
 
-    if (!$subscriptionValid) {
+            if (
+                $subscriptionEnd
+                >= $now
+            ) {
 
-        http_response_code(403);
+                $subscriptionValid =
+                    true;
+            }
+        } catch (Throwable $e) {
 
-        die('This store is currently unavailable.');
+            $subscriptionValid =
+                false;
+        }
     }
 }
 
 
 /*
+ * Only customers are blocked by subscription.
+ *
+ * Admin and Super Admin previews remain available.
+ */
+if (
+    !$previewMode
+    && !$subscriptionValid
+) {
+
+    http_response_code(403);
+
+    die('This store is currently unavailable.');
+}
+
+
+/*
 |--------------------------------------------------------------------------
-| DISPLAY VALUES
+| STORE DETAILS
 |--------------------------------------------------------------------------
 */
 
 $storeName =
-    trim((string)($store['display_name'] ?? '')) !== ''
-    ? $store['display_name']
-    : $store['company_name'];
+    trim(
+        (string)(
+            $store['display_name']
+            ?? ''
+        )
+    );
+
+if ($storeName === '') {
+
+    $storeName =
+        $store['company_name'];
+}
+
+
+$description =
+    trim(
+        (string)(
+            $store['description']
+            ?? ''
+        )
+    );
+
+
+$address =
+    trim(
+        (string)(
+            $store['address']
+            ?? ''
+        )
+    );
+
+
+$phone =
+    trim(
+        (string)(
+            $store['storefront_phone']
+            ?? ''
+        )
+    );
+
+if ($phone === '') {
+
+    $phone =
+        trim(
+            (string)(
+                $store['company_phone']
+                ?? ''
+            )
+        );
+}
+
+
+$email =
+    trim(
+        (string)(
+            $store['storefront_email']
+            ?? ''
+        )
+    );
+
+if ($email === '') {
+
+    $email =
+        trim(
+            (string)(
+                $store['company_email']
+                ?? ''
+            )
+        );
+}
+
+
+$whatsapp =
+    trim(
+        (string)(
+            $store['whatsapp']
+            ?? ''
+        )
+    );
+
+
+$deliveryInformation =
+    trim(
+        (string)(
+            $store['delivery_information']
+            ?? ''
+        )
+    );
+
+
+$storeOpen =
+    ($store['store_status']
+        ?? 'open')
+    === 'open';
+
 
 $primaryColor =
-    preg_match(
-        '/^#[0-9A-Fa-f]{6}$/',
-        (string)($store['primary_color'] ?? '')
-    )
-    ? $store['primary_color']
-    : '#198754';
+    trim(
+        (string)(
+            $store['primary_color']
+            ?? ''
+        )
+    );
 
-$isOpen =
-    ($store['store_status'] ?? 'open')
-    === 'open';
+
+if (
+    !preg_match(
+        '/^#[A-Fa-f0-9]{6}$/',
+        $primaryColor
+    )
+) {
+
+    $primaryColor =
+        '#198754';
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| STORE LOGO
+|--------------------------------------------------------------------------
+*/
+
+$logoStored =
+    !empty($store['storefront_logo'])
+    ? $store['storefront_logo']
+    : (
+        $store['company_logo']
+        ?? ''
+    );
+
+
+$storeLogo =
+    resolveStoredImage(
+        $logoStored,
+        'storefront'
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| BANNER
+|--------------------------------------------------------------------------
+*/
+
+$bannerImage = '';
+
+if (
+    !empty($store['banner_image'])
+) {
+
+    $bannerImage =
+        resolveStoredImage(
+            $store['banner_image'],
+            'storefront'
+        );
+
+
+    /*
+     * Do not use generic product placeholder
+     * as a storefront banner.
+     */
+    if (
+        str_contains(
+            $bannerImage,
+            'product-placeholder.svg'
+        )
+    ) {
+
+        $bannerImage = '';
+    }
+}
 
 
 /*
@@ -202,44 +889,39 @@ $isOpen =
 */
 
 $search =
-    trim($_GET['q'] ?? '');
+    trim(
+        $_GET['q'] ?? ''
+    );
+
 
 $categoryId =
-    (int)($_GET['category'] ?? 0);
+    isset($_GET['category'])
+    ? (int)$_GET['category']
+    : 0;
 
 
 /*
 |--------------------------------------------------------------------------
-| CATEGORIES
+| LOAD CATEGORIES
 |--------------------------------------------------------------------------
 */
 
 $stmt = $conn->prepare("
     SELECT
-        c.id,
-        c.name,
+        id,
+        name
 
-        COUNT(p.id) AS product_count
+    FROM categories
 
-    FROM categories c
+    WHERE company_id = ?
+      AND status = 'active'
 
-    LEFT JOIN products p
-        ON p.category_id = c.id
-        AND p.company_id = c.company_id
-        AND p.status = 'active'
-
-    WHERE c.company_id = ?
-      AND c.status = 'active'
-
-    GROUP BY
-        c.id,
-        c.name
-
-    ORDER BY
-        c.name ASC
+    ORDER BY name ASC
 ");
 
-$stmt->execute([$companyId]);
+$stmt->execute([
+    $companyId
+]);
 
 $categories =
     $stmt->fetchAll();
@@ -247,40 +929,17 @@ $categories =
 
 /*
 |--------------------------------------------------------------------------
-| VALIDATE CATEGORY
+| LOAD PRODUCTS
 |--------------------------------------------------------------------------
-*/
-
-if ($categoryId > 0) {
-
-    $stmt = $conn->prepare("
-        SELECT id
-        FROM categories
-        WHERE id = ?
-          AND company_id = ?
-          AND status = 'active'
-        LIMIT 1
-    ");
-
-    $stmt->execute([
-        $categoryId,
-        $companyId
-    ]);
-
-    if (!$stmt->fetch()) {
-        $categoryId = 0;
-    }
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| PRODUCTS
+|
+| Important:
+| We read BOTH products.image and product_images.image.
 |--------------------------------------------------------------------------
 */
 
 $sql = "
     SELECT
+
         p.id,
         p.company_id,
         p.category_id,
@@ -290,12 +949,15 @@ $sql = "
         p.stock,
         p.unit,
         p.image,
+        p.status,
 
-        c.name AS category_name,
+        cat.name AS category_name,
 
         (
             SELECT pi.image
+
             FROM product_images pi
+
             WHERE pi.product_id = p.id
 
             ORDER BY
@@ -308,25 +970,18 @@ $sql = "
 
     FROM products p
 
-    LEFT JOIN categories c
-        ON c.id = p.category_id
-        AND c.company_id = p.company_id
+    LEFT JOIN categories cat
+        ON cat.id = p.category_id
+        AND cat.company_id = p.company_id
 
     WHERE p.company_id = ?
       AND p.status = 'active'
 ";
 
-$params = [$companyId];
 
-
-if ($categoryId > 0) {
-
-    $sql .= "
-        AND p.category_id = ?
-    ";
-
-    $params[] = $categoryId;
-}
+$params = [
+    $companyId
+];
 
 
 if ($search !== '') {
@@ -335,25 +990,53 @@ if ($search !== '') {
         AND (
             p.name LIKE ?
             OR p.description LIKE ?
+            OR cat.name LIKE ?
         )
     ";
 
-    $like = '%' . $search . '%';
+    $like =
+        '%' . $search . '%';
 
+    $params[] = $like;
     $params[] = $like;
     $params[] = $like;
 }
 
 
+if ($categoryId > 0) {
+
+    $sql .= "
+        AND p.category_id = ?
+    ";
+
+    $params[] =
+        $categoryId;
+}
+
+
 $sql .= "
     ORDER BY
-        p.created_at DESC
+        p.id DESC
 ";
 
-$stmt = $conn->prepare($sql);
+
+$stmt =
+    $conn->prepare($sql);
+
 $stmt->execute($params);
 
-$products = $stmt->fetchAll();
+$products =
+    $stmt->fetchAll();
+
+
+/*
+|--------------------------------------------------------------------------
+| PRODUCT COUNT
+|--------------------------------------------------------------------------
+*/
+
+$totalProducts =
+    count($products);
 
 
 /*
@@ -364,7 +1047,11 @@ $products = $stmt->fetchAll();
 
 $cartCount = 0;
 
-if ($role === 'customer') {
+
+if (
+    $role === 'customer'
+    && $userId > 0
+) {
 
     $stmt = $conn->prepare("
         SELECT
@@ -372,13 +1059,16 @@ if ($role === 'customer') {
                 SUM(quantity),
                 0
             )
+
         FROM cart
+
         WHERE user_id = ?
     ");
 
     $stmt->execute([
-        currentUserId()
+        $userId
     ]);
+
 
     $cartCount =
         (int)$stmt->fetchColumn();
@@ -387,101 +1077,27 @@ if ($role === 'customer') {
 
 /*
 |--------------------------------------------------------------------------
-| PRODUCT IMAGE
-|--------------------------------------------------------------------------
-*/
-
-function storefrontProductImage(
-    array $product
-): string {
-
-    $image =
-        $product['primary_image']
-        ?? $product['image']
-        ?? null;
-
-    if (!$image) {
-        return 'assets/images/product-placeholder.svg';
-    }
-
-    $image = str_replace(
-        '\\',
-        '/',
-        trim($image)
-    );
-
-    $image = ltrim(
-        $image,
-        '/'
-    );
-
-    if (
-        str_starts_with(
-            $image,
-            'http://'
-        )
-        || str_starts_with(
-            $image,
-            'https://'
-        )
-    ) {
-
-        return $image;
-    }
-
-    if (
-        str_starts_with(
-            $image,
-            'uploads/'
-        )
-        || str_starts_with(
-            $image,
-            'assets/'
-        )
-    ) {
-
-        return $image;
-    }
-
-    if (
-        str_starts_with(
-            $image,
-            'products/'
-        )
-    ) {
-
-        return
-            'uploads/'
-            . $image;
-    }
-
-    return
-        'uploads/products/'
-        . $image;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| WHATSAPP
+| WHATSAPP URL
 |--------------------------------------------------------------------------
 */
 
 $whatsappUrl = '';
 
-if (!empty($store['whatsapp'])) {
+if ($whatsapp !== '') {
 
-    $number = preg_replace(
-        '/[^0-9]/',
-        '',
-        $store['whatsapp']
-    );
+    $whatsappNumber =
+        preg_replace(
+            '/[^0-9]/',
+            '',
+            $whatsapp
+        );
 
-    if ($number !== '') {
+
+    if ($whatsappNumber !== '') {
 
         $whatsappUrl =
             'https://wa.me/'
-            . $number;
+            . $whatsappNumber;
     }
 }
 
@@ -499,232 +1115,574 @@ if (!empty($store['whatsapp'])) {
         content="width=device-width, initial-scale=1">
 
     <title>
-        <?= htmlspecialchars($storeName) ?>
+        <?= h($storeName) ?>
         | Grocery Delivery
     </title>
+
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet">
 
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
         rel="stylesheet">
 
+
     <style>
         :root {
-            --store-primary:
-                <?= htmlspecialchars(
-                    $primaryColor
-                ) ?>;
 
-            --market-dark: #111827;
+            --store-primary:
+                <?= h($primaryColor) ?>;
+
+            --page-bg:
+                #f7f8fa;
+
+            --border:
+                #e9ecef;
+
+            --text:
+                #182230;
+
+            --muted:
+                #667085;
+
         }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
 
         body {
-            background: #f7f8fa;
-            color: #17202a;
+
+            margin: 0;
+
+            background:
+                var(--page-bg);
+
+            color:
+                var(--text);
+
+            font-family:
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
         }
 
 
-        /* NAV */
+        a {
+            text-decoration: none;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PREVIEW BAR
+        |--------------------------------------------------------------------------
+        */
+
+        .preview-bar {
+
+            background:
+                #101828;
+
+            color:
+                #fff;
+
+            padding:
+                10px 15px;
+
+            text-align: center;
+
+            font-size:
+                .88rem;
+
+            position:
+                relative;
+
+            z-index:
+                1100;
+
+        }
+
+
+        .preview-bar strong {
+
+            color:
+                #7be2a8;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NAVIGATION
+        |--------------------------------------------------------------------------
+        */
 
         .store-nav {
+
+            position:
+                sticky;
+
+            top:
+                0;
+
+            z-index:
+                1000;
+
             background:
-                rgba(255, 255, 255, .97);
-
-            border-bottom:
-                1px solid #e8eaed;
-
-            position: sticky;
-
-            top: 0;
-
-            z-index: 1000;
+                rgba(255,
+                    255,
+                    255,
+                    .97);
 
             backdrop-filter:
-                blur(10px);
+                blur(12px);
+
+            border-bottom:
+                1px solid var(--border);
+
         }
 
 
-        .store-logo-small {
-            width: 44px;
-            height: 44px;
+        .store-brand {
 
-            border-radius: 12px;
+            display:
+                flex;
 
-            object-fit: cover;
+            align-items:
+                center;
+
+            gap:
+                10px;
+
+            min-width:
+                0;
+
+        }
+
+
+        .nav-logo {
+
+            width:
+                42px;
+
+            height:
+                42px;
+
+            object-fit:
+                cover;
+
+            border-radius:
+                12px;
 
             border:
-                1px solid #eee;
-        }
-
-
-        .logo-placeholder-small {
-
-            width: 44px;
-            height: 44px;
-
-            border-radius: 12px;
-
-            display: flex;
-            justify-content: center;
-            align-items: center;
-
-            color: #fff;
+                1px solid var(--border);
 
             background:
-                var(--store-primary);
+                #f2f4f7;
+
         }
 
 
-        .cart-button {
+        .store-brand-name {
 
-            width: 44px;
-            height: 44px;
+            font-weight:
+                750;
 
-            border-radius: 12px;
+            color:
+                var(--text);
 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            white-space:
+                nowrap;
+
+            overflow:
+                hidden;
+
+            text-overflow:
+                ellipsis;
+
+            max-width:
+                260px;
+
         }
 
 
-        /* HERO */
+        /*
+        |--------------------------------------------------------------------------
+        | HERO
+        |--------------------------------------------------------------------------
+        */
 
         .store-hero {
 
-            min-height: 340px;
+            position:
+                relative;
 
-            position: relative;
+            overflow:
+                hidden;
+
+            border-radius:
+                26px;
+
+            min-height:
+                330px;
 
             background:
                 linear-gradient(135deg,
-                    var(--store-primary),
-                    #111827);
+                    #172033,
+                    #101828);
 
-            background-size: cover;
+            color:
+                #fff;
 
-            background-position: center;
-
-            display: flex;
-
-            align-items: center;
-
-            overflow: hidden;
         }
 
 
-        .store-hero-overlay {
+        .hero-banner {
 
-            position: absolute;
+            position:
+                absolute;
 
-            inset: 0;
+            inset:
+                0;
+
+            width:
+                100%;
+
+            height:
+                100%;
+
+            object-fit:
+                cover;
+
+        }
+
+
+        .hero-overlay {
+
+            position:
+                absolute;
+
+            inset:
+                0;
 
             background:
                 linear-gradient(90deg,
-                    rgba(0, 0, 0, .78),
-                    rgba(0, 0, 0, .28));
+                    rgba(16,
+                        24,
+                        40,
+                        .94),
+                    rgba(16,
+                        24,
+                        40,
+                        .65),
+                    rgba(16,
+                        24,
+                        40,
+                        .30));
+
         }
 
 
         .hero-content {
 
-            position: relative;
+            position:
+                relative;
 
-            z-index: 2;
+            z-index:
+                2;
 
-            color: white;
+            padding:
+                45px;
 
-            max-width: 720px;
+            min-height:
+                330px;
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
         }
 
 
         .hero-logo {
 
-            width: 90px;
-            height: 90px;
+            width:
+                88px;
 
-            border-radius: 22px;
+            height:
+                88px;
 
-            background: #fff;
+            border-radius:
+                22px;
 
-            object-fit: cover;
+            object-fit:
+                cover;
 
             border:
-                4px solid white;
+                4px solid rgba(255,
+                    255,
+                    255,
+                    .2);
+
+            background:
+                #fff;
+
         }
 
 
-        /* CATEGORY */
+        .store-status {
+
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            gap:
+                6px;
+
+            border-radius:
+                999px;
+
+            padding:
+                7px 12px;
+
+            font-size:
+                .8rem;
+
+            font-weight:
+                700;
+
+        }
+
+
+        .store-open {
+
+            background:
+                rgba(25,
+                    135,
+                    84,
+                    .22);
+
+            color:
+                #a6efc1;
+
+        }
+
+
+        .store-closed {
+
+            background:
+                rgba(220,
+                    53,
+                    69,
+                    .23);
+
+            color:
+                #ffafb7;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | INFORMATION CARDS
+        |--------------------------------------------------------------------------
+        */
+
+        .info-card {
+
+            background:
+                #fff;
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                18px;
+
+            padding:
+                20px;
+
+            height:
+                100%;
+
+        }
+
+
+        .info-icon {
+
+            width:
+                42px;
+
+            height:
+                42px;
+
+            border-radius:
+                12px;
+
+            display:
+                flex;
+
+            justify-content:
+                center;
+
+            align-items:
+                center;
+
+            background:
+                color-mix(in srgb,
+                    var(--store-primary) 12%,
+                    white);
+
+            color:
+                var(--store-primary);
+
+            flex-shrink:
+                0;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SEARCH
+        |--------------------------------------------------------------------------
+        */
+
+        .filter-panel {
+
+            background:
+                #fff;
+
+            border:
+                1px solid var(--border);
+
+            border-radius:
+                20px;
+
+            padding:
+                18px;
+
+        }
+
+
+        .search-control {
+
+            min-height:
+                48px;
+
+            border-radius:
+                13px;
+
+        }
+
 
         .category-scroll {
 
-            display: flex;
+            display:
+                flex;
 
-            gap: 10px;
+            gap:
+                9px;
 
-            overflow-x: auto;
+            overflow-x:
+                auto;
 
-            padding-bottom: 8px;
+            padding-bottom:
+                4px;
 
-            scrollbar-width: thin;
+            scrollbar-width:
+                thin;
+
         }
 
 
         .category-pill {
 
-            white-space: nowrap;
+            display:
+                inline-flex;
 
-            text-decoration: none;
+            white-space:
+                nowrap;
 
             border:
-                1px solid #dee2e6;
+                1px solid var(--border);
 
-            color: #343a40;
+            background:
+                #fff;
 
-            background: white;
-
-            border-radius: 999px;
+            color:
+                #475467;
 
             padding:
-                9px 16px;
+                9px 14px;
+
+            border-radius:
+                999px;
+
+            font-size:
+                .88rem;
+
+            transition:
+                .2s;
+
         }
 
 
         .category-pill:hover,
         .category-pill.active {
 
-            color: #fff;
+            color:
+                #fff;
 
             background:
                 var(--store-primary);
 
             border-color:
                 var(--store-primary);
+
         }
 
 
-        /* PRODUCT */
+        /*
+        |--------------------------------------------------------------------------
+        | PRODUCT CARD
+        |--------------------------------------------------------------------------
+        */
 
         .product-card {
 
-            border: 0;
+            height:
+                100%;
 
-            border-radius: 20px;
+            background:
+                #fff;
 
-            background: #fff;
+            border:
+                1px solid var(--border);
 
-            height: 100%;
+            border-radius:
+                20px;
 
-            overflow: hidden;
-
-            box-shadow:
-                0 7px 24px rgba(0, 0, 0, .06);
+            overflow:
+                hidden;
 
             transition:
-                .2s ease;
+                transform .2s ease,
+                box-shadow .2s ease;
+
         }
 
 
@@ -734,30 +1692,153 @@ if (!empty($store['whatsapp'])) {
                 translateY(-4px);
 
             box-shadow:
-                0 14px 35px rgba(0, 0, 0, .1);
+                0 16px 35px rgba(16,
+                    24,
+                    40,
+                    .09);
+
+        }
+
+
+        .product-image-wrap {
+
+            position:
+                relative;
+
+            background:
+                #f2f4f7;
+
+            overflow:
+                hidden;
+
         }
 
 
         .product-image {
 
-            width: 100%;
+            width:
+                100%;
 
-            height: 220px;
+            height:
+                220px;
 
-            object-fit: cover;
+            object-fit:
+                cover;
 
-            background: #f1f3f5;
+            display:
+                block;
+
+            transition:
+                transform .35s ease;
+
+        }
+
+
+        .product-card:hover .product-image {
+
+            transform:
+                scale(1.035);
+
+        }
+
+
+        .stock-badge {
+
+            position:
+                absolute;
+
+            top:
+                13px;
+
+            right:
+                13px;
+
+            padding:
+                6px 9px;
+
+            border-radius:
+                999px;
+
+            font-size:
+                .72rem;
+
+            font-weight:
+                700;
+
+            background:
+                rgba(255,
+                    255,
+                    255,
+                    .94);
+
+            box-shadow:
+                0 3px 12px rgba(0,
+                    0,
+                    0,
+                    .08);
+
+        }
+
+
+        .product-body {
+
+            padding:
+                18px;
+
+        }
+
+
+        .product-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+
+            min-height: 48px;
+        }
+
+
+        .product-description {
+            color: var(--muted);
+            font-size: .86rem;
+
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+
+            min-height: 41px;
         }
 
 
         .product-price {
 
-            font-weight: 800;
+            font-weight:
+                800;
 
-            font-size: 1.12rem;
+            font-size:
+                1.14rem;
 
             color:
                 var(--store-primary);
+
+        }
+
+
+        .product-unit {
+
+            color:
+                var(--muted);
+
+            font-size:
+                .8rem;
+
         }
 
 
@@ -769,7 +1850,12 @@ if (!empty($store['whatsapp'])) {
             border-color:
                 var(--store-primary);
 
-            color: #fff;
+            color:
+                #fff;
+
+            border-radius:
+                11px;
+
         }
 
 
@@ -781,61 +1867,153 @@ if (!empty($store['whatsapp'])) {
             border-color:
                 var(--store-primary);
 
-            color: #fff;
+            color:
+                #fff;
 
-            opacity: .9;
+            filter:
+                brightness(.92);
+
         }
 
 
-        .store-info {
+        /*
+        |--------------------------------------------------------------------------
+        | EMPTY STATE
+        |--------------------------------------------------------------------------
+        */
 
-            background: #fff;
+        .empty-state {
+
+            background:
+                #fff;
 
             border:
-                1px solid #e9ecef;
+                1px solid var(--border);
 
-            border-radius: 18px;
+            border-radius:
+                22px;
 
-            height: 100%;
+            padding:
+                65px 25px;
+
+            text-align:
+                center;
+
         }
 
 
-        .preview-banner {
+        .empty-icon {
 
-            background: #fff3cd;
+            width:
+                70px;
 
-            border-bottom:
-                1px solid #ffe69c;
+            height:
+                70px;
 
-            padding: 10px;
+            margin:
+                0 auto 18px;
 
-            text-align: center;
+            border-radius:
+                20px;
 
-            color: #664d03;
+            display:
+                flex;
 
-            font-size: .9rem;
-        }
+            justify-content:
+                center;
 
+            align-items:
+                center;
 
-        footer {
-
-            background: #111827;
+            background:
+                #f2f4f7;
 
             color:
-                rgba(255, 255, 255, .75);
+                #667085;
+
+            font-size:
+                1.7rem;
+
         }
 
 
-        @media(max-width:767px) {
+        /*
+        |--------------------------------------------------------------------------
+        | CLOSED STORE
+        |--------------------------------------------------------------------------
+        */
+
+        .closed-message {
+
+            border:
+                0;
+
+            border-radius:
+                18px;
+
+            background:
+                #fff3cd;
+
+            color:
+                #664d03;
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MOBILE
+        |--------------------------------------------------------------------------
+        */
+
+        @media(max-width: 767px) {
+
+            .store-brand-name {
+
+                max-width:
+                    150px;
+
+            }
+
+
+            .hero-content {
+
+                padding:
+                    28px 22px;
+
+                min-height:
+                    290px;
+
+            }
+
 
             .store-hero {
 
-                min-height: 300px;
+                min-height:
+                    290px;
+
+                border-radius:
+                    20px;
+
             }
+
+
+            .hero-logo {
+
+                width:
+                    70px;
+
+                height:
+                    70px;
+
+            }
+
 
             .product-image {
 
-                height: 180px;
+                height:
+                    180px;
+
             }
 
         }
@@ -863,14 +2041,40 @@ if (!empty($store['whatsapp'])) {
     ?>
 
 
+    <!-- =========================================================
+     PREVIEW MODE
+========================================================= -->
+
     <?php if ($previewMode): ?>
 
-        <div class="preview-banner">
+        <div class="preview-bar">
 
             <i
                 class="bi bi-eye me-1"></i>
 
-            Storefront Preview Mode
+
+            <?php if (
+                $previewType
+                === 'super_admin'
+            ): ?>
+
+                <strong>
+                    SUPER ADMIN PREVIEW
+                </strong>
+
+                — You are viewing this storefront
+                as a platform administrator.
+
+            <?php else: ?>
+
+                <strong>
+                    STOREFRONT PREVIEW
+                </strong>
+
+                — Customers see this storefront
+                in the marketplace.
+
+            <?php endif; ?>
 
         </div>
 
@@ -883,32 +2087,55 @@ if (!empty($store['whatsapp'])) {
 
     <nav class="store-nav">
 
-        <div class="container py-3">
+        <div class="container">
 
             <div
-                class="d-flex align-items-center justify-content-between gap-3">
+                class="d-flex align-items-center justify-content-between py-3 gap-3">
 
 
                 <div
                     class="d-flex align-items-center gap-3">
 
 
-                    <?php if ($role === 'customer'): ?>
+                    <!-- BACK -->
+
+                    <?php if (
+                        $role === 'customer'
+                    ): ?>
 
                         <a
                             href="/somame_ent/marketplace.php"
-                            class="btn btn-light border">
+                            class="btn btn-light border"
+                            title="Back to Marketplace">
 
                             <i
                                 class="bi bi-arrow-left"></i>
 
                         </a>
 
+
+                    <?php elseif (
+                        $role
+                        === 'super_admin'
+                    ): ?>
+
+                        <a
+                            href="/somame_ent/super_admin/companies.php"
+                            class="btn btn-light border"
+                            title="Back to Companies">
+
+                            <i
+                                class="bi bi-arrow-left"></i>
+
+                        </a>
+
+
                     <?php else: ?>
 
                         <a
                             href="/somame_ent/admin/storefront.php"
-                            class="btn btn-light border">
+                            class="btn btn-light border"
+                            title="Back to Storefront Management">
 
                             <i
                                 class="bi bi-arrow-left"></i>
@@ -918,75 +2145,61 @@ if (!empty($store['whatsapp'])) {
                     <?php endif; ?>
 
 
-                    <a
-                        href="/somame_ent/store.php?store=<?= urlencode($slug) ?>"
-                        class="text-decoration-none text-dark">
+                    <div class="store-brand">
+
+                        <img
+                            src="<?= h(
+                                        $storeLogo
+                                    ) ?>"
+                            class="nav-logo"
+                            alt="<?= h(
+                                        $storeName
+                                    ) ?>"
+                            onerror="
+                            this.onerror=null;
+                            this.src='/somame_ent/assets/images/product-placeholder.svg';
+                        ">
+
 
                         <div
-                            class="d-flex align-items-center gap-2">
+                            class="store-brand-name">
 
-
-                            <?php if (
-                                !empty($store['logo'])
-                            ): ?>
-
-                                <img
-                                    src="<?= htmlspecialchars(
-                                                $store['logo']
-                                            ) ?>"
-                                    class="store-logo-small"
-                                    alt="<?= htmlspecialchars(
-                                                $storeName
-                                            ) ?>">
-
-                            <?php else: ?>
-
-                                <div
-                                    class="logo-placeholder-small">
-
-                                    <i
-                                        class="bi bi-shop"></i>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <div>
-
-                                <strong
-                                    class="d-block lh-sm">
-
-                                    <?= htmlspecialchars(
-                                        $storeName
-                                    ) ?>
-
-                                </strong>
-
-                                <small
-                                    class="text-muted">
-
-                                    Storefront
-
-                                </small>
-
-                            </div>
+                            <?= h(
+                                $storeName
+                            ) ?>
 
                         </div>
 
-                    </a>
+                    </div>
 
                 </div>
 
 
-                <?php if ($role === 'customer'): ?>
+                <!-- CUSTOMER ACTIONS -->
+
+                <?php if (
+                    $role === 'customer'
+                ): ?>
 
                     <div
                         class="d-flex align-items-center gap-2">
 
                         <a
+                            href="/somame_ent/orders.php"
+                            class="btn btn-light border d-none d-sm-inline-flex">
+
+                            <i
+                                class="bi bi-receipt me-1"></i>
+
+                            Orders
+
+                        </a>
+
+
+                        <a
                             href="/somame_ent/cart.php"
-                            class="btn btn-light border cart-button position-relative">
+                            class="btn btn-light border position-relative"
+                            title="Cart">
 
                             <i
                                 class="bi bi-cart3"></i>
@@ -1007,18 +2220,10 @@ if (!empty($store['whatsapp'])) {
 
                         </a>
 
-
-                        <a
-                            href="/somame_ent/customer/dashboard.php"
-                            class="btn btn-store d-none d-md-inline-block">
-
-                            My Account
-
-                        </a>
-
                     </div>
 
                 <?php endif; ?>
+
 
             </div>
 
@@ -1027,140 +2232,275 @@ if (!empty($store['whatsapp'])) {
     </nav>
 
 
-    <!-- =========================================================
-     HERO
-========================================================= -->
-
-    <section
-        class="store-hero"
-
-        <?php if (
-            !empty($store['banner_image'])
-        ): ?>
-
-        style="
-            background-image:
-            url('<?= htmlspecialchars(
-                        $store['banner_image']
-                    ) ?>');
-        "
-
-        <?php endif; ?>>
-
-        <div
-            class="store-hero-overlay"></div>
+    <main class="container py-4">
 
 
-        <div class="container">
+        <!-- =====================================================
+         HERO
+    ====================================================== -->
 
-            <div
-                class="hero-content py-5">
-
-
-                <?php if (
-                    !empty($store['logo'])
-                ): ?>
-
-                    <img
-                        src="<?= htmlspecialchars(
-                                    $store['logo']
-                                ) ?>"
-                        class="hero-logo mb-3"
-                        alt="<?= htmlspecialchars(
-                                    $storeName
-                                ) ?>">
-
-                <?php endif; ?>
+        <section
+            class="store-hero mb-4">
 
 
-                <?php if ($isOpen): ?>
+            <?php if (
+                $bannerImage !== ''
+            ): ?>
 
-                    <span
-                        class="badge rounded-pill text-bg-success mb-3">
+                <img
+                    src="<?= h(
+                                $bannerImage
+                            ) ?>"
+                    class="hero-banner"
+                    alt="">
 
-                        <i
-                            class="bi bi-circle-fill me-1"
-                            style="font-size:.5rem;"></i>
-
-                        Open for orders
-
-                    </span>
-
-                <?php else: ?>
-
-                    <span
-                        class="badge rounded-pill text-bg-secondary mb-3">
-
-                        <i
-                            class="bi bi-clock me-1"></i>
-
-                        Currently closed
-
-                    </span>
-
-                <?php endif; ?>
+            <?php endif; ?>
 
 
-                <h1
-                    class="display-5 fw-bold">
-
-                    <?= htmlspecialchars(
-                        $storeName
-                    ) ?>
-
-                </h1>
+            <div class="hero-overlay"></div>
 
 
-                <?php if (
-                    !empty($store['description'])
-                ): ?>
+            <div class="hero-content">
 
-                    <p class="lead mt-3 mb-0">
+                <div
+                    class="row w-100 align-items-center">
 
-                        <?= nl2br(
-                            htmlspecialchars(
-                                $store['description']
-                            )
-                        ) ?>
+                    <div
+                        class="col-lg-8">
 
-                    </p>
+                        <div
+                            class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-3 mb-3">
 
-                <?php endif; ?>
+                            <img
+                                src="<?= h(
+                                            $storeLogo
+                                        ) ?>"
+                                alt="<?= h(
+                                            $storeName
+                                        ) ?>"
+                                class="hero-logo"
+                                onerror="
+                                this.onerror=null;
+                                this.src='/somame_ent/assets/images/product-placeholder.svg';
+                            ">
 
+
+                            <div>
+
+                                <div
+                                    class="mb-2">
+
+                                    <span
+                                        class="store-status <?= $storeOpen
+                                                                ? 'store-open'
+                                                                : 'store-closed' ?>">
+
+                                        <i
+                                            class="bi <?= $storeOpen
+                                                            ? 'bi-check-circle-fill'
+                                                            : 'bi-clock-fill' ?>"></i>
+
+                                        <?= $storeOpen
+                                            ? 'Open'
+                                            : 'Closed' ?>
+
+                                    </span>
+
+                                </div>
+
+
+                                <h1
+                                    class="fw-bold mb-0">
+
+                                    <?= h(
+                                        $storeName
+                                    ) ?>
+
+                                </h1>
+
+                            </div>
+
+                        </div>
+
+
+                        <?php if (
+                            $description !== ''
+                        ): ?>
+
+                            <p
+                                class="mb-3"
+                                style="
+                                max-width:650px;
+                                color:
+                                rgba(
+                                    255,
+                                    255,
+                                    255,
+                                    .74
+                                );
+                            ">
+
+                                <?= nl2br(
+                                    h(
+                                        $description
+                                    )
+                                ) ?>
+
+                            </p>
+
+                        <?php endif; ?>
+
+
+                        <div
+                            class="d-flex flex-wrap gap-3 small"
+                            style="
+                            color:
+                            rgba(
+                                255,
+                                255,
+                                255,
+                                .72
+                            );
+                        ">
+
+
+                            <?php if (
+                                $address !== ''
+                            ): ?>
+
+                                <span>
+
+                                    <i
+                                        class="bi bi-geo-alt me-1"></i>
+
+                                    <?= h(
+                                        $address
+                                    ) ?>
+
+                                </span>
+
+                            <?php endif; ?>
+
+
+                            <span>
+
+                                <i
+                                    class="bi bi-bag me-1"></i>
+
+                                <?= $totalProducts ?>
+
+                                product<?= $totalProducts === 1
+                                            ? ''
+                                            : 's' ?>
+
+                            </span>
+
+
+                        </div>
+
+                    </div>
+
+                </div>
 
             </div>
 
-        </div>
-
-    </section>
+        </section>
 
 
-    <!-- =========================================================
-     STORE INFO
-========================================================= -->
+        <!-- =====================================================
+         CLOSED MESSAGE
+    ====================================================== -->
 
-    <section class="py-4">
+        <?php if (
+            !$storeOpen
+        ): ?>
 
-        <div class="container">
+            <div
+                class="alert closed-message mb-4">
 
-            <div class="row g-3">
+                <div
+                    class="d-flex gap-3">
+
+                    <i
+                        class="bi bi-clock-history fs-4"></i>
+
+
+                    <div>
+
+                        <strong
+                            class="d-block">
+                            Store currently closed
+                        </strong>
+
+                        <small>
+                            You can browse the products,
+                            but ordering is temporarily
+                            unavailable.
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        <?php endif; ?>
+
+
+        <!-- =====================================================
+         STORE INFORMATION
+    ====================================================== -->
+
+        <?php if (
+            $address !== ''
+            || $phone !== ''
+            || $email !== ''
+            || $whatsappUrl !== ''
+            || $deliveryInformation !== ''
+        ): ?>
+
+            <div
+                class="row g-3 mb-4">
 
 
                 <?php if (
-                    !empty($store['address'])
+                    $address !== ''
                 ): ?>
 
-                    <div class="col-md-4">
+                    <div
+                        class="col-md-6 col-xl-3">
 
                         <div
-                            class="store-info p-3">
+                            class="info-card">
 
-                            <i
-                                class="bi bi-geo-alt text-success me-2"></i>
+                            <div
+                                class="d-flex gap-3">
 
-                            <?= htmlspecialchars(
-                                $store['address']
-                            ) ?>
+                                <div
+                                    class="info-icon">
+
+                                    <i
+                                        class="bi bi-geo-alt"></i>
+
+                                </div>
+
+
+                                <div>
+
+                                    <small
+                                        class="text-muted d-block">
+                                        Location
+                                    </small>
+
+                                    <strong>
+                                        <?= h(
+                                            $address
+                                        ) ?>
+                                    </strong>
+
+                                </div>
+
+                            </div>
 
                         </div>
 
@@ -1170,20 +2510,49 @@ if (!empty($store['whatsapp'])) {
 
 
                 <?php if (
-                    !empty($store['phone'])
+                    $phone !== ''
                 ): ?>
 
-                    <div class="col-md-4">
+                    <div
+                        class="col-md-6 col-xl-3">
 
                         <div
-                            class="store-info p-3">
+                            class="info-card">
 
-                            <i
-                                class="bi bi-telephone text-success me-2"></i>
+                            <div
+                                class="d-flex gap-3">
 
-                            <?= htmlspecialchars(
-                                $store['phone']
-                            ) ?>
+                                <div
+                                    class="info-icon">
+
+                                    <i
+                                        class="bi bi-telephone"></i>
+
+                                </div>
+
+
+                                <div>
+
+                                    <small
+                                        class="text-muted d-block">
+                                        Contact
+                                    </small>
+
+                                    <a
+                                        href="tel:<?= h(
+                                                        $phone
+                                                    ) ?>"
+                                        class="fw-semibold text-dark">
+
+                                        <?= h(
+                                            $phone
+                                        ) ?>
+
+                                    </a>
+
+                                </div>
+
+                            </div>
 
                         </div>
 
@@ -1196,21 +2565,103 @@ if (!empty($store['whatsapp'])) {
                     $whatsappUrl !== ''
                 ): ?>
 
-                    <div class="col-md-4">
+                    <div
+                        class="col-md-6 col-xl-3">
 
-                        <a
-                            href="<?= htmlspecialchars(
-                                        $whatsappUrl
-                                    ) ?>"
-                            target="_blank"
-                            class="store-info p-3 d-block text-decoration-none text-dark">
+                        <div
+                            class="info-card">
 
-                            <i
-                                class="bi bi-whatsapp text-success me-2"></i>
+                            <div
+                                class="d-flex gap-3">
 
-                            Chat on WhatsApp
+                                <div
+                                    class="info-icon">
 
-                        </a>
+                                    <i
+                                        class="bi bi-whatsapp"></i>
+
+                                </div>
+
+
+                                <div>
+
+                                    <small
+                                        class="text-muted d-block">
+                                        WhatsApp
+                                    </small>
+
+                                    <a
+                                        href="<?= h(
+                                                    $whatsappUrl
+                                                ) ?>"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="fw-semibold"
+                                        style="
+                                        color:
+                                        var(
+                                            --store-primary
+                                        );
+                                    ">
+
+                                        Chat with store
+
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <?php if (
+                    $deliveryInformation !== ''
+                ): ?>
+
+                    <div
+                        class="col-md-6 col-xl-3">
+
+                        <div
+                            class="info-card">
+
+                            <div
+                                class="d-flex gap-3">
+
+                                <div
+                                    class="info-icon">
+
+                                    <i
+                                        class="bi bi-truck"></i>
+
+                                </div>
+
+
+                                <div>
+
+                                    <small
+                                        class="text-muted d-block">
+                                        Delivery
+                                    </small>
+
+                                    <span
+                                        class="fw-semibold">
+
+                                        <?= h(
+                                            $deliveryInformation
+                                        ) ?>
+
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
 
                     </div>
 
@@ -1219,121 +2670,155 @@ if (!empty($store['whatsapp'])) {
 
             </div>
 
-        </div>
-
-    </section>
+        <?php endif; ?>
 
 
-    <!-- =========================================================
-     PRODUCTS
-========================================================= -->
+        <!-- =====================================================
+         FILTERS
+    ====================================================== -->
 
-    <section
-        class="py-4 pb-5"
-        id="products">
+        <section
+            class="filter-panel mb-4">
 
-        <div class="container">
+            <form
+                method="GET"
+                action="/somame_ent/store.php">
 
-
-            <div
-                class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-
-                <div>
-
-                    <small
-                        class="text-success fw-bold text-uppercase">
-                        Shop
-                    </small>
-
-                    <h2 class="fw-bold mb-0">
-                        Products
-                    </h2>
-
-                </div>
+                <input
+                    type="hidden"
+                    name="store"
+                    value="<?= h(
+                                $storeSlug
+                            ) ?>">
 
 
-                <form
-                    method="GET"
-                    class="d-flex gap-2">
+                <?php if (
+                    $categoryId > 0
+                ): ?>
 
                     <input
                         type="hidden"
-                        name="store"
-                        value="<?= htmlspecialchars(
-                                    $slug
-                                ) ?>">
+                        name="category"
+                        value="<?= $categoryId ?>">
+
+                <?php endif; ?>
+
+
+                <div
+                    class="row g-2 align-items-center mb-3">
+
+                    <div
+                        class="col-md">
+
+                        <div
+                            class="input-group">
+
+                            <span
+                                class="input-group-text bg-white border-end-0 search-control">
+
+                                <i
+                                    class="bi bi-search text-muted"></i>
+
+                            </span>
+
+
+                            <input
+                                type="search"
+                                name="q"
+                                value="<?= h(
+                                            $search
+                                        ) ?>"
+                                class="form-control border-start-0 search-control"
+                                placeholder="Search products...">
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="col-md-auto">
+
+                        <button
+                            type="submit"
+                            class="btn btn-store px-4 search-control">
+
+                            Search
+
+                        </button>
+
+                    </div>
 
 
                     <?php if (
-                        $categoryId > 0
+                        $search !== ''
+                        || $categoryId > 0
                     ): ?>
 
-                        <input
-                            type="hidden"
-                            name="category"
-                            value="<?= $categoryId ?>">
+                        <div
+                            class="col-md-auto">
+
+                            <a
+                                href="/somame_ent/store.php?store=<?= urlencode(
+                                                                        $storeSlug
+                                                                    ) ?>"
+                                class="btn btn-light border search-control d-flex align-items-center">
+
+                                Clear
+
+                            </a>
+
+                        </div>
 
                     <?php endif; ?>
 
+                </div>
 
-                    <input
-                        type="search"
-                        name="q"
-                        class="form-control"
-                        placeholder="Search products..."
-                        value="<?= htmlspecialchars(
-                                    $search
-                                ) ?>">
+            </form>
 
-
-                    <button
-                        class="btn btn-store"
-                        type="submit">
-
-                        <i
-                            class="bi bi-search"></i>
-
-                    </button>
-
-                </form>
-
-            </div>
-
-
-            <!-- CATEGORY FILTER -->
 
             <div
-                class="category-scroll mb-4">
+                class="category-scroll">
 
                 <a
-                    href="/somame_ent/store.php?store=<?= urlencode($slug) ?>#products"
+                    href="/somame_ent/store.php?store=<?= urlencode(
+                                                            $storeSlug
+                                                        ) ?><?= $search !== ''
+                                                                ? '&q='
+                                                                . urlencode(
+                                                                    $search
+                                                                )
+                                                                : '' ?>"
                     class="category-pill <?= $categoryId === 0
                                                 ? 'active'
                                                 : '' ?>">
-                    All
+
+                    All Products
+
                 </a>
 
 
                 <?php foreach (
-                    $categories as $category
+                    $categories
+                    as $category
                 ): ?>
 
                     <a
-                        href="/somame_ent/store.php?store=<?= urlencode($slug) ?>&category=<?= (int)$category['id'] ?>#products"
+                        href="/somame_ent/store.php?store=<?= urlencode(
+                                                                $storeSlug
+                                                            ) ?>&category=<?= (int)$category['id'] ?><?= $search !== ''
+                                                                                                            ? '&q='
+                                                                                                            . urlencode(
+                                                                                                                $search
+                                                                                                            )
+                                                                                                            : '' ?>"
                         class="category-pill <?= $categoryId === (int)$category['id']
                                                     ? 'active'
                                                     : '' ?>">
 
-                        <?= htmlspecialchars(
+                        <?= h(
                             $category['name']
                         ) ?>
-
-                        <span class="ms-1">
-
-                            <?= (int)
-                            $category['product_count'] ?>
-
-                        </span>
 
                     </a>
 
@@ -1341,76 +2826,137 @@ if (!empty($store['whatsapp'])) {
 
             </div>
 
-
-            <?php if (
-                !$isOpen
-                && !$previewMode
-            ): ?>
-
-                <div
-                    class="alert alert-warning">
-
-                    <i
-                        class="bi bi-clock me-2"></i>
-
-                    This store is currently closed.
-                    You can browse products, but ordering
-                    is temporarily unavailable.
-
-                </div>
-
-            <?php endif; ?>
+        </section>
 
 
-            <div class="row g-4">
+        <!-- =====================================================
+         PRODUCTS HEADER
+    ====================================================== -->
+
+        <div
+            class="d-flex justify-content-between align-items-center mb-3">
+
+            <div>
+
+                <h4
+                    class="fw-bold mb-1">
+                    Products
+                </h4>
+
+                <small
+                    class="text-muted">
+
+                    <?= $totalProducts ?>
+
+                    item<?= $totalProducts === 1
+                            ? ''
+                            : 's' ?>
+
+                    found
+
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+         PRODUCTS
+    ====================================================== -->
+
+        <?php if (
+            !empty($products)
+        ): ?>
+
+            <div
+                class="row g-3 g-lg-4">
 
 
                 <?php foreach (
-                    $products as $product
+                    $products
+                    as $product
                 ): ?>
+
 
                     <?php
 
-                    $image =
+                    $productImage =
                         storefrontProductImage(
                             $product
                         );
 
                     $inStock =
-                        (float)
-                        $product['stock']
+                        (float)$product['stock']
                         > 0;
 
                     ?>
 
 
                     <div
-                        class="col-6 col-lg-4 col-xl-3">
+                        class="col-6 col-md-4 col-xl-3">
 
-                        <article
+                        <div
                             class="product-card">
 
 
-                            <div class="position-relative">
+                            <div
+                                class="product-image-wrap">
 
-                                <img
-                                    src="<?= htmlspecialchars(
-                                                $image
-                                            ) ?>"
-                                    class="product-image"
-                                    alt="<?= htmlspecialchars(
-                                                $product['name']
-                                            ) ?>"
-                                    onerror="
-                                    this.onerror=null;
-                                    this.src='assets/images/product-placeholder.svg';
-                                ">
+                                <?php if (
+                                    $role === 'customer'
+                                ): ?>
+
+                                    <a
+                                        href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                                                                                                $storeSlug
+                                                                                                            ) ?>">
+
+                                        <img
+                                            src="<?= h(
+                                                        $productImage
+                                                    ) ?>"
+                                            alt="<?= h(
+                                                        $product['name']
+                                                    ) ?>"
+                                            class="product-image"
+                                            loading="lazy"
+                                            onerror="
+                                            this.onerror=null;
+                                            this.src='/somame_ent/assets/images/product-placeholder.svg';
+                                        ">
+
+                                    </a>
+
+
+                                <?php else: ?>
+
+                                    <img
+                                        src="<?= h(
+                                                    $productImage
+                                                ) ?>"
+                                        alt="<?= h(
+                                                    $product['name']
+                                                ) ?>"
+                                        class="product-image"
+                                        loading="lazy"
+                                        onerror="
+                                        this.onerror=null;
+                                        this.src='/somame_ent/assets/images/product-placeholder.svg';
+                                    ">
+
+                                <?php endif; ?>
 
 
                                 <span
-                                    class="position-absolute top-0 end-0 m-2 badge <?= $inStock
-                                                                                        ? 'text-bg-success'
-                                                                                        : 'text-bg-danger' ?>">
+                                    class="stock-badge <?= $inStock
+                                                            ? 'text-success'
+                                                            : 'text-danger' ?>">
+
+                                    <i
+                                        class="bi <?= $inStock
+                                                        ? 'bi-check-circle'
+                                                        : 'bi-x-circle' ?> me-1"></i>
 
                                     <?= $inStock
                                         ? 'In Stock'
@@ -1421,7 +2967,8 @@ if (!empty($store['whatsapp'])) {
                             </div>
 
 
-                            <div class="p-3">
+                            <div
+                                class="product-body">
 
 
                                 <?php if (
@@ -1429,9 +2976,9 @@ if (!empty($store['whatsapp'])) {
                                 ): ?>
 
                                     <small
-                                        class="text-muted">
+                                        class="text-muted d-block mb-1">
 
-                                        <?= htmlspecialchars(
+                                        <?= h(
                                             $product['category_name']
                                         ) ?>
 
@@ -1440,249 +2987,216 @@ if (!empty($store['whatsapp'])) {
                                 <?php endif; ?>
 
 
-                                <h5
-                                    class="fw-bold mt-1">
+                                <div
+                                    class="product-name mb-2">
 
-                                    <?= htmlspecialchars(
+                                    <?= h(
                                         $product['name']
                                     ) ?>
 
-                                </h5>
+                                </div>
 
 
                                 <?php if (
                                     !empty($product['description'])
                                 ): ?>
 
-                                    <p
-                                        class="small text-muted">
+                                    <div
+                                        class="product-description mb-3">
 
-                                        <?= htmlspecialchars(
-                                            mb_strimwidth(
-                                                $product['description'],
-                                                0,
-                                                80,
-                                                '...'
-                                            )
+                                        <?= h(
+                                            $product['description']
                                         ) ?>
 
-                                    </p>
+                                    </div>
+
+                                <?php else: ?>
+
+                                    <div
+                                        class="product-description mb-3">
+                                        Available from
+                                        <?= h(
+                                            $storeName
+                                        ) ?>.
+                                    </div>
 
                                 <?php endif; ?>
 
 
                                 <div
-                                    class="product-price">
+                                    class="d-flex justify-content-between align-items-end gap-2">
 
-                                    GH₵
-                                    <?= number_format(
-                                        (float)
-                                        $product['price'],
-                                        2
-                                    ) ?>
+                                    <div>
 
-                                </div>
+                                        <div
+                                            class="product-price">
 
+                                            <?= money(
+                                                $product['price']
+                                            ) ?>
 
-                                <small
-                                    class="text-muted">
-
-                                    per
-                                    <?= htmlspecialchars(
-                                        $product['unit']
-                                    ) ?>
-
-                                </small>
+                                        </div>
 
 
-                                <div class="mt-3">
+                                        <?php if (
+                                            !empty($product['unit'])
+                                        ): ?>
+
+                                            <div
+                                                class="product-unit">
+
+                                                per
+                                                <?= h(
+                                                    $product['unit']
+                                                ) ?>
+
+                                            </div>
+
+                                        <?php endif; ?>
+
+                                    </div>
+
 
                                     <?php if (
-                                        $role === 'customer'
+                                        $role
+                                        === 'customer'
                                     ): ?>
 
                                         <a
-                                            href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode($slug) ?>"
-                                            class="btn btn-store w-100 <?= (!$inStock || !$isOpen)
-                                                                            ? 'disabled'
-                                                                            : '' ?>">
+                                            href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                                                                                                    $storeSlug
+                                                                                                                ) ?>"
+                                            class="btn btn-store btn-sm">
 
-                                            View Product
+                                            <i
+                                                class="bi bi-arrow-right"></i>
 
                                         </a>
 
+
                                     <?php else: ?>
 
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline-secondary w-100"
-                                            disabled>
+                                        <span
+                                            class="badge text-bg-light border">
 
-                                            Preview Only
+                                            Preview
 
-                                        </button>
+                                        </span>
 
                                     <?php endif; ?>
+
 
                                 </div>
 
 
                             </div>
 
-                        </article>
+                        </div>
 
                     </div>
+
 
                 <?php endforeach; ?>
 
 
-                <?php if (!$products): ?>
-
-                    <div class="col-12">
-
-                        <div
-                            class="text-center bg-white rounded-4 p-5">
-
-                            <i
-                                class="bi bi-bag-x display-4 text-muted"></i>
-
-                            <h4 class="mt-3">
-                                No products found
-                            </h4>
-
-                            <p
-                                class="text-muted">
-
-                                There are no products
-                                matching this selection.
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                <?php endif; ?>
-
-
             </div>
 
-        </div>
 
-    </section>
+        <?php else: ?>
 
-
-    <!-- =========================================================
-     DELIVERY INFORMATION
-========================================================= -->
-
-    <?php if (
-        !empty($store['delivery_information'])
-    ): ?>
-
-        <section class="pb-5">
-
-            <div class="container">
-
-                <div
-                    class="store-info p-4">
-
-                    <div class="row g-3 align-items-center">
-
-                        <div
-                            class="col-md-2 text-center">
-
-                            <i
-                                class="bi bi-truck display-4"
-                                style="
-                                color:
-                                var(--store-primary);
-                            "></i>
-
-                        </div>
-
-
-                        <div class="col-md-10">
-
-                            <h4 class="fw-bold">
-                                Delivery Information
-                            </h4>
-
-                            <p
-                                class="text-muted mb-0">
-
-                                <?= nl2br(
-                                    htmlspecialchars(
-                                        $store['delivery_information']
-                                    )
-                                ) ?>
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-    <?php endif; ?>
-
-
-    <footer class="py-5">
-
-        <div class="container">
 
             <div
-                class="d-flex flex-wrap justify-content-between gap-3">
+                class="empty-state">
 
-                <div>
+                <div
+                    class="empty-icon">
 
-                    <h5
-                        class="text-white fw-bold">
-
-                        <?= htmlspecialchars(
-                            $storeName
-                        ) ?>
-
-                    </h5>
-
-                    <small>
-                        Available through Grocery Delivery Marketplace.
-                    </small>
+                    <i
+                        class="bi bi-bag"></i>
 
                 </div>
+
+
+                <h5
+                    class="fw-bold">
+
+                    No products found
+
+                </h5>
+
+
+                <p
+                    class="text-muted mb-3">
+
+                    <?php if (
+                        $search !== ''
+                        || $categoryId > 0
+                    ): ?>
+
+                        No products match your
+                        current filters.
+
+                    <?php else: ?>
+
+                        This store has not added
+                        any products yet.
+
+                    <?php endif; ?>
+
+                </p>
 
 
                 <?php if (
-                    $role === 'customer'
+                    $search !== ''
+                    || $categoryId > 0
                 ): ?>
 
                     <a
-                        href="/somame_ent/marketplace.php"
-                        class="text-light text-decoration-none">
+                        href="/somame_ent/store.php?store=<?= urlencode(
+                                                                $storeSlug
+                                                            ) ?>"
+                        class="btn btn-store">
 
-                        <i
-                            class="bi bi-arrow-left me-1"></i>
-
-                        Back to Marketplace
+                        View All Products
 
                     </a>
 
                 <?php endif; ?>
 
+
             </div>
 
-        </div>
 
-    </footer>
+        <?php endif; ?>
+
+
+        <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
+        <footer
+            class="py-5 text-center text-muted small">
+
+            <div
+                class="mb-1 fw-semibold text-dark">
+
+                <?= h(
+                    $storeName
+                ) ?>
+
+            </div>
+
+            Powered by Grocery Delivery
+
+        </footer>
+
+
+    </main>
 
 
     <script
         src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 
 </body>
 

@@ -800,9 +800,9 @@ $companies = $stmt->fetchAll();
                                                                         ) ?>"
                                             target="_blank"
                                             class="btn btn-sm btn-outline-primary"
-                                            title="View Storefront">
+                                            title="Preview Storefront">
 
-                                            <i class="bi bi-shop"></i>
+                                            <i class="bi bi-shop-window"></i>
 
                                         </a>
 

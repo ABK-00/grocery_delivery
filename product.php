@@ -2,25 +2,218 @@
 
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
-requireRole('customer');
-requireCompanyAccess();
-$companyId = currentCompanyId();
+require_once __DIR__ . '/includes/functions.php';
 
-$productId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+function singleProductImage(array $product): string
+{
+    $placeholder =
+        '/somame_ent/assets/images/product-placeholder.svg';
 
-if (!$productId || $productId <= 0) {
-    http_response_code(404);
-    die("Product not found.");
+    $image = '';
+
+    if (!empty($product['primary_image'])) {
+        $image = $product['primary_image'];
+    } elseif (!empty($product['image'])) {
+        $image = $product['image'];
+    }
+
+    $image = trim((string)$image);
+
+    if ($image === '') {
+        return $placeholder;
+    }
+
+    if (
+        str_starts_with($image, 'http://') ||
+        str_starts_with($image, 'https://')
+    ) {
+        return $image;
+    }
+
+    $image = str_replace('\\', '/', $image);
+    $image = ltrim($image, '/');
+
+    if (str_starts_with($image, 'somame_ent/')) {
+        return '/' . $image;
+    }
+
+    if (
+        str_starts_with(
+            $image,
+            'assets/images/products/'
+        )
+    ) {
+        return '/somame_ent/' . $image;
+    }
+
+    $filename = basename($image);
+
+    $physicalFile =
+        __DIR__
+        . '/assets/images/products/'
+        . $filename;
+
+    if (is_file($physicalFile)) {
+        return
+            '/somame_ent/assets/images/products/'
+            . rawurlencode($filename);
+    }
+
+    return $placeholder;
 }
+
+requireRole('customer');
+
+$userId = currentUserId();
+
+$productId = (int)($_GET['id'] ?? $_POST['product_id'] ?? 0);
+$storeSlug = trim($_GET['store'] ?? $_POST['store'] ?? '');
+
+$error = '';
+$message = '';
+$cartConflict = null;
+
 
 /*
 |--------------------------------------------------------------------------
-| Get Product
+| VALIDATE REQUEST
 |--------------------------------------------------------------------------
 */
+
+if ($productId <= 0 || $storeSlug === '') {
+    http_response_code(404);
+    die('Product not found.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| LOAD STORE
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare("
+    SELECT
+        c.id AS company_id,
+        c.company_name,
+        c.storefront_slug,
+        c.status AS company_status,
+        c.subscription_plan,
+        c.trial_ends_at,
+        c.subscription_ends_at,
+
+        s.display_name,
+        s.logo,
+        s.primary_color,
+        s.store_status
+
+    FROM companies c
+
+    LEFT JOIN company_storefronts s
+        ON s.company_id = c.id
+
+    WHERE c.storefront_slug = ?
+
+    LIMIT 1
+");
+
+$stmt->execute([$storeSlug]);
+
+$store = $stmt->fetch();
+
+if (!$store) {
+    http_response_code(404);
+    die('Store not found.');
+}
+
+$companyId = (int)$store['company_id'];
+
+
+/*
+|--------------------------------------------------------------------------
+| COMPANY STATUS
+|--------------------------------------------------------------------------
+*/
+
+if ($store['company_status'] !== 'active') {
+    http_response_code(403);
+    die('This store is currently unavailable.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SUBSCRIPTION
+|--------------------------------------------------------------------------
+*/
+
+$now = new DateTime();
+$subscriptionValid = false;
+
+if ($store['subscription_plan'] === 'trial') {
+
+    if (
+        !empty($store['trial_ends_at'])
+        && new DateTime($store['trial_ends_at']) >= $now
+    ) {
+        $subscriptionValid = true;
+    }
+} elseif (
+    in_array(
+        $store['subscription_plan'],
+        ['monthly', 'quarterly', 'yearly'],
+        true
+    )
+) {
+
+    if (
+        !empty($store['subscription_ends_at'])
+        && new DateTime($store['subscription_ends_at']) >= $now
+    ) {
+        $subscriptionValid = true;
+    }
+}
+
+if (!$subscriptionValid) {
+    http_response_code(403);
+    die('This store is currently unavailable.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| STORE DETAILS
+|--------------------------------------------------------------------------
+*/
+
+$storeName =
+    !empty($store['display_name'])
+    ? $store['display_name']
+    : $store['company_name'];
+
+$storeOpen =
+    ($store['store_status'] ?? 'open') === 'open';
+
+$primaryColor =
+    preg_match(
+        '/^#[0-9A-Fa-f]{6}$/',
+        (string)($store['primary_color'] ?? '')
+    )
+    ? $store['primary_color']
+    : '#198754';
+
+
+/*
+|--------------------------------------------------------------------------
+| LOAD PRODUCT
+|--------------------------------------------------------------------------
+*/
+
 $stmt = $conn->prepare("
     SELECT
         p.id,
+        p.company_id,
+        p.category_id,
         p.name,
         p.description,
         p.price,
@@ -28,829 +221,755 @@ $stmt = $conn->prepare("
         p.unit,
         p.image,
         p.status,
-        c.name AS category_name
+
+        cat.name AS category_name,
+
+        c.company_name,
+        c.storefront_slug,
+
+        COALESCE(
+            NULLIF(cs.display_name, ''),
+            c.company_name
+        ) AS store_name,
+
+        cs.store_status,
+
+        (
+            SELECT pi.image
+            FROM product_images pi
+            WHERE pi.product_id = p.id
+            ORDER BY
+                pi.is_primary DESC,
+                pi.sort_order ASC,
+                pi.id ASC
+            LIMIT 1
+        ) AS primary_image
+
     FROM products p
-    LEFT JOIN categories c
-        ON p.category_id = c.id
+
+    INNER JOIN companies c
+        ON c.id = p.company_id
+
+    LEFT JOIN company_storefronts cs
+        ON cs.company_id = c.id
+
+    LEFT JOIN categories cat
+        ON cat.id = p.category_id
+        AND cat.company_id = p.company_id
+
     WHERE p.id = ?
       AND p.company_id = ?
       AND p.status = 'active'
+
     LIMIT 1
 ");
 
-$stmt->execute([$productId, $companyId]);
+$stmt->execute([
+    $productId,
+    $companyId
+]);
+
 $product = $stmt->fetch();
 
 if (!$product) {
     http_response_code(404);
-    die("Product not found or unavailable.");
+    die('Product not found.');
 }
 
-/*
-|--------------------------------------------------------------------------
-| Get Product Images
-|--------------------------------------------------------------------------
-*/
-$imageStmt = $conn->prepare("
-    SELECT id, image, is_primary, sort_order
-    FROM product_images
-    WHERE product_id = ?
-    ORDER BY is_primary DESC, sort_order ASC, id ASC
-");
-
-$imageStmt->execute([$productId]);
-$images = $imageStmt->fetchAll();
 
 /*
 |--------------------------------------------------------------------------
-| Fallback to old products.image field
+| PRODUCT IMAGE
 |--------------------------------------------------------------------------
 */
-if (empty($images) && !empty($product['image'])) {
-    $images[] = [
-        'id' => 0,
-        'image' => $product['image'],
-        'is_primary' => 1,
-        'sort_order' => 0
-    ];
-}
 
-if (empty($images)) {
-    $images[] = [
-        'id' => 0,
-        'image' => null,
-        'is_primary' => 1,
-        'sort_order' => 0
-    ];
-}
-
-$mainImage = $images[0]['image'];
-
-/*
-|--------------------------------------------------------------------------
-| Related Products
-|--------------------------------------------------------------------------
-*/
-$relatedStmt = $conn->prepare("
-    SELECT
-        p.id,
-        p.name,
-        p.price,
-        p.stock,
-        p.unit,
-        p.image
-    FROM products p
-    WHERE p.status = 'active'
-      AND p.company_id = ?
-      AND p.id != ?
-      AND (
-          p.category_id = (
-              SELECT category_id
-              FROM products
-              WHERE id = ? AND company_id = ?
-          )
-          OR p.category_id IS NULL
-      )
-    ORDER BY p.created_at DESC
-    LIMIT 4
-");
-
-$relatedStmt->execute([$companyId, $productId, $productId, $companyId]);
-$relatedProducts = $relatedStmt->fetchAll();
-
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
-function e($value)
+function productPageImage(array $product): string
 {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-}
+    $image =
+        $product['primary_image']
+        ?? $product['image']
+        ?? null;
 
-function productImage($filename)
-{
-    if (!$filename) {
-        return 'assets/images/product-placeholder.png';
+    if (!$image) {
+        return 'assets/images/product-placeholder.svg';
     }
 
-    return 'assets/images/products/' . rawurlencode($filename);
+    $image = str_replace('\\', '/', trim($image));
+    $image = ltrim($image, '/');
+
+    if (
+        str_starts_with($image, 'http://')
+        || str_starts_with($image, 'https://')
+    ) {
+        return $image;
+    }
+
+    if (
+        str_starts_with($image, 'uploads/')
+        || str_starts_with($image, 'assets/')
+    ) {
+        return $image;
+    }
+
+    if (str_starts_with($image, 'products/')) {
+        return 'uploads/' . $image;
+    }
+
+    return 'uploads/products/' . $image;
 }
 
-$formattedPrice = number_format((float)$product['price'], 2);
+$productImage =
+    singleProductImage($product);
 
-$stock = (float)$product['stock'];
 
-if ($stock <= 0) {
-    $stockText = 'Out of stock';
-    $stockClass = 'out';
-} elseif ($stock <= 5) {
-    $stockText = 'Only ' . rtrim(rtrim(number_format($stock, 2), '0'), '.') . ' left';
-    $stockClass = 'low';
-} else {
-    $stockText = 'In stock';
-    $stockClass = 'available';
+/*
+|--------------------------------------------------------------------------
+| ADD TO CART
+|--------------------------------------------------------------------------
+*/
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && ($_POST['action'] ?? '') === 'add_to_cart'
+) {
+
+    $quantity = (float)($_POST['quantity'] ?? 1);
+
+    if (!$storeOpen) {
+
+        $error = 'This store is currently closed.';
+    } elseif ((float)$product['stock'] <= 0) {
+
+        $error = 'This product is out of stock.';
+    } elseif ($quantity <= 0) {
+
+        $error = 'Invalid quantity.';
+    } elseif ($quantity > (float)$product['stock']) {
+
+        $error = 'Requested quantity exceeds available stock.';
+    } else {
+
+        try {
+
+            /*
+            |--------------------------------------------------------------------------
+            | CHECK EXISTING CART VENDOR
+            |--------------------------------------------------------------------------
+            */
+
+            $stmt = $conn->prepare("
+                SELECT
+                    p.company_id,
+                    c.company_name,
+                    c.storefront_slug,
+                    s.display_name
+
+                FROM cart ca
+
+                INNER JOIN products p
+                    ON p.id = ca.product_id
+
+                INNER JOIN companies c
+                    ON c.id = p.company_id
+
+                LEFT JOIN company_storefronts s
+                    ON s.company_id = c.id
+
+                WHERE ca.user_id = ?
+
+                LIMIT 1
+            ");
+
+            $stmt->execute([$userId]);
+
+            $existingCart = $stmt->fetch();
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | DIFFERENT VENDOR
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                $existingCart
+                && (int)$existingCart['company_id'] !== $companyId
+                && ($_POST['replace_cart'] ?? '') !== '1'
+            ) {
+
+                $existingStoreName =
+                    !empty($existingCart['display_name'])
+                    ? $existingCart['display_name']
+                    : $existingCart['company_name'];
+
+                $cartConflict = [
+                    'store_name' => $existingStoreName
+                ];
+            } else {
+
+                $conn->beginTransaction();
+
+
+                /*
+                 * User confirmed starting a new order
+                 * with another vendor.
+                 */
+                if (
+                    $existingCart
+                    && (int)$existingCart['company_id'] !== $companyId
+                    && ($_POST['replace_cart'] ?? '') === '1'
+                ) {
+
+                    $stmt = $conn->prepare("
+                        DELETE FROM cart
+                        WHERE user_id = ?
+                    ");
+
+                    $stmt->execute([$userId]);
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | EXISTING PRODUCT IN CART
+                |--------------------------------------------------------------------------
+                */
+
+                $stmt = $conn->prepare("
+                    SELECT
+                        id,
+                        quantity
+                    FROM cart
+                    WHERE user_id = ?
+                      AND product_id = ?
+                    LIMIT 1
+                ");
+
+                $stmt->execute([
+                    $userId,
+                    $productId
+                ]);
+
+                $cartItem = $stmt->fetch();
+
+
+                if ($cartItem) {
+
+                    $newQuantity =
+                        (float)$cartItem['quantity']
+                        + $quantity;
+
+                    if (
+                        $newQuantity
+                        > (float)$product['stock']
+                    ) {
+
+                        throw new RuntimeException(
+                            'The total cart quantity exceeds available stock.'
+                        );
+                    }
+
+
+                    $stmt = $conn->prepare("
+                        UPDATE cart
+                        SET quantity = ?
+                        WHERE id = ?
+                          AND user_id = ?
+                    ");
+
+                    $stmt->execute([
+                        $newQuantity,
+                        $cartItem['id'],
+                        $userId
+                    ]);
+                } else {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | NEW CART ITEM
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $stmt = $conn->prepare("
+                        INSERT INTO cart (
+                            user_id,
+                            product_id,
+                            quantity
+                        )
+                        VALUES (?, ?, ?)
+                    ");
+
+                    $stmt->execute([
+                        $userId,
+                        $productId,
+                        $quantity
+                    ]);
+                }
+
+
+                $conn->commit();
+
+
+                header(
+                    'Location: /somame_ent/cart.php?added=1'
+                );
+
+                exit;
+            }
+        } catch (Throwable $e) {
+
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+
+            $error = $e->getMessage();
+        }
+    }
 }
 
-$maxQuantity = max(1, (int)floor($stock));
+
+/*
+|--------------------------------------------------------------------------
+| CART COUNT
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare("
+    SELECT
+        COALESCE(SUM(quantity), 0)
+    FROM cart
+    WHERE user_id = ?
+");
+
+$stmt->execute([$userId]);
+
+$cartCount = (int)$stmt->fetchColumn();
 
 ?>
-<!DOCTYPE html>
+<!doctype html>
+
 <html lang="en">
 
 <head>
 
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        content="width=device-width, initial-scale=1">
 
-    <title><?= e($product['name']) ?> | GroceryDelivery</title>
+    <title>
+        <?= htmlspecialchars($product['name']) ?>
+        | <?= htmlspecialchars($storeName) ?>
+    </title>
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+        rel="stylesheet">
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-        rel="stylesheet"
-    >
+        rel="stylesheet">
 
     <style>
-
         :root {
-            --green: #16a34a;
-            --dark-green: #15803d;
-            --navy: #0f172a;
-            --light-bg: #f8fafc;
-            --border: #e5e7eb;
-        }
-
-        * {
-            box-sizing: border-box;
+            --store-primary:
+                <?= htmlspecialchars($primaryColor) ?>;
         }
 
         body {
-            margin: 0;
-            background: var(--light-bg);
-            color: #1e293b;
-            font-family:
-                Inter,
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
+            background: #f7f8fa;
+            color: #17202a;
         }
 
-        /* NAVBAR */
-
-        .navbar {
-            background: #ffffff;
-            border-bottom: 1px solid var(--border);
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
-        .navbar-brand {
-            font-weight: 800;
-            color: var(--navy) !important;
-            font-size: 1.35rem;
-        }
-
-        .navbar-brand span {
-            color: var(--green);
-        }
-
-        .nav-link {
-            color: #475569 !important;
-            font-weight: 600;
-        }
-
-        .nav-link:hover {
-            color: var(--green) !important;
-        }
-
-        .cart-btn {
-            position: relative;
-        }
-
-        .cart-badge {
-            position: absolute;
-            top: -7px;
-            right: -8px;
-            background: #dc2626;
-            color: #fff;
-            font-size: 11px;
-            min-width: 19px;
-            height: 19px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* PAGE */
-
-        .product-section {
-            padding: 45px 0 70px;
-        }
-
-        .breadcrumb {
-            font-size: 14px;
-        }
-
-        .breadcrumb a {
-            color: var(--green);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        /* PRODUCT CARD */
-
-        .product-card {
-            background: #ffffff;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            padding: 28px;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, .05);
-        }
-
-        /* IMAGE AREA */
-
-        .main-image-box {
-            width: 100%;
-            height: 470px;
-            border-radius: 18px;
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .product-image-card {
+            background: #fff;
+            border-radius: 24px;
             overflow: hidden;
+            border: 1px solid #eceff2;
         }
 
-        .main-image {
+        .product-main-image {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
-            padding: 25px;
-        }
-
-        .placeholder-image {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            font-size: 70px;
-        }
-
-        .thumbnail-container {
-            display: flex;
-            gap: 12px;
-            margin-top: 15px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-        }
-
-        .thumbnail {
-            width: 78px;
-            height: 78px;
-            border: 2px solid transparent;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #f8fafc;
-            flex-shrink: 0;
-            padding: 0;
-            cursor: pointer;
-        }
-
-        .thumbnail.active {
-            border-color: var(--green);
-        }
-
-        .thumbnail img {
-            width: 100%;
-            height: 100%;
+            height: 520px;
             object-fit: cover;
+            display: block;
+            background: #f3f4f6;
         }
 
-        /* PRODUCT INFO */
-
-        .category-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 12px;
-            border-radius: 30px;
-            background: #dcfce7;
-            color: #15803d;
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 14px;
-        }
-
-        .product-title {
-            font-size: 2.25rem;
-            line-height: 1.15;
-            font-weight: 800;
-            color: var(--navy);
-            margin-bottom: 15px;
-        }
-
-        .product-description {
-            color: #64748b;
-            line-height: 1.8;
-            font-size: 15px;
+        .product-info-card {
+            background: #fff;
+            border-radius: 24px;
+            border: 1px solid #eceff2;
+            padding: 32px;
         }
 
         .price {
+            color: var(--store-primary);
             font-size: 2rem;
             font-weight: 800;
-            color: var(--green);
         }
 
-        .unit {
-            color: #64748b;
-            font-size: 14px;
+        .btn-store {
+            background: var(--store-primary);
+            border-color: var(--store-primary);
+            color: #fff;
         }
 
-        .stock-status {
+        .btn-store:hover {
+            background: var(--store-primary);
+            border-color: var(--store-primary);
+            color: #fff;
+            opacity: .9;
+        }
+
+        .quantity-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quantity-box button {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+        }
+
+        .quantity-box input {
+            width: 80px;
+            height: 44px;
+            text-align: center;
+            border-radius: 12px;
+        }
+
+        .store-chip {
             display: inline-flex;
             align-items: center;
             gap: 7px;
-            margin-top: 10px;
-            font-size: 14px;
-            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #f3f4f6;
+            font-size: .85rem;
         }
-
-        .stock-status.available {
-            color: #16a34a;
-        }
-
-        .stock-status.low {
-            color: #d97706;
-        }
-
-        .stock-status.out {
-            color: #dc2626;
-        }
-
-        /* QUANTITY */
-
-        .quantity-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 25px;
-        }
-
-        .quantity-control {
-            display: flex;
-            align-items: center;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            overflow: hidden;
-            background: #fff;
-        }
-
-        .quantity-control button {
-            width: 42px;
-            height: 42px;
-            border: 0;
-            background: #f8fafc;
-            font-size: 18px;
-        }
-
-        .quantity-control button:hover {
-            background: #dcfce7;
-        }
-
-        .quantity-control input {
-            width: 55px;
-            height: 42px;
-            border: 0;
-            text-align: center;
-            font-weight: 700;
-            outline: none;
-        }
-
-        /* BUTTON */
-
-        .add-cart-btn {
-            margin-top: 22px;
-            width: 100%;
-            border: 0;
-            background: var(--green);
-            color: #fff;
-            padding: 14px 20px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 16px;
-            transition: .2s ease;
-        }
-
-        .add-cart-btn:hover {
-            background: var(--dark-green);
-            transform: translateY(-1px);
-        }
-
-        .add-cart-btn:disabled {
-            background: #94a3b8;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* FEATURES */
-
-        .product-features {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 25px;
-        }
-
-        .feature {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 13px 10px;
-            text-align: center;
-        }
-
-        .feature i {
-            display: block;
-            color: var(--green);
-            font-size: 21px;
-            margin-bottom: 5px;
-        }
-
-        .feature span {
-            font-size: 11px;
-            font-weight: 700;
-            color: #64748b;
-        }
-
-        /* RELATED */
-
-        .related-section {
-            margin-top: 45px;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--navy);
-            margin-bottom: 20px;
-        }
-
-        .related-card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            overflow: hidden;
-            height: 100%;
-            transition: .2s ease;
-        }
-
-        .related-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(15, 23, 42, .08);
-        }
-
-        .related-image {
-            height: 190px;
-            background: #f8fafc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .related-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .related-body {
-            padding: 15px;
-        }
-
-        .related-name {
-            font-weight: 700;
-            color: var(--navy);
-            text-decoration: none;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .related-price {
-            color: var(--green);
-            font-size: 17px;
-            font-weight: 800;
-        }
-
-        /* MOBILE */
 
         @media (max-width: 767px) {
-
-            .product-section {
-                padding-top: 25px;
-            }
-
-            .product-card {
-                padding: 18px;
-            }
-
-            .main-image-box {
+            .product-main-image {
                 height: 330px;
             }
-
-            .product-title {
-                font-size: 1.8rem;
-                margin-top: 25px;
-            }
-
-            .product-features {
-                grid-template-columns: 1fr;
-            }
-
         }
-
     </style>
 
-    <link href="assets/css/customer.css" rel="stylesheet">
 </head>
 
 <body>
-    <?php include __DIR__ . '/includes/loader.php'; ?>
-
-<!-- NAVBAR -->
-
-<nav class="navbar navbar-expand-lg sticky-top">
-
-    <div class="container">
-
-        <a class="navbar-brand" href="index.php">
-            Grocery<span>Delivery</span>
-        </a>
-
-        <button
-            class="navbar-toggler"
-            type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#mainNavbar"
-        >
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div
-            class="collapse navbar-collapse"
-            id="mainNavbar"
-        >
-
-            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
-
-                <li class="nav-item">
-                    <a class="nav-link" href="index.php">
-                        Home
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="products.php">
-                        Products
-                    </a>
-                </li>
-
-                <li class="nav-item">
-
-                    <a
-                        class="nav-link cart-btn"
-                        href="cart.php"
-                    >
-
-                        <i class="bi bi-cart3 fs-5"></i>
-
-                        <span
-                            class="cart-badge"
-                            id="cartBadge"
-                        >0</span>
-
-                    </a>
-
-                </li>
-
-            </ul>
-
-        </div>
-
-    </div>
-
-</nav>
 
 
-<!-- PRODUCT -->
+    <?php
 
-<main class="product-section">
+    if (
+        file_exists(
+            __DIR__
+                . '/includes/loader.php'
+        )
+    ) {
+        include __DIR__ . '/includes/loader.php';
+    }
 
-    <div class="container">
-
-        <nav aria-label="breadcrumb" class="mb-4">
-
-            <ol class="breadcrumb">
-
-                <li class="breadcrumb-item">
-                    <a href="index.php">Home</a>
-                </li>
-
-                <li class="breadcrumb-item">
-                    <a href="products.php">Products</a>
-                </li>
-
-                <li class="breadcrumb-item active">
-                    <?= e($product['name']) ?>
-                </li>
-
-            </ol>
-
-        </nav>
+    ?>
 
 
-        <div class="product-card">
+    <!-- NAV -->
 
-            <div class="row g-4">
+    <nav class="topbar">
 
-                <!-- IMAGES -->
+        <div class="container py-3">
 
-                <div class="col-lg-6">
+            <div
+                class="d-flex align-items-center justify-content-between gap-3">
 
-                    <div class="main-image-box">
+                <a
+                    href="/somame_ent/store.php?store=<?= urlencode($storeSlug) ?>"
+                    class="btn btn-light border">
 
-                        <?php if ($mainImage): ?>
+                    <i class="bi bi-arrow-left me-1"></i>
 
-                            <img
-                                src="<?= e(productImage($mainImage)) ?>"
-                                alt="<?= e($product['name']) ?>"
-                                class="main-image"
-                                id="mainProductImage"
-                            >
+                    <span class="d-none d-sm-inline">
+                        Back to Store
+                    </span>
 
-                        <?php else: ?>
-
-                            <div class="placeholder-image">
-                                <i class="bi bi-image"></i>
-                            </div>
-
-                        <?php endif; ?>
-
-                    </div>
+                </a>
 
 
-                    <?php if (count($images) > 1): ?>
+                <div class="fw-bold">
 
-                        <div class="thumbnail-container">
-
-                            <?php foreach ($images as $index => $img): ?>
-
-                                <?php if (!empty($img['image'])): ?>
-
-                                    <button
-                                        type="button"
-                                        class="thumbnail <?= $index === 0 ? 'active' : '' ?>"
-                                        onclick="changeImage(
-                                            this,
-                                            '<?= e(productImage($img['image'])) ?>'
-                                        )"
-                                    >
-
-                                        <img
-                                            src="<?= e(productImage($img['image'])) ?>"
-                                            alt="<?= e($product['name']) ?>"
-                                        >
-
-                                    </button>
-
-                                <?php endif; ?>
-
-                            <?php endforeach; ?>
-
-                        </div>
-
-                    <?php endif; ?>
+                    <?= htmlspecialchars($storeName) ?>
 
                 </div>
 
 
-                <!-- DETAILS -->
+                <a
+                    href="/somame_ent/cart.php"
+                    class="btn btn-light border position-relative">
 
-                <div class="col-lg-6">
+                    <i class="bi bi-cart3"></i>
+
+
+                    <?php if ($cartCount > 0): ?>
+
+                        <span
+                            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            <?= $cartCount ?>
+                        </span>
+
+                    <?php endif; ?>
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </nav>
+
+
+    <main class="container py-4 py-md-5">
+
+
+        <?php if ($error): ?>
+
+            <div class="alert alert-danger">
+
+                <i class="bi bi-exclamation-circle me-1"></i>
+
+                <?= htmlspecialchars($error) ?>
+
+            </div>
+
+        <?php endif; ?>
+
+
+        <div class="row g-4 align-items-start">
+
+
+            <!-- IMAGE -->
+
+            <div class="col-lg-6">
+
+                <div class="product-image-card">
+
+                    <img
+                        src="<?= htmlspecialchars($productImage) ?>"
+                        alt="<?= htmlspecialchars($product['name']) ?>"
+                        class="product-main-image"
+                        onerror="
+        this.onerror=null;
+        this.src='/somame_ent/assets/images/product-placeholder.svg';
+    ">
+
+                </div>
+
+            </div>
+
+
+            <!-- INFO -->
+
+            <div class="col-lg-6">
+
+                <div class="product-info-card">
+
+
+                    <div class="store-chip mb-3">
+
+                        <i class="bi bi-shop"></i>
+
+                        <?= htmlspecialchars($storeName) ?>
+
+                    </div>
+
 
                     <?php if (!empty($product['category_name'])): ?>
 
-                        <div class="category-label">
-
-                            <i class="bi bi-tag-fill"></i>
-
-                            <?= e($product['category_name']) ?>
-
+                        <div
+                            class="text-success fw-semibold small text-uppercase mb-2">
+                            <?= htmlspecialchars($product['category_name']) ?>
                         </div>
 
                     <?php endif; ?>
 
 
-                    <h1 class="product-title">
-                        <?= e($product['name']) ?>
+                    <h1 class="fw-bold mb-3">
+
+                        <?= htmlspecialchars($product['name']) ?>
+
                     </h1>
+
+
+                    <div class="price">
+
+                        GH₵
+                        <?= number_format(
+                            (float)$product['price'],
+                            2
+                        ) ?>
+
+                    </div>
+
+
+                    <div class="text-muted mb-4">
+
+                        per
+                        <?= htmlspecialchars($product['unit']) ?>
+
+                    </div>
 
 
                     <?php if (!empty($product['description'])): ?>
 
-                        <p class="product-description">
-                            <?= nl2br(e($product['description'])) ?>
+                        <p class="text-muted">
+
+                            <?= nl2br(
+                                htmlspecialchars(
+                                    $product['description']
+                                )
+                            ) ?>
+
                         </p>
 
                     <?php endif; ?>
 
 
-                    <div class="mt-4">
-
-                        <span class="price">
-                            GH₵ <?= $formattedPrice ?>
-                        </span>
-
-                        <span class="unit">
-                            / <?= e($product['unit']) ?>
-                        </span>
-
-                    </div>
+                    <hr class="my-4">
 
 
-                    <div class="stock-status <?= $stockClass ?>">
+                    <!-- STOCK -->
 
-                        <?php if ($stockClass === 'available'): ?>
+                    <div class="mb-4">
 
-                            <i class="bi bi-check-circle-fill"></i>
+                        <?php if ((float)$product['stock'] > 0): ?>
 
-                        <?php elseif ($stockClass === 'low'): ?>
+                            <span class="badge text-bg-success">
 
-                            <i class="bi bi-exclamation-circle-fill"></i>
+                                <i class="bi bi-check-circle me-1"></i>
+
+                                In Stock
+
+                            </span>
+
+                            <small class="text-muted ms-2">
+
+                                <?= number_format(
+                                    (float)$product['stock'],
+                                    2
+                                ) ?>
+
+                                <?= htmlspecialchars($product['unit']) ?>
+
+                                available
+
+                            </small>
 
                         <?php else: ?>
 
-                            <i class="bi bi-x-circle-fill"></i>
+                            <span class="badge text-bg-danger">
+
+                                Out of Stock
+
+                            </span>
 
                         <?php endif; ?>
-
-                        <?= e($stockText) ?>
 
                     </div>
 
 
-                    <?php if ($stock > 0): ?>
+                    <?php if (!$storeOpen): ?>
 
-                        <div class="quantity-wrapper">
+                        <div class="alert alert-warning">
 
-                            <strong>Quantity:</strong>
+                            <i class="bi bi-clock me-2"></i>
 
-                            <div class="quantity-control">
+                            This store is currently closed.
 
-                                <button
-                                    type="button"
-                                    onclick="decreaseQuantity()"
-                                >
-                                    −
-                                </button>
+                        </div>
 
-                                <input
-                                    type="number"
-                                    id="quantity"
-                                    value="1"
-                                    min="1"
-                                    max="<?= $maxQuantity ?>"
-                                    readonly
-                                >
+                    <?php endif; ?>
 
-                                <button
-                                    type="button"
-                                    onclick="increaseQuantity()"
-                                >
-                                    +
-                                </button>
 
-                            </div>
+                    <!-- ADD TO CART -->
+
+                    <form method="POST">
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="add_to_cart">
+
+                        <input
+                            type="hidden"
+                            name="product_id"
+                            value="<?= (int)$product['id'] ?>">
+
+                        <input
+                            type="hidden"
+                            name="store"
+                            value="<?= htmlspecialchars($storeSlug) ?>">
+
+
+                        <label class="form-label fw-semibold">
+                            Quantity
+                        </label>
+
+
+                        <div class="quantity-box mb-4">
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                id="decreaseQuantity">
+                                <i class="bi bi-dash"></i>
+                            </button>
+
+
+                            <input
+                                type="number"
+                                name="quantity"
+                                id="quantity"
+                                class="form-control"
+                                value="1"
+                                min="1"
+                                max="<?= htmlspecialchars(
+                                            (string)$product['stock']
+                                        ) ?>"
+                                step="1"
+                                required>
+
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                id="increaseQuantity">
+                                <i class="bi bi-plus"></i>
+                            </button>
 
                         </div>
 
 
                         <button
-                            type="button"
-                            class="add-cart-btn"
-                            onclick="addToCart()"
-                        >
+                            type="submit"
+                            class="btn btn-store btn-lg w-100"
+                            <?= (
+                                !$storeOpen
+                                || (float)$product['stock'] <= 0
+                            )
+                                ? 'disabled'
+                                : '' ?>>
 
                             <i class="bi bi-cart-plus me-2"></i>
 
@@ -858,52 +977,29 @@ $maxQuantity = max(1, (int)floor($stock));
 
                         </button>
 
-                    <?php else: ?>
-
-                        <button
-                            type="button"
-                            class="add-cart-btn"
-                            disabled
-                        >
-
-                            <i class="bi bi-x-circle me-2"></i>
-
-                            Out of Stock
-
-                        </button>
-
-                    <?php endif; ?>
+                    </form>
 
 
-                    <div class="product-features">
+                    <div
+                        class="border rounded-4 p-3 mt-4 bg-light">
 
-                        <div class="feature">
+                        <div class="d-flex gap-3">
 
-                            <i class="bi bi-truck"></i>
+                            <i
+                                class="bi bi-truck fs-4 text-success"></i>
 
-                            <span>
-                                Fast Delivery
-                            </span>
+                            <div>
 
-                        </div>
+                                <strong class="d-block">
+                                    Delivery
+                                </strong>
 
-                        <div class="feature">
+                                <small class="text-muted">
+                                    Delivery details and fees will
+                                    be confirmed during checkout.
+                                </small>
 
-                            <i class="bi bi-shield-check"></i>
-
-                            <span>
-                                Quality Products
-                            </span>
-
-                        </div>
-
-                        <div class="feature">
-
-                            <i class="bi bi-headset"></i>
-
-                            <span>
-                                Customer Support
-                            </span>
+                            </div>
 
                         </div>
 
@@ -915,259 +1011,233 @@ $maxQuantity = max(1, (int)floor($stock));
 
         </div>
 
-
-        <!-- RELATED PRODUCTS -->
-
-        <?php if (!empty($relatedProducts)): ?>
-
-            <section class="related-section">
-
-                <h2 class="section-title">
-                    You May Also Like
-                </h2>
-
-                <div class="row g-4">
-
-                    <?php foreach ($relatedProducts as $related): ?>
-
-                        <div class="col-6 col-md-4 col-lg-3">
-
-                            <div class="related-card">
-
-                                <a
-                                    href="product.php?id=<?= (int)$related['id'] ?>"
-                                    class="text-decoration-none"
-                                >
-
-                                    <div class="related-image">
-
-                                        <?php if (!empty($related['image'])): ?>
-
-                                            <img
-                                                src="<?= e(productImage($related['image'])) ?>"
-                                                alt="<?= e($related['name']) ?>"
-                                            >
-
-                                        <?php else: ?>
-
-                                            <i
-                                                class="bi bi-image"
-                                                style="font-size:50px;color:#cbd5e1;"
-                                            ></i>
-
-                                        <?php endif; ?>
-
-                                    </div>
-
-                                </a>
+    </main>
 
 
-                                <div class="related-body">
+    <!-- =========================================================
+     CART CONFLICT MODAL
+========================================================= -->
 
-                                    <a
-                                        href="product.php?id=<?= (int)$related['id'] ?>"
-                                        class="related-name"
-                                    >
-                                        <?= e($related['name']) ?>
-                                    </a>
+    <?php if ($cartConflict): ?>
 
-                                    <div class="related-price">
+        <div
+            class="modal fade"
+            id="cartConflictModal"
+            tabindex="-1"
+            data-bs-backdrop="static">
 
-                                        GH₵
-                                        <?= number_format((float)$related['price'], 2) ?>
+            <div
+                class="modal-dialog modal-dialog-centered">
 
-                                    </div>
+                <div class="modal-content">
 
-                                </div>
+                    <div class="modal-header">
 
-                            </div>
+                        <h5 class="modal-title">
 
-                        </div>
+                            <i
+                                class="bi bi-cart-x text-warning me-2"></i>
 
-                    <?php endforeach; ?>
+                            Start a new order?
+
+                        </h5>
+
+                    </div>
+
+
+                    <div class="modal-body">
+
+                        <p>
+
+                            Your cart currently contains items from
+
+                            <strong>
+                                <?= htmlspecialchars(
+                                    $cartConflict['store_name']
+                                ) ?>
+                            </strong>.
+
+                        </p>
+
+
+                        <p class="mb-0 text-muted">
+
+                            You can only order from one store at a time.
+                            Starting an order from
+
+                            <strong>
+                                <?= htmlspecialchars($storeName) ?>
+                            </strong>
+
+                            will clear your current cart.
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="modal-footer">
+
+                        <a
+                            href="/somame_ent/cart.php"
+                            class="btn btn-outline-secondary">
+                            Keep Current Cart
+                        </a>
+
+
+                        <form method="POST">
+
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="add_to_cart">
+
+                            <input
+                                type="hidden"
+                                name="replace_cart"
+                                value="1">
+
+                            <input
+                                type="hidden"
+                                name="product_id"
+                                value="<?= (int)$product['id'] ?>">
+
+                            <input
+                                type="hidden"
+                                name="store"
+                                value="<?= htmlspecialchars($storeSlug) ?>">
+
+                            <input
+                                type="hidden"
+                                name="quantity"
+                                value="<?= htmlspecialchars(
+                                            $_POST['quantity'] ?? '1'
+                                        ) ?>">
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-danger">
+
+                                Clear Cart & Continue
+
+                            </button>
+
+                        </form>
+
+                    </div>
 
                 </div>
 
-            </section>
+            </div>
+
+        </div>
+
+    <?php endif; ?>
+
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+    <script>
+        /*
+|--------------------------------------------------------------------------
+| QUANTITY
+|--------------------------------------------------------------------------
+*/
+
+        const quantity =
+            document.getElementById('quantity');
+
+        const decrease =
+            document.getElementById(
+                'decreaseQuantity'
+            );
+
+        const increase =
+            document.getElementById(
+                'increaseQuantity'
+            );
+
+
+        if (
+            quantity &&
+            decrease &&
+            increase
+        ) {
+
+            decrease.addEventListener(
+                'click',
+                function() {
+
+                    let value =
+                        parseInt(
+                            quantity.value || '1',
+                            10
+                        );
+
+                    value =
+                        Math.max(
+                            1,
+                            value - 1
+                        );
+
+                    quantity.value =
+                        value;
+                }
+            );
+
+
+            increase.addEventListener(
+                'click',
+                function() {
+
+                    let value =
+                        parseInt(
+                            quantity.value || '1',
+                            10
+                        );
+
+                    const max =
+                        parseInt(
+                            quantity.max || '999999',
+                            10
+                        );
+
+                    value =
+                        Math.min(
+                            max,
+                            value + 1
+                        );
+
+                    quantity.value =
+                        value;
+                }
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CART CONFLICT
+        |--------------------------------------------------------------------------
+        */
+
+        <?php if ($cartConflict): ?>
+
+            const conflictModal =
+                new bootstrap.Modal(
+                    document.getElementById(
+                        'cartConflictModal'
+                    )
+                );
+
+            conflictModal.show();
 
         <?php endif; ?>
+    </script>
 
-    </div>
-
-</main>
-
-
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-></script>
-
-
-<script>
-
-/*
-|--------------------------------------------------------------------------
-| Image Gallery
-|--------------------------------------------------------------------------
-*/
-
-function changeImage(button, imageUrl)
-{
-    const mainImage = document.getElementById('mainProductImage');
-
-    if (mainImage) {
-        mainImage.src = imageUrl;
-    }
-
-    document
-        .querySelectorAll('.thumbnail')
-        .forEach(function(item) {
-            item.classList.remove('active');
-        });
-
-    button.classList.add('active');
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Quantity
-|--------------------------------------------------------------------------
-*/
-
-function increaseQuantity()
-{
-    const input = document.getElementById('quantity');
-
-    if (!input) {
-        return;
-    }
-
-    let quantity = parseInt(input.value) || 1;
-
-    const max = parseInt(input.max) || 999999;
-
-    if (quantity < max) {
-        quantity++;
-    }
-
-    input.value = quantity;
-}
-
-
-function decreaseQuantity()
-{
-    const input = document.getElementById('quantity');
-
-    if (!input) {
-        return;
-    }
-
-    let quantity = parseInt(input.value) || 1;
-
-    if (quantity > 1) {
-        quantity--;
-    }
-
-    input.value = quantity;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Cart
-|--------------------------------------------------------------------------
-|
-| For now this stores the cart in localStorage.
-| We will replace this with the MySQL cart system when cart.php
-| and the cart API are connected.
-|
-*/
-
-function addToCart()
-{
-    const quantityInput = document.getElementById('quantity');
-
-    if (!quantityInput) {
-        return;
-    }
-
-    const quantity = parseInt(quantityInput.value) || 1;
-
-    const product = {
-        id: <?= (int)$product['id'] ?>,
-        name: <?= json_encode($product['name']) ?>,
-        price: <?= (float)$product['price'] ?>,
-        unit: <?= json_encode($product['unit']) ?>,
-        image: <?= json_encode($mainImage) ?>,
-        quantity: quantity
-    };
-
-    let cart = JSON.parse(
-        localStorage.getItem('grocery_cart') || '[]'
-    );
-
-    const existingIndex = cart.findIndex(function(item) {
-        return parseInt(item.id) === product.id;
-    });
-
-    if (existingIndex !== -1) {
-
-        cart[existingIndex].quantity += quantity;
-
-    } else {
-
-        cart.push(product);
-
-    }
-
-    localStorage.setItem(
-        'grocery_cart',
-        JSON.stringify(cart)
-    );
-
-    updateCartBadge();
-
-    alert(
-        product.name +
-        ' has been added to your cart.'
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Cart Badge
-|--------------------------------------------------------------------------
-*/
-
-function updateCartBadge()
-{
-    const badge = document.getElementById('cartBadge');
-
-    if (!badge) {
-        return;
-    }
-
-    const cart = JSON.parse(
-        localStorage.getItem('grocery_cart') || '[]'
-    );
-
-    let total = 0;
-
-    cart.forEach(function(item) {
-        total += parseInt(item.quantity) || 0;
-    });
-
-    badge.textContent = total;
-}
-
-
-document.addEventListener(
-    'DOMContentLoaded',
-    updateCartBadge
-);
-
-</script>
 
 </body>
 

@@ -490,7 +490,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ) {
                     throw new Exception(
                         "A product can have a maximum of 5 images. " .
-                        "This product currently has {$existingCount}."
+                            "This product currently has {$existingCount}."
                     );
                 }
 
@@ -641,7 +641,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             header("Location: products.php?success=updated");
             exit;
         }
-
     } catch (Exception $e) {
 
         $message = $e->getMessage();
@@ -755,13 +754,21 @@ foreach ($imageStmt->fetchAll() as $image) {
 | STATS
 |--------------------------------------------------------------------------
 */
-$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ?"); $stat->execute([$companyId]); $totalProducts = (int)$stat->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ?");
+$stat->execute([$companyId]);
+$totalProducts = (int)$stat->fetchColumn();
 
-$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ? AND status = 'active'"); $stat->execute([$companyId]); $activeProducts = (int)$stat->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ? AND status = 'active'");
+$stat->execute([$companyId]);
+$activeProducts = (int)$stat->fetchColumn();
 
-$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ? AND status = 'inactive'"); $stat->execute([$companyId]); $inactiveProducts = (int)$stat->fetchColumn();
+$stat = $conn->prepare("SELECT COUNT(*) FROM products WHERE company_id = ? AND status = 'inactive'");
+$stat->execute([$companyId]);
+$inactiveProducts = (int)$stat->fetchColumn();
 
-$stat = $conn->prepare("SELECT COALESCE(SUM(stock), 0) FROM products WHERE company_id = ?"); $stat->execute([$companyId]); $totalStock = (float)$stat->fetchColumn();
+$stat = $conn->prepare("SELECT COALESCE(SUM(stock), 0) FROM products WHERE company_id = ?");
+$stat->execute([$companyId]);
+$totalStock = (float)$stat->fetchColumn();
 
 ?>
 
@@ -773,7 +780,7 @@ $stat = $conn->prepare("SELECT COALESCE(SUM(stock), 0) FROM products WHERE compa
     <meta charset="UTF-8">
 
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+        content="width=device-width, initial-scale=1.0">
 
     <title>Products | GroceryDelivery</title>
 
@@ -899,1198 +906,203 @@ $stat = $conn->prepare("SELECT COALESCE(SUM(stock), 0) FROM products WHERE compa
 
 <body>
 
-<?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
-<?php include "../includes/loader.php"; ?>
+    <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
+    <?php include "../includes/loader.php"; ?>
 
 
-<main class="main-content">
+    <main class="main-content">
 
-    <!-- TOPBAR -->
+        <!-- TOPBAR -->
 
-    <div class="topbar">
+        <div class="topbar">
 
-        <div class="topbar-left">
+            <div class="topbar-left">
 
-            <button
-                class="sidebar-toggle"
-                id="sidebarToggle"
-                type="button"
-            >
-                <i class="bi bi-list"></i>
-            </button>
+                <button
+                    class="sidebar-toggle"
+                    id="sidebarToggle"
+                    type="button">
+                    <i class="bi bi-list"></i>
+                </button>
+
+                <div>
+                    <h1 class="topbar-title">
+                        Products Management
+                    </h1>
+
+                    <p class="topbar-subtitle">
+                        Add, edit, and manage grocery items in your store inventory.
+                    </p>
+                </div>
+
+            </div>
 
             <div>
-                <h1 class="topbar-title">
-                    Products Management
-                </h1>
-
-                <p class="topbar-subtitle">
-                    Add, edit, and manage grocery items in your store inventory.
-                </p>
-            </div>
-
-        </div>
-
-        <div>
-            <button
-                class="btn btn-success"
-                data-bs-toggle="modal"
-                data-bs-target="#addProductModal"
-                type="button"
-            >
-                <i class="bi bi-plus-lg me-1"></i>
-                Add Product
-            </button>
-        </div>
-
-    </div>
-
-            <p>
-                Manage grocery products, inventory and product galleries.
-            </p>
-
-        </div>
-
-        <button
-            class="btn btn-primary-custom"
-            data-bs-toggle="modal"
-            data-bs-target="#addProductModal">
-
-            <i class="bi bi-plus-lg me-1"></i>
-            Add Product
-
-        </button>
-
-    </div>
-
-
-    <!-- Message -->
-    <?php if ($message): ?>
-
-        <div class="alert alert-<?= e($messageType) ?> alert-dismissible fade show">
-
-            <?= e($message) ?>
-
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="alert">
-            </button>
-
-        </div>
-
-    <?php endif; ?>
-
-
-    <!-- Stats -->
-    <div class="row g-3 mb-4">
-
-        <div class="col-md-3">
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    <i class="bi bi-box-seam"></i>
-                </div>
-
-                <div class="stat-number">
-                    <?= number_format($totalProducts) ?>
-                </div>
-
-                <div class="stat-label">
-                    Total Products
-                </div>
-
+                <button
+                    class="btn btn-success"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addProductModal"
+                    type="button">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Add Product
+                </button>
             </div>
 
         </div>
 
 
-        <div class="col-md-3">
+        <!-- Message -->
+        <?php if ($message): ?>
 
-            <div class="stat-card">
+            <div class="alert alert-<?= e($messageType) ?> alert-dismissible fade show">
 
-                <div class="stat-icon">
-                    <i class="bi bi-check-circle"></i>
-                </div>
+                <?= e($message) ?>
 
-                <div class="stat-number">
-                    <?= number_format($activeProducts) ?>
-                </div>
-
-                <div class="stat-label">
-                    Active Products
-                </div>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+                </button>
 
             </div>
 
-        </div>
+        <?php endif; ?>
 
 
-        <div class="col-md-3">
+        <!-- Stats -->
+        <div class="row g-3 mb-4">
 
-            <div class="stat-card">
+            <div class="col-md-3">
 
-                <div class="stat-icon">
-                    <i class="bi bi-pause-circle"></i>
-                </div>
+                <div class="stat-card">
 
-                <div class="stat-number">
-                    <?= number_format($inactiveProducts) ?>
-                </div>
-
-                <div class="stat-label">
-                    Inactive Products
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="col-md-3">
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    <i class="bi bi-boxes"></i>
-                </div>
-
-                <div class="stat-number">
-                    <?= number_format($totalStock, 2) ?>
-                </div>
-
-                <div class="stat-label">
-                    Total Stock
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- Products -->
-    <div class="content-card">
-
-        <!-- Filters -->
-        <div class="filters">
-
-            <form method="GET">
-
-                <div class="row g-2">
-
-                    <div class="col-lg-5">
-
-                        <div class="input-group">
-
-                            <span class="input-group-text">
-                                <i class="bi bi-search"></i>
-                            </span>
-
-                            <input
-                                type="text"
-                                name="search"
-                                class="form-control"
-                                placeholder="Search products..."
-                                value="<?= e($search) ?>">
-
-                        </div>
-
+                    <div class="stat-icon">
+                        <i class="bi bi-box-seam"></i>
                     </div>
 
-
-                    <div class="col-lg-3">
-
-                        <select
-                            name="category"
-                            class="form-select">
-
-                            <option value="">
-                                All Categories
-                            </option>
-
-                            <?php foreach ($categories as $category): ?>
-
-                                <option
-                                    value="<?= $category["id"] ?>"
-                                    <?= $categoryFilter == $category["id"] ? "selected" : "" ?>>
-
-                                    <?= e($category["name"]) ?>
-
-                                </option>
-
-                            <?php endforeach; ?>
-
-                        </select>
-
+                    <div class="stat-number">
+                        <?= number_format($totalProducts) ?>
                     </div>
 
-
-                    <div class="col-lg-2">
-
-                        <select
-                            name="status"
-                            class="form-select">
-
-                            <option value="">
-                                All Status
-                            </option>
-
-                            <option
-                                value="active"
-                                <?= $statusFilter === "active" ? "selected" : "" ?>>
-
-                                Active
-
-                            </option>
-
-                            <option
-                                value="inactive"
-                                <?= $statusFilter === "inactive" ? "selected" : "" ?>>
-
-                                Inactive
-
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="col-lg-2">
-
-                        <button
-                            class="btn btn-dark w-100">
-
-                            <i class="bi bi-funnel me-1"></i>
-                            Filter
-
-                        </button>
-
+                    <div class="stat-label">
+                        Total Products
                     </div>
 
                 </div>
 
-            </form>
+            </div>
+
+
+            <div class="col-md-3">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+
+                    <div class="stat-number">
+                        <?= number_format($activeProducts) ?>
+                    </div>
+
+                    <div class="stat-label">
+                        Active Products
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="bi bi-pause-circle"></i>
+                    </div>
+
+                    <div class="stat-number">
+                        <?= number_format($inactiveProducts) ?>
+                    </div>
+
+                    <div class="stat-label">
+                        Inactive Products
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        <i class="bi bi-boxes"></i>
+                    </div>
+
+                    <div class="stat-number">
+                        <?= number_format($totalStock, 2) ?>
+                    </div>
+
+                    <div class="stat-label">
+                        Total Stock
+                    </div>
+
+                </div>
+
+            </div>
 
         </div>
 
 
-        <!-- Table -->
-        <div class="table-responsive">
+        <!-- Products -->
+        <div class="content-card">
 
-            <table class="table table-hover mb-0 product-table">
+            <!-- Filters -->
+            <div class="filters">
 
-                <thead>
+                <form method="GET">
 
-                    <tr>
+                    <div class="row g-2">
 
-                        <th class="px-4 py-3">
-                            Product
-                        </th>
+                        <div class="col-lg-5">
 
-                        <th>
-                            Category
-                        </th>
+                            <div class="input-group">
 
-                        <th>
-                            Price
-                        </th>
-
-                        <th>
-                            Stock
-                        </th>
-
-                        <th>
-                            Gallery
-                        </th>
-
-                        <th>
-                            Status
-                        </th>
-
-                        <th class="text-end px-4">
-                            Actions
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                <?php if (!$products): ?>
-
-                    <tr>
-
-                        <td
-                            colspan="7"
-                            class="text-center py-5 text-muted">
-
-                            <i
-                                class="bi bi-box-seam fs-1 d-block mb-2">
-                            </i>
-
-                            No products found.
-
-                        </td>
-
-                    </tr>
-
-                <?php endif; ?>
-
-
-                <?php foreach ($products as $product): ?>
-
-                    <?php
-
-                    $images =
-                        $productImages[$product["id"]] ?? [];
-
-                    $primaryImage = null;
-
-                    foreach ($images as $img) {
-
-                        if ($img["is_primary"]) {
-                            $primaryImage = $img;
-                            break;
-                        }
-                    }
-
-                    if (!$primaryImage && !empty($images)) {
-                        $primaryImage = $images[0];
-                    }
-
-                    ?>
-
-                    <tr>
-
-                        <!-- Product -->
-                        <td class="px-4">
-
-                            <div class="d-flex align-items-center gap-3">
-
-                                <?php if ($primaryImage): ?>
-
-                                    <img
-                                        src="<?= $uploadUrl . e($primaryImage["image"]) ?>"
-                                        class="product-image"
-                                        alt="<?= e($product["name"]) ?>">
-
-                                <?php elseif (!empty($product["image"])): ?>
-
-                                    <img
-                                        src="<?= $uploadUrl . e($product["image"]) ?>"
-                                        class="product-image"
-                                        alt="<?= e($product["name"]) ?>">
-
-                                <?php else: ?>
-
-                                    <div class="image-placeholder">
-
-                                        <i class="bi bi-image"></i>
-
-                                    </div>
-
-                                <?php endif; ?>
-
-
-                                <div>
-
-                                    <div class="fw-bold">
-                                        <?= e($product["name"]) ?>
-                                    </div>
-
-                                    <small class="text-muted">
-                                        <?= e($product["unit"]) ?>
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-                        </td>
-
-
-                        <!-- Category -->
-                        <td>
-
-                            <?= e(
-                                $product["category_name"]
-                                ?? "Uncategorized"
-                            ) ?>
-
-                        </td>
-
-
-                        <!-- Price -->
-                        <td>
-
-                            <strong>
-                                GH₵ <?= number_format(
-                                    $product["price"],
-                                    2
-                                ) ?>
-                            </strong>
-
-                        </td>
-
-
-                        <!-- Stock -->
-                        <td>
-
-                            <?= number_format(
-                                $product["stock"],
-                                2
-                            ) ?>
-
-                            <?= e($product["unit"]) ?>
-
-                        </td>
-
-
-                        <!-- Gallery -->
-                        <td>
-
-                            <div class="gallery">
-
-                                <?php foreach ($images as $img): ?>
-
-                                    <img
-                                        src="<?= $uploadUrl . e($img["image"]) ?>"
-                                        class="gallery-thumb <?= $img["is_primary"] ? "primary" : "" ?>"
-                                        title="<?= $img["is_primary"] ? "Primary image" : "Product image" ?>">
-
-                                <?php endforeach; ?>
-
-
-                                <?php if (!$images): ?>
-
-                                    <span class="text-muted small">
-                                        No images
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </div>
-
-                            <small class="text-muted">
-
-                                <?= count($images) ?>/5 images
-
-                            </small>
-
-                        </td>
-
-
-                        <!-- Status -->
-                        <td>
-
-                            <?php if ($product["status"] === "active"): ?>
-
-                                <span class="badge badge-active px-3 py-2">
-                                    Active
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
                                 </span>
 
-                            <?php else: ?>
-
-                                <span class="badge badge-inactive px-3 py-2">
-                                    Inactive
-                                </span>
-
-                            <?php endif; ?>
-
-                        </td>
-
-
-                        <!-- Actions -->
-                        <td class="text-end px-4">
-
-                            <div class="dropdown">
-
-                                <button
-                                    class="btn btn-sm btn-light"
-                                    data-bs-toggle="dropdown">
-
-                                    <i class="bi bi-three-dots"></i>
-
-                                </button>
-
-                                <ul class="dropdown-menu dropdown-menu-end">
-
-                                    <li>
-
-                                        <button
-                                            class="dropdown-item"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editProduct<?= $product["id"] ?>">
-
-                                            <i class="bi bi-pencil me-2"></i>
-                                            Edit Product
-
-                                        </button>
-
-                                    </li>
-
-
-                                    <li>
-
-                                        <button
-                                            class="dropdown-item"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#imagesModal<?= $product["id"] ?>">
-
-                                            <i class="bi bi-images me-2"></i>
-                                            Manage Images
-
-                                        </button>
-
-                                    </li>
-
-
-                                    <li>
-
-                                        <form method="POST">
-
-                                            <input
-                                                type="hidden"
-                                                name="action"
-                                                value="toggle_status">
-
-                                            <input
-                                                type="hidden"
-                                                name="product_id"
-                                                value="<?= $product["id"] ?>">
-
-                                            <button
-                                                class="dropdown-item">
-
-                                                <i class="bi bi-toggle-on me-2"></i>
-
-                                                <?= $product["status"] === "active"
-                                                    ? "Deactivate"
-                                                    : "Activate" ?>
-
-                                            </button>
-
-                                        </form>
-
-                                    </li>
-
-
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-
-
-                                    <li>
-
-                                        <form
-                                            method="POST"
-                                            onsubmit="return confirm('Delete this product and all its images?');">
-
-                                            <input
-                                                type="hidden"
-                                                name="action"
-                                                value="delete">
-
-                                            <input
-                                                type="hidden"
-                                                name="product_id"
-                                                value="<?= $product["id"] ?>">
-
-                                            <button
-                                                class="dropdown-item text-danger">
-
-                                                <i class="bi bi-trash me-2"></i>
-                                                Delete Product
-
-                                            </button>
-
-                                        </form>
-
-                                    </li>
-
-                                </ul>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-
-                    <!-- EDIT PRODUCT MODAL -->
-                    <div
-                        class="modal fade"
-                        id="editProduct<?= $product["id"] ?>"
-                        tabindex="-1">
-
-                        <div class="modal-dialog modal-lg modal-dialog-centered">
-
-                            <div class="modal-content">
-
-                                <form
-                                    method="POST"
-                                    enctype="multipart/form-data">
-
-                                    <div class="modal-header">
-
-                                        <h5 class="modal-title">
-
-                                            <i class="bi bi-pencil-square me-2"></i>
-
-                                            Edit Product
-
-                                        </h5>
-
-                                        <button
-                                            type="button"
-                                            class="btn-close"
-                                            data-bs-dismiss="modal">
-                                        </button>
-
-                                    </div>
-
-
-                                    <div class="modal-body">
-
-                                        <input
-                                            type="hidden"
-                                            name="action"
-                                            value="update">
-
-                                        <input
-                                            type="hidden"
-                                            name="product_id"
-                                            value="<?= $product["id"] ?>">
-
-
-                                        <div class="row g-3">
-
-                                            <div class="col-md-8">
-
-                                                <label class="form-label">
-                                                    Product Name
-                                                </label>
-
-                                                <input
-                                                    type="text"
-                                                    name="name"
-                                                    class="form-control"
-                                                    value="<?= e($product["name"]) ?>"
-                                                    required>
-
-                                            </div>
-
-
-                                            <div class="col-md-4">
-
-                                                <label class="form-label">
-                                                    Category
-                                                </label>
-
-                                                <select
-                                                    name="category_id"
-                                                    class="form-select">
-
-                                                    <option value="">
-                                                        Uncategorized
-                                                    </option>
-
-                                                    <?php foreach ($categories as $category): ?>
-
-                                                        <option
-                                                            value="<?= $category["id"] ?>"
-                                                            <?= $product["category_id"] == $category["id"]
-                                                                ? "selected"
-                                                                : "" ?>>
-
-                                                            <?= e($category["name"]) ?>
-
-                                                        </option>
-
-                                                    <?php endforeach; ?>
-
-                                                </select>
-
-                                            </div>
-
-
-                                            <div class="col-md-4">
-
-                                                <label class="form-label">
-                                                    Price (GH₵)
-                                                </label>
-
-                                                <input
-                                                    type="number"
-                                                    name="price"
-                                                    step="0.01"
-                                                    min="0"
-                                                    class="form-control"
-                                                    value="<?= e($product["price"]) ?>"
-                                                    required>
-
-                                            </div>
-
-
-                                            <div class="col-md-4">
-
-                                                <label class="form-label">
-                                                    Stock
-                                                </label>
-
-                                                <input
-                                                    type="number"
-                                                    name="stock"
-                                                    step="0.01"
-                                                    min="0"
-                                                    class="form-control"
-                                                    value="<?= e($product["stock"]) ?>"
-                                                    required>
-
-                                            </div>
-
-
-                                            <div class="col-md-4">
-
-                                                <label class="form-label">
-                                                    Unit
-                                                </label>
-
-                                                <select
-                                                    name="unit"
-                                                    class="form-select">
-
-                                                    <?php
-
-                                                    $units = [
-                                                        "piece",
-                                                        "kg",
-                                                        "gram",
-                                                        "litre",
-                                                        "ml",
-                                                        "pack",
-                                                        "box",
-                                                        "bottle",
-                                                        "bag",
-                                                        "dozen"
-                                                    ];
-
-                                                    foreach ($units as $unit):
-
-                                                    ?>
-
-                                                        <option
-                                                            value="<?= $unit ?>"
-                                                            <?= $product["unit"] === $unit
-                                                                ? "selected"
-                                                                : "" ?>>
-
-                                                            <?= ucfirst($unit) ?>
-
-                                                        </option>
-
-                                                    <?php endforeach; ?>
-
-                                                </select>
-
-                                            </div>
-
-
-                                            <div class="col-12">
-
-                                                <label class="form-label">
-                                                    Description
-                                                </label>
-
-                                                <textarea
-                                                    name="description"
-                                                    rows="4"
-                                                    class="form-control"><?= e($product["description"]) ?></textarea>
-
-                                            </div>
-
-
-                                            <div class="col-12">
-
-                                                <label class="form-label">
-
-                                                    Add More Images
-
-                                                    <span class="text-muted">
-                                                        (maximum 5 total)
-                                                    </span>
-
-                                                </label>
-
-                                                <input
-                                                    type="file"
-                                                    name="images[]"
-                                                    class="form-control"
-                                                    accept=".jpg,.jpeg,.png,.webp"
-                                                    multiple>
-
-                                                <small class="text-muted">
-                                                    JPG, PNG or WEBP. Maximum 5MB each.
-                                                </small>
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div class="modal-footer">
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-light"
-                                            data-bs-dismiss="modal">
-
-                                            Cancel
-
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            class="btn btn-primary-custom">
-
-                                            Save Changes
-
-                                        </button>
-
-                                    </div>
-
-                                </form>
+                                <input
+                                    type="text"
+                                    name="search"
+                                    class="form-control"
+                                    placeholder="Search products..."
+                                    value="<?= e($search) ?>">
 
                             </div>
 
                         </div>
 
-                    </div>
 
-
-                    <!-- IMAGE MANAGEMENT MODAL -->
-                    <div
-                        class="modal fade"
-                        id="imagesModal<?= $product["id"] ?>"
-                        tabindex="-1">
-
-                        <div class="modal-dialog modal-lg modal-dialog-centered">
-
-                            <div class="modal-content">
-
-                                <div class="modal-header">
-
-                                    <div>
-
-                                        <h5 class="modal-title">
-
-                                            <i class="bi bi-images me-2"></i>
-
-                                            Product Images
-
-                                        </h5>
-
-                                        <small class="text-muted">
-
-                                            <?= e($product["name"]) ?>
-
-                                        </small>
-
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        class="btn-close"
-                                        data-bs-dismiss="modal">
-                                    </button>
-
-                                </div>
-
-
-                                <div class="modal-body">
-
-                                    <div class="d-flex justify-content-between mb-3">
-
-                                        <strong>
-                                            <?= count($images) ?> / 5 Images
-                                        </strong>
-
-                                        <span class="text-muted small">
-                                            Green border = primary image
-                                        </span>
-
-                                    </div>
-
-
-                                    <?php if ($images): ?>
-
-                                        <div class="image-manager">
-
-                                            <?php foreach ($images as $img): ?>
-
-                                                <div class="image-box">
-
-                                                    <?php if ($img["is_primary"]): ?>
-
-                                                        <span class="primary-label">
-                                                            PRIMARY
-                                                        </span>
-
-                                                    <?php endif; ?>
-
-
-                                                    <img
-                                                        src="<?= $uploadUrl . e($img["image"]) ?>"
-                                                        alt="Product image">
-
-
-                                                    <div class="image-actions">
-
-                                                        <?php if (!$img["is_primary"]): ?>
-
-                                                            <a
-                                                                href="?primary_image=<?= $img["id"] ?>"
-                                                                class="btn btn-sm btn-outline-success">
-
-                                                                <i class="bi bi-star"></i>
-
-                                                            </a>
-
-                                                        <?php endif; ?>
-
-
-                                                        <a
-                                                            href="?delete_image=<?= $img["id"] ?>"
-                                                            class="btn btn-sm btn-outline-danger"
-                                                            onclick="return confirm('Delete this image?');">
-
-                                                            <i class="bi bi-trash"></i>
-
-                                                        </a>
-
-                                                    </div>
-
-                                                </div>
-
-                                            <?php endforeach; ?>
-
-                                        </div>
-
-                                    <?php else: ?>
-
-                                        <div class="text-center py-4 text-muted">
-
-                                            <i class="bi bi-images fs-1"></i>
-
-                                            <p class="mt-2">
-                                                No images have been added yet.
-                                            </p>
-
-                                        </div>
-
-                                    <?php endif; ?>
-
-
-                                    <?php if (count($images) < 5): ?>
-
-                                        <hr class="my-4">
-
-                                        <form
-                                            method="POST"
-                                            enctype="multipart/form-data">
-
-                                            <input
-                                                type="hidden"
-                                                name="action"
-                                                value="update">
-
-                                            <input
-                                                type="hidden"
-                                                name="product_id"
-                                                value="<?= $product["id"] ?>">
-
-                                            <input
-                                                type="hidden"
-                                                name="name"
-                                                value="<?= e($product["name"]) ?>">
-
-                                            <input
-                                                type="hidden"
-                                                name="category_id"
-                                                value="<?= e($product["category_id"]) ?>">
-
-                                            <input
-                                                type="hidden"
-                                                name="description"
-                                                value="<?= e($product["description"]) ?>">
-
-                                            <input
-                                                type="hidden"
-                                                name="price"
-                                                value="<?= e($product["price"]) ?>">
-
-                                            <input
-                                                type="hidden"
-                                                name="stock"
-                                                value="<?= e($product["stock"]) ?>">
-
-                                            <input
-                                                type="hidden"
-                                                name="unit"
-                                                value="<?= e($product["unit"]) ?>">
-
-
-                                            <label class="form-label fw-bold">
-
-                                                Add Images
-
-                                            </label>
-
-                                            <input
-                                                type="file"
-                                                name="images[]"
-                                                class="form-control"
-                                                accept=".jpg,.jpeg,.png,.webp"
-                                                multiple
-                                                onchange="limitImages(this, <?= 5 - count($images) ?>)">
-
-                                            <small class="text-muted">
-                                                You can add
-                                                <?= 5 - count($images) ?>
-                                                more image(s).
-                                            </small>
-
-
-                                            <button
-                                                type="submit"
-                                                class="btn btn-primary-custom mt-3">
-
-                                                <i class="bi bi-cloud-upload me-1"></i>
-
-                                                Upload Images
-
-                                            </button>
-
-                                        </form>
-
-                                    <?php else: ?>
-
-                                        <div class="alert alert-success mt-4 mb-0">
-
-                                            <i class="bi bi-check-circle me-2"></i>
-
-                                            This product already has the maximum
-                                            5 images.
-
-                                        </div>
-
-                                    <?php endif; ?>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                <?php endforeach; ?>
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-</main>
-
-
-<!-- ADD PRODUCT MODAL -->
-<div
-    class="modal fade"
-    id="addProductModal"
-    tabindex="-1">
-
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-
-        <div class="modal-content">
-
-            <form
-                method="POST"
-                enctype="multipart/form-data">
-
-                <div class="modal-header">
-
-                    <h5 class="modal-title">
-
-                        <i class="bi bi-plus-circle me-2"></i>
-
-                        Add New Product
-
-                    </h5>
-
-                    <button
-                        type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                    </button>
-
-                </div>
-
-
-                <div class="modal-body">
-
-                    <input
-                        type="hidden"
-                        name="action"
-                        value="create">
-
-
-                    <div class="row g-3">
-
-                        <div class="col-md-8">
-
-                            <label class="form-label">
-                                Product Name
-                            </label>
-
-                            <input
-                                type="text"
-                                name="name"
-                                class="form-control"
-                                placeholder="e.g. Fresh Tomatoes"
-                                required>
-
-                        </div>
-
-
-                        <div class="col-md-4">
-
-                            <label class="form-label">
-                                Category
-                            </label>
+                        <div class="col-lg-3">
 
                             <select
-                                name="category_id"
+                                name="category"
                                 class="form-select">
 
                                 <option value="">
-                                    Uncategorized
+                                    All Categories
                                 </option>
 
                                 <?php foreach ($categories as $category): ?>
 
                                     <option
-                                        value="<?= $category["id"] ?>">
+                                        value="<?= $category["id"] ?>"
+                                        <?= $categoryFilter == $category["id"] ? "selected" : "" ?>>
 
                                         <?= e($category["name"]) ?>
 
@@ -2103,190 +1115,1164 @@ $stat = $conn->prepare("SELECT COALESCE(SUM(stock), 0) FROM products WHERE compa
                         </div>
 
 
-                        <div class="col-md-4">
-
-                            <label class="form-label">
-                                Price (GH₵)
-                            </label>
-
-                            <input
-                                type="number"
-                                name="price"
-                                step="0.01"
-                                min="0"
-                                class="form-control"
-                                placeholder="0.00"
-                                required>
-
-                        </div>
-
-
-                        <div class="col-md-4">
-
-                            <label class="form-label">
-                                Stock
-                            </label>
-
-                            <input
-                                type="number"
-                                name="stock"
-                                step="0.01"
-                                min="0"
-                                class="form-control"
-                                placeholder="0"
-                                required>
-
-                        </div>
-
-
-                        <div class="col-md-4">
-
-                            <label class="form-label">
-                                Unit
-                            </label>
+                        <div class="col-lg-2">
 
                             <select
-                                name="unit"
+                                name="status"
                                 class="form-select">
 
-                                <?php
+                                <option value="">
+                                    All Status
+                                </option>
 
-                                $units = [
-                                    "piece",
-                                    "kg",
-                                    "gram",
-                                    "litre",
-                                    "ml",
-                                    "pack",
-                                    "box",
-                                    "bottle",
-                                    "bag",
-                                    "dozen"
-                                ];
+                                <option
+                                    value="active"
+                                    <?= $statusFilter === "active" ? "selected" : "" ?>>
 
-                                foreach ($units as $unit):
+                                    Active
 
-                                ?>
+                                </option>
 
-                                    <option value="<?= $unit ?>">
+                                <option
+                                    value="inactive"
+                                    <?= $statusFilter === "inactive" ? "selected" : "" ?>>
 
-                                        <?= ucfirst($unit) ?>
+                                    Inactive
 
-                                    </option>
-
-                                <?php endforeach; ?>
+                                </option>
 
                             </select>
 
                         </div>
 
 
-                        <div class="col-12">
+                        <div class="col-lg-2">
 
-                            <label class="form-label">
-                                Description
-                            </label>
+                            <button
+                                class="btn btn-dark w-100">
 
-                            <textarea
-                                name="description"
-                                rows="4"
-                                class="form-control"
-                                placeholder="Describe the product..."></textarea>
+                                <i class="bi bi-funnel me-1"></i>
+                                Filter
 
-                        </div>
-
-
-                        <div class="col-12">
-
-                            <label class="form-label fw-bold">
-
-                                Product Images
-
-                                <span class="text-muted">
-                                    (up to 5)
-                                </span>
-
-                            </label>
-
-                            <input
-                                type="file"
-                                name="images[]"
-                                class="form-control"
-                                accept=".jpg,.jpeg,.png,.webp"
-                                multiple
-                                onchange="limitImages(this, 5)">
-
-                            <small class="text-muted">
-
-                                You can select up to 5 images.
-                                The first image will automatically become
-                                the primary image.
-
-                                JPG, PNG or WEBP — maximum 5MB each.
-
-                            </small>
+                            </button>
 
                         </div>
 
                     </div>
 
-                </div>
+                </form>
+
+            </div>
 
 
-                <div class="modal-footer">
+            <!-- Table -->
+            <div class="table-responsive">
 
-                    <button
-                        type="button"
-                        class="btn btn-light"
-                        data-bs-dismiss="modal">
+                <table class="table table-hover mb-0 product-table">
 
-                        Cancel
+                    <thead>
 
-                    </button>
+                        <tr>
 
-                    <button
-                        type="submit"
-                        class="btn btn-primary-custom">
+                            <th class="px-4 py-3">
+                                Product
+                            </th>
 
-                        <i class="bi bi-plus-lg me-1"></i>
+                            <th>
+                                Category
+                            </th>
 
-                        Create Product
+                            <th>
+                                Price
+                            </th>
 
-                    </button>
+                            <th>
+                                Stock
+                            </th>
 
-                </div>
+                            <th>
+                                Gallery
+                            </th>
 
-            </form>
+                            <th>
+                                Status
+                            </th>
+
+                            <th class="text-end px-4">
+                                Actions
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <?php if (!$products): ?>
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    class="text-center py-5 text-muted">
+
+                                    <i
+                                        class="bi bi-box-seam fs-1 d-block mb-2">
+                                    </i>
+
+                                    No products found.
+
+                                </td>
+
+                            </tr>
+
+                        <?php endif; ?>
+
+
+                        <?php foreach ($products as $product): ?>
+
+                            <?php
+
+                            $images =
+                                $productImages[$product["id"]] ?? [];
+
+                            $primaryImage = null;
+
+                            foreach ($images as $img) {
+
+                                if ($img["is_primary"]) {
+                                    $primaryImage = $img;
+                                    break;
+                                }
+                            }
+
+                            if (!$primaryImage && !empty($images)) {
+                                $primaryImage = $images[0];
+                            }
+
+                            ?>
+
+                            <tr>
+
+                                <!-- Product -->
+                                <td class="px-4">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        <?php if ($primaryImage): ?>
+
+                                            <img
+                                                src="<?= $uploadUrl . e($primaryImage["image"]) ?>"
+                                                class="product-image"
+                                                alt="<?= e($product["name"]) ?>">
+
+                                        <?php elseif (!empty($product["image"])): ?>
+
+                                            <img
+                                                src="<?= $uploadUrl . e($product["image"]) ?>"
+                                                class="product-image"
+                                                alt="<?= e($product["name"]) ?>">
+
+                                        <?php else: ?>
+
+                                            <div class="image-placeholder">
+
+                                                <i class="bi bi-image"></i>
+
+                                            </div>
+
+                                        <?php endif; ?>
+
+
+                                        <div>
+
+                                            <div class="fw-bold">
+                                                <?= e($product["name"]) ?>
+                                            </div>
+
+                                            <small class="text-muted">
+                                                <?= e($product["unit"]) ?>
+                                            </small>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- Category -->
+                                <td>
+
+                                    <?= e(
+                                        $product["category_name"]
+                                            ?? "Uncategorized"
+                                    ) ?>
+
+                                </td>
+
+
+                                <!-- Price -->
+                                <td>
+
+                                    <strong>
+                                        GH₵ <?= number_format(
+                                                $product["price"],
+                                                2
+                                            ) ?>
+                                    </strong>
+
+                                </td>
+
+
+                                <!-- Stock -->
+                                <td>
+
+                                    <?= number_format(
+                                        $product["stock"],
+                                        2
+                                    ) ?>
+
+                                    <?= e($product["unit"]) ?>
+
+                                </td>
+
+
+                                <!-- Gallery -->
+                                <td>
+
+                                    <div class="gallery">
+
+                                        <?php foreach ($images as $img): ?>
+
+                                            <img
+                                                src="<?= $uploadUrl . e($img["image"]) ?>"
+                                                class="gallery-thumb <?= $img["is_primary"] ? "primary" : "" ?>"
+                                                title="<?= $img["is_primary"] ? "Primary image" : "Product image" ?>">
+
+                                        <?php endforeach; ?>
+
+
+                                        <?php if (!$images): ?>
+
+                                            <span class="text-muted small">
+                                                No images
+                                            </span>
+
+                                        <?php endif; ?>
+
+                                    </div>
+
+                                    <small class="text-muted">
+
+                                        <?= count($images) ?>/5 images
+
+                                    </small>
+
+                                </td>
+
+
+                                <!-- Status -->
+                                <td>
+
+                                    <?php if ($product["status"] === "active"): ?>
+
+                                        <span class="badge badge-active px-3 py-2">
+                                            Active
+                                        </span>
+
+                                    <?php else: ?>
+
+                                        <span class="badge badge-inactive px-3 py-2">
+                                            Inactive
+                                        </span>
+
+                                    <?php endif; ?>
+
+                                </td>
+
+
+                                <!-- Actions -->
+                                <td class="text-end px-4">
+
+                                    <div class="dropdown">
+
+                                        <button
+                                            class="btn btn-sm btn-light"
+                                            data-bs-toggle="dropdown">
+
+                                            <i class="bi bi-three-dots"></i>
+
+                                        </button>
+
+                                        <ul class="dropdown-menu dropdown-menu-end">
+
+                                            <li>
+
+                                                <button
+                                                    class="dropdown-item"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editProduct<?= $product["id"] ?>">
+
+                                                    <i class="bi bi-pencil me-2"></i>
+                                                    Edit Product
+
+                                                </button>
+
+                                            </li>
+
+
+                                            <li>
+
+                                                <button
+                                                    class="dropdown-item"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#imagesModal<?= $product["id"] ?>">
+
+                                                    <i class="bi bi-images me-2"></i>
+                                                    Manage Images
+
+                                                </button>
+
+                                            </li>
+
+
+                                            <li>
+
+                                                <form method="POST">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="toggle_status">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="product_id"
+                                                        value="<?= $product["id"] ?>">
+
+                                                    <button
+                                                        class="dropdown-item">
+
+                                                        <i class="bi bi-toggle-on me-2"></i>
+
+                                                        <?= $product["status"] === "active"
+                                                            ? "Deactivate"
+                                                            : "Activate" ?>
+
+                                                    </button>
+
+                                                </form>
+
+                                            </li>
+
+
+                                            <li>
+                                                <hr class="dropdown-divider">
+                                            </li>
+
+
+                                            <li>
+
+                                                <form
+                                                    method="POST"
+                                                    onsubmit="return confirm('Delete this product and all its images?');">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="delete">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="product_id"
+                                                        value="<?= $product["id"] ?>">
+
+                                                    <button
+                                                        class="dropdown-item text-danger">
+
+                                                        <i class="bi bi-trash me-2"></i>
+                                                        Delete Product
+
+                                                    </button>
+
+                                                </form>
+
+                                            </li>
+
+                                        </ul>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+
+                            <!-- EDIT PRODUCT MODAL -->
+                            <div
+                                class="modal fade"
+                                id="editProduct<?= $product["id"] ?>"
+                                tabindex="-1">
+
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+
+                                    <div class="modal-content">
+
+                                        <form
+                                            method="POST"
+                                            enctype="multipart/form-data">
+
+                                            <div class="modal-header">
+
+                                                <h5 class="modal-title">
+
+                                                    <i class="bi bi-pencil-square me-2"></i>
+
+                                                    Edit Product
+
+                                                </h5>
+
+                                                <button
+                                                    type="button"
+                                                    class="btn-close"
+                                                    data-bs-dismiss="modal">
+                                                </button>
+
+                                            </div>
+
+
+                                            <div class="modal-body">
+
+                                                <input
+                                                    type="hidden"
+                                                    name="action"
+                                                    value="update">
+
+                                                <input
+                                                    type="hidden"
+                                                    name="product_id"
+                                                    value="<?= $product["id"] ?>">
+
+
+                                                <div class="row g-3">
+
+                                                    <div class="col-md-8">
+
+                                                        <label class="form-label">
+                                                            Product Name
+                                                        </label>
+
+                                                        <input
+                                                            type="text"
+                                                            name="name"
+                                                            class="form-control"
+                                                            value="<?= e($product["name"]) ?>"
+                                                            required>
+
+                                                    </div>
+
+
+                                                    <div class="col-md-4">
+
+                                                        <label class="form-label">
+                                                            Category
+                                                        </label>
+
+                                                        <select
+                                                            name="category_id"
+                                                            class="form-select">
+
+                                                            <option value="">
+                                                                Uncategorized
+                                                            </option>
+
+                                                            <?php foreach ($categories as $category): ?>
+
+                                                                <option
+                                                                    value="<?= $category["id"] ?>"
+                                                                    <?= $product["category_id"] == $category["id"]
+                                                                        ? "selected"
+                                                                        : "" ?>>
+
+                                                                    <?= e($category["name"]) ?>
+
+                                                                </option>
+
+                                                            <?php endforeach; ?>
+
+                                                        </select>
+
+                                                    </div>
+
+
+                                                    <div class="col-md-4">
+
+                                                        <label class="form-label">
+                                                            Price (GH₵)
+                                                        </label>
+
+                                                        <input
+                                                            type="number"
+                                                            name="price"
+                                                            step="0.01"
+                                                            min="0"
+                                                            class="form-control"
+                                                            value="<?= e($product["price"]) ?>"
+                                                            required>
+
+                                                    </div>
+
+
+                                                    <div class="col-md-4">
+
+                                                        <label class="form-label">
+                                                            Stock
+                                                        </label>
+
+                                                        <input
+                                                            type="number"
+                                                            name="stock"
+                                                            step="0.01"
+                                                            min="0"
+                                                            class="form-control"
+                                                            value="<?= e($product["stock"]) ?>"
+                                                            required>
+
+                                                    </div>
+
+
+                                                    <div class="col-md-4">
+
+                                                        <label class="form-label">
+                                                            Unit
+                                                        </label>
+
+                                                        <select
+                                                            name="unit"
+                                                            class="form-select">
+
+                                                            <?php
+
+                                                            $units = [
+                                                                "piece",
+                                                                "kg",
+                                                                "gram",
+                                                                "litre",
+                                                                "ml",
+                                                                "pack",
+                                                                "box",
+                                                                "bottle",
+                                                                "bag",
+                                                                "dozen"
+                                                            ];
+
+                                                            foreach ($units as $unit):
+
+                                                            ?>
+
+                                                                <option
+                                                                    value="<?= $unit ?>"
+                                                                    <?= $product["unit"] === $unit
+                                                                        ? "selected"
+                                                                        : "" ?>>
+
+                                                                    <?= ucfirst($unit) ?>
+
+                                                                </option>
+
+                                                            <?php endforeach; ?>
+
+                                                        </select>
+
+                                                    </div>
+
+
+                                                    <div class="col-12">
+
+                                                        <label class="form-label">
+                                                            Description
+                                                        </label>
+
+                                                        <textarea
+                                                            name="description"
+                                                            rows="4"
+                                                            class="form-control"><?= e($product["description"]) ?></textarea>
+
+                                                    </div>
+
+
+                                                    <div class="col-12">
+
+                                                        <label class="form-label">
+
+                                                            Add More Images
+
+                                                            <span class="text-muted">
+                                                                (maximum 5 total)
+                                                            </span>
+
+                                                        </label>
+
+                                                        <input
+                                                            type="file"
+                                                            name="images[]"
+                                                            class="form-control"
+                                                            accept=".jpg,.jpeg,.png,.webp"
+                                                            multiple>
+
+                                                        <small class="text-muted">
+                                                            JPG, PNG or WEBP. Maximum 5MB each.
+                                                        </small>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <div class="modal-footer">
+
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-light"
+                                                    data-bs-dismiss="modal">
+
+                                                    Cancel
+
+                                                </button>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-primary-custom">
+
+                                                    Save Changes
+
+                                                </button>
+
+                                            </div>
+
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- IMAGE MANAGEMENT MODAL -->
+                            <div
+                                class="modal fade"
+                                id="imagesModal<?= $product["id"] ?>"
+                                tabindex="-1">
+
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+
+                                    <div class="modal-content">
+
+                                        <div class="modal-header">
+
+                                            <div>
+
+                                                <h5 class="modal-title">
+
+                                                    <i class="bi bi-images me-2"></i>
+
+                                                    Product Images
+
+                                                </h5>
+
+                                                <small class="text-muted">
+
+                                                    <?= e($product["name"]) ?>
+
+                                                </small>
+
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                class="btn-close"
+                                                data-bs-dismiss="modal">
+                                            </button>
+
+                                        </div>
+
+
+                                        <div class="modal-body">
+
+                                            <div class="d-flex justify-content-between mb-3">
+
+                                                <strong>
+                                                    <?= count($images) ?> / 5 Images
+                                                </strong>
+
+                                                <span class="text-muted small">
+                                                    Green border = primary image
+                                                </span>
+
+                                            </div>
+
+
+                                            <?php if ($images): ?>
+
+                                                <div class="image-manager">
+
+                                                    <?php foreach ($images as $img): ?>
+
+                                                        <div class="image-box">
+
+                                                            <?php if ($img["is_primary"]): ?>
+
+                                                                <span class="primary-label">
+                                                                    PRIMARY
+                                                                </span>
+
+                                                            <?php endif; ?>
+
+
+                                                            <img
+                                                                src="<?= $uploadUrl . e($img["image"]) ?>"
+                                                                alt="Product image">
+
+
+                                                            <div class="image-actions">
+
+                                                                <?php if (!$img["is_primary"]): ?>
+
+                                                                    <a
+                                                                        href="?primary_image=<?= $img["id"] ?>"
+                                                                        class="btn btn-sm btn-outline-success">
+
+                                                                        <i class="bi bi-star"></i>
+
+                                                                    </a>
+
+                                                                <?php endif; ?>
+
+
+                                                                <a
+                                                                    href="?delete_image=<?= $img["id"] ?>"
+                                                                    class="btn btn-sm btn-outline-danger"
+                                                                    onclick="return confirm('Delete this image?');">
+
+                                                                    <i class="bi bi-trash"></i>
+
+                                                                </a>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    <?php endforeach; ?>
+
+                                                </div>
+
+                                            <?php else: ?>
+
+                                                <div class="text-center py-4 text-muted">
+
+                                                    <i class="bi bi-images fs-1"></i>
+
+                                                    <p class="mt-2">
+                                                        No images have been added yet.
+                                                    </p>
+
+                                                </div>
+
+                                            <?php endif; ?>
+
+
+                                            <?php if (count($images) < 5): ?>
+
+                                                <hr class="my-4">
+
+                                                <form
+                                                    method="POST"
+                                                    enctype="multipart/form-data">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="action"
+                                                        value="update">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="product_id"
+                                                        value="<?= $product["id"] ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="name"
+                                                        value="<?= e($product["name"]) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="category_id"
+                                                        value="<?= e($product["category_id"]) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="description"
+                                                        value="<?= e($product["description"]) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="price"
+                                                        value="<?= e($product["price"]) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="stock"
+                                                        value="<?= e($product["stock"]) ?>">
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="unit"
+                                                        value="<?= e($product["unit"]) ?>">
+
+
+                                                    <label class="form-label fw-bold">
+
+                                                        Add Images
+
+                                                    </label>
+
+                                                    <input
+                                                        type="file"
+                                                        name="images[]"
+                                                        class="form-control"
+                                                        accept=".jpg,.jpeg,.png,.webp"
+                                                        multiple
+                                                        onchange="limitImages(this, <?= 5 - count($images) ?>)">
+
+                                                    <small class="text-muted">
+                                                        You can add
+                                                        <?= 5 - count($images) ?>
+                                                        more image(s).
+                                                    </small>
+
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-primary-custom mt-3">
+
+                                                        <i class="bi bi-cloud-upload me-1"></i>
+
+                                                        Upload Images
+
+                                                    </button>
+
+                                                </form>
+
+                                            <?php else: ?>
+
+                                                <div class="alert alert-success mt-4 mb-0">
+
+                                                    <i class="bi bi-check-circle me-2"></i>
+
+                                                    This product already has the maximum
+                                                    5 images.
+
+                                                </div>
+
+                                            <?php endif; ?>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        <?php endforeach; ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- ADD PRODUCT MODAL -->
+    <div
+        class="modal fade"
+        id="addProductModal"
+        tabindex="-1">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <form
+                    method="POST"
+                    enctype="multipart/form-data">
+
+                    <div class="modal-header">
+
+                        <h5 class="modal-title">
+
+                            <i class="bi bi-plus-circle me-2"></i>
+
+                            Add New Product
+
+                        </h5>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                        </button>
+
+                    </div>
+
+
+                    <div class="modal-body">
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="create">
+
+
+                        <div class="row g-3">
+
+                            <div class="col-md-8">
+
+                                <label class="form-label">
+                                    Product Name
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="name"
+                                    class="form-control"
+                                    placeholder="e.g. Fresh Tomatoes"
+                                    required>
+
+                            </div>
+
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Category
+                                </label>
+
+                                <select
+                                    name="category_id"
+                                    class="form-select">
+
+                                    <option value="">
+                                        Uncategorized
+                                    </option>
+
+                                    <?php foreach ($categories as $category): ?>
+
+                                        <option
+                                            value="<?= $category["id"] ?>">
+
+                                            <?= e($category["name"]) ?>
+
+                                        </option>
+
+                                    <?php endforeach; ?>
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Price (GH₵)
+                                </label>
+
+                                <input
+                                    type="number"
+                                    name="price"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control"
+                                    placeholder="0.00"
+                                    required>
+
+                            </div>
+
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Stock
+                                </label>
+
+                                <input
+                                    type="number"
+                                    name="stock"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control"
+                                    placeholder="0"
+                                    required>
+
+                            </div>
+
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">
+                                    Unit
+                                </label>
+
+                                <select
+                                    name="unit"
+                                    class="form-select">
+
+                                    <?php
+
+                                    $units = [
+                                        "piece",
+                                        "kg",
+                                        "gram",
+                                        "litre",
+                                        "ml",
+                                        "pack",
+                                        "box",
+                                        "bottle",
+                                        "bag",
+                                        "dozen"
+                                    ];
+
+                                    foreach ($units as $unit):
+
+                                    ?>
+
+                                        <option value="<?= $unit ?>">
+
+                                            <?= ucfirst($unit) ?>
+
+                                        </option>
+
+                                    <?php endforeach; ?>
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="col-12">
+
+                                <label class="form-label">
+                                    Description
+                                </label>
+
+                                <textarea
+                                    name="description"
+                                    rows="4"
+                                    class="form-control"
+                                    placeholder="Describe the product..."></textarea>
+
+                            </div>
+
+
+                            <div class="col-12">
+
+                                <label class="form-label fw-bold">
+
+                                    Product Images
+
+                                    <span class="text-muted">
+                                        (up to 5)
+                                    </span>
+
+                                </label>
+
+                                <input
+                                    type="file"
+                                    name="images[]"
+                                    class="form-control"
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    multiple
+                                    onchange="limitImages(this, 5)">
+
+                                <small class="text-muted">
+
+                                    You can select up to 5 images.
+                                    The first image will automatically become
+                                    the primary image.
+
+                                    JPG, PNG or WEBP — maximum 5MB each.
+
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-light"
+                            data-bs-dismiss="modal">
+
+                            Cancel
+
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary-custom">
+
+                            <i class="bi bi-plus-lg me-1"></i>
+
+                            Create Product
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
 
         </div>
 
     </div>
 
-</div>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
 
 
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-</script>
+    <script>
+        function limitImages(input, maximum) {
 
+            if (input.files.length > maximum) {
 
-<script>
+                alert(
+                    "You can select a maximum of " +
+                    maximum +
+                    " image(s)."
+                );
 
-function limitImages(input, maximum) {
-
-    if (input.files.length > maximum) {
-
-        alert(
-            "You can select a maximum of " +
-            maximum +
-            " image(s)."
-        );
-
-        input.value = "";
-    }
-}
-
-</script>
+                input.value = "";
+            }
+        }
+    </script>
 
 </body>
+
 </html>
