@@ -271,9 +271,7 @@ $staffMembers = $stmt->fetchAll();
         rel="stylesheet">    <link
         href="../assets/css/admin.css"
         rel="stylesheet">
-    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-
-    <style>
+<style>
         .table-card {
             background: white;
             padding: 25px;
@@ -298,6 +296,7 @@ $staffMembers = $stmt->fetchAll();
         }
     </style>
 
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
 <body class="admin-farvist">
