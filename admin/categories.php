@@ -267,6 +267,7 @@ try {
         href="../assets/css/admin.css"
         rel="stylesheet"
     >
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 
     <style>
         .stat-card {
@@ -425,7 +426,7 @@ try {
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
