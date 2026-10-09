@@ -1,5 +1,34 @@
 <?php
-require_once __DIR__.'/../config/db.php'; require_once __DIR__.'/../includes/auth.php';
-requireRole('customer'); requireCompanyAccess(); header('Content-Type: application/json');
-$userId=(int)$_SESSION['user_id']; $companyId=currentCompanyId(); $productId=(int)($_POST['product_id']??0);
-$st=$conn->prepare("DELETE c FROM cart c INNER JOIN products p ON p.id=c.product_id WHERE c.user_id=? AND c.product_id=? AND p.company_id=?");$st->execute([$userId,$productId,$companyId]);echo json_encode(['success'=>true]);
+
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+
+requireRole('customer');
+
+header('Content-Type: application/json');
+
+$userId = (int) $_SESSION['user_id'];
+$productId = (int) ($_POST['product_id'] ?? 0);
+
+if ($productId <= 0) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Invalid product.'
+    ]);
+    exit;
+}
+
+$stmt = $conn->prepare("
+    DELETE FROM cart
+    WHERE user_id = ?
+      AND product_id = ?
+");
+
+$stmt->execute([
+    $userId,
+    $productId
+]);
+
+echo json_encode([
+    'success' => true
+]);
