@@ -371,9 +371,7 @@ $totalRevenue = (float)$stat->fetchColumn();
     <link
         href="../assets/css/admin.css"
         rel="stylesheet">
-    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-
-    <style>
+<style>
         .order-number {
             font-weight: 700;
             color: #111827;
@@ -394,6 +392,7 @@ $totalRevenue = (float)$stat->fetchColumn();
         }
     </style>
 
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
 <body class="admin-farvist">
