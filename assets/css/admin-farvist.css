@@ -1072,3 +1072,229 @@ body.admin-farvist .fv-theme-option.active .fv-theme-check {
     opacity: 1;
 }
 
+
+
+/* =========================================================
+   ADMIN PORTAL PAGE ADAPTERS
+   Lets legacy admin pages share the Farvist design system.
+   ========================================================= */
+
+body.admin-farvist .topbar {
+    min-height: 76px;
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.075),
+            rgba(255,255,255,.035)
+        ) !important;
+    border: 1px solid var(--fv-border) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 18px 44px rgba(0,0,0,.16) !important;
+    backdrop-filter: blur(18px) saturate(135%);
+    -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+body.admin-farvist .topbar-title {
+    color: var(--fv-text) !important;
+    font-size: 1.35rem;
+    letter-spacing: -.025em;
+}
+
+body.admin-farvist .topbar-subtitle {
+    color: var(--fv-muted) !important;
+}
+
+body.admin-farvist .stat-card,
+body.admin-farvist .content-card,
+body.admin-farvist .store-card,
+body.admin-farvist .report-card,
+body.admin-farvist .profile-card,
+body.admin-farvist .card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.075),
+            rgba(255,255,255,.035)
+        ) !important;
+    color: var(--fv-text) !important;
+    border: 1px solid var(--fv-border) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 18px 44px rgba(0,0,0,.16) !important;
+    backdrop-filter: blur(18px) saturate(135%);
+    -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+body.admin-farvist .stat-card {
+    transition:
+        transform .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease;
+}
+
+body.admin-farvist .stat-card:hover {
+    transform: translateY(-3px);
+    border-color:
+        rgba(var(--fv-primary-rgb), .20) !important;
+    box-shadow:
+        0 22px 50px rgba(0,0,0,.20) !important;
+}
+
+body.admin-farvist .stat-icon {
+    background:
+        rgba(var(--fv-primary-rgb), .11) !important;
+    color: var(--fv-primary) !important;
+    border: 1px solid
+        rgba(var(--fv-primary-rgb), .14);
+}
+
+body.admin-farvist .stat-number {
+    color: var(--fv-text) !important;
+}
+
+body.admin-farvist .stat-label {
+    color: var(--fv-muted) !important;
+}
+
+body.admin-farvist .form-control,
+body.admin-farvist .form-select,
+body.admin-farvist .input-group-text {
+    color: var(--fv-text) !important;
+    background:
+        rgba(255,255,255,.045) !important;
+    border-color: var(--fv-border) !important;
+    border-radius: 12px !important;
+}
+
+body.admin-farvist .form-control:focus,
+body.admin-farvist .form-select:focus {
+    border-color:
+        rgba(var(--fv-primary-rgb), .56) !important;
+    box-shadow:
+        0 0 0 .2rem
+        rgba(var(--fv-primary-rgb), .11) !important;
+}
+
+body.admin-farvist .btn-success,
+body.admin-farvist .btn-primary-custom {
+    color: #fff !important;
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        ) !important;
+    border-color: transparent !important;
+    box-shadow:
+        0 9px 22px
+        rgba(var(--fv-primary-rgb), .18);
+}
+
+body.admin-farvist .btn-outline-success {
+    color: var(--fv-primary) !important;
+    border-color:
+        rgba(var(--fv-primary-rgb), .38) !important;
+}
+
+body.admin-farvist .btn-outline-success:hover {
+    color: #fff !important;
+    background: var(--fv-primary) !important;
+}
+
+body.admin-farvist .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--fv-text);
+    --bs-table-border-color: var(--fv-border);
+}
+
+body.admin-farvist .table thead th {
+    color: var(--fv-muted) !important;
+    background:
+        rgba(var(--fv-primary-rgb), .045) !important;
+    border-bottom-color: var(--fv-border) !important;
+}
+
+body.admin-farvist .table tbody td {
+    color: var(--fv-text) !important;
+    border-bottom-color: var(--fv-border) !important;
+}
+
+body.admin-farvist .table tbody tr:hover {
+    background:
+        rgba(var(--fv-primary-rgb), .035) !important;
+}
+
+body.admin-farvist .modal-content,
+body.admin-farvist .dropdown-menu {
+    color: var(--fv-text) !important;
+    background:
+        rgba(15,23,42,.94) !important;
+    border: 1px solid var(--fv-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 24px 58px rgba(0,0,0,.32);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+}
+
+body.admin-farvist .dropdown-item {
+    color: var(--fv-text);
+}
+
+body.admin-farvist .dropdown-item:hover,
+body.admin-farvist .dropdown-item:focus {
+    color: var(--fv-text);
+    background:
+        rgba(var(--fv-primary-rgb), .08);
+}
+
+body.admin-farvist .alert {
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+html[data-theme="light"] body.admin-farvist .topbar,
+html[data-theme="light"] body.admin-farvist .stat-card,
+html[data-theme="light"] body.admin-farvist .content-card,
+html[data-theme="light"] body.admin-farvist .store-card,
+html[data-theme="light"] body.admin-farvist .report-card,
+html[data-theme="light"] body.admin-farvist .profile-card,
+html[data-theme="light"] body.admin-farvist .card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.86),
+            rgba(255,255,255,.66)
+        ) !important;
+    box-shadow:
+        0 18px 44px rgba(30,41,59,.08) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .form-control,
+html[data-theme="light"] body.admin-farvist .form-select,
+html[data-theme="light"] body.admin-farvist .input-group-text {
+    background:
+        rgba(255,255,255,.66) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .modal-content,
+html[data-theme="light"] body.admin-farvist .dropdown-menu {
+    background:
+        rgba(255,255,255,.96) !important;
+}
+
+/* Accent picker inside shared admin sidebar */
+body.admin-farvist .sidebar-accent-picker {
+    position: relative;
+}
+
+body.admin-farvist .sidebar-accent-menu {
+    min-width: 210px;
+    padding: 9px;
+    border-radius: 15px;
+}
+
+body.admin-farvist .sidebar-accent-menu .fv-theme-option {
+    font-size: .8rem;
+}
