@@ -138,8 +138,7 @@ $partnerCount = (int)($stats['partner_count'] ?? 0);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="../assets/css/admin.css" rel="stylesheet">
-    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-    <style>
+<style>
         .user-avatar {
             width: 40px;
             height: 40px;
@@ -152,6 +151,7 @@ $partnerCount = (int)($stats['partner_count'] ?? 0);
             font-weight: 700;
         }
     </style>
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 <body class="admin-farvist">
 
