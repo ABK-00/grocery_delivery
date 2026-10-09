@@ -24,3 +24,5 @@ $customerPrefix = $inCustomerDir ? '' : 'customer/';
 </aside>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <script>document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('customerSidebar'),o=document.getElementById('sidebarOverlay');['sidebarToggle','customerMenuBtn'].forEach(function(id){var b=document.getElementById(id);if(b&&s)b.addEventListener('click',function(){s.classList.toggle('show');if(o)o.classList.toggle('show')})});if(o&&s)o.addEventListener('click',function(){s.classList.remove('show');o.classList.remove('show')});if(s)s.querySelectorAll('.nav-link').forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=900&&!a.hasAttribute('data-theme-toggle')){s.classList.remove('show');if(o)o.classList.remove('show')}})})});</script>
+
+<script src="<?= $rootPrefix ?>assets/js/theme.js"></script>
