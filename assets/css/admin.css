@@ -11,8 +11,8 @@
 body {
     margin: 0;
     padding: 0;
-    background: #f4f7f6;
-    color: #1f2937;
+    background: #f5f7ff;
+    color: #1e2333;
     font-family: "Segoe UI", Arial, sans-serif;
 }
 
@@ -27,7 +27,7 @@ body {
     left: 0;
     width: 250px;
     height: 100vh;
-    background: #111827;
+    background: #171a2b;
     color: white;
     z-index: 1000;
     display: flex;
@@ -69,8 +69,8 @@ body {
     height: 36px;
     min-width: 36px;
     border-radius: 10px;
-    background: #22c55e;
-    color: #111827;
+    background: #6d5dfc;
+    color: #171a2b;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -89,7 +89,7 @@ body {
 }
 
 .brand-text span {
-    color: #22c55e;
+    color: #6d5dfc;
 }
 
 
@@ -104,7 +104,7 @@ body {
 
 .sidebar-section-title {
     padding: 8px 12px 6px;
-    color: #6b7280;
+    color: #73798c;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1px;
@@ -136,13 +136,13 @@ body {
 }
 
 .sidebar .nav-link:hover {
-    background: rgba(34,197,94,0.10);
+    background: rgba(109,93,252,0.10);
     color: white;
 }
 
 .sidebar .nav-link.active {
-    background: #22c55e;
-    color: #111827;
+    background: #6d5dfc;
+    color: #171a2b;
     font-weight: 600;
 }
 
@@ -195,14 +195,14 @@ body {
 
 .topbar-title {
     margin: 0;
-    color: #111827;
+    color: #171a2b;
     font-size: 22px;
     font-weight: 700;
 }
 
 .topbar-subtitle {
     margin: 3px 0 0;
-    color: #6b7280;
+    color: #73798c;
     font-size: 13px;
 }
 
@@ -217,7 +217,7 @@ body {
     height: 42px;
     border: none;
     border-radius: 9px;
-    background: #111827;
+    background: #171a2b;
     color: white;
     align-items: center;
     justify-content: center;
@@ -264,18 +264,18 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 21px;
-    background: #dcfce7;
-    color: #16a34a;
+    background: #ece9ff;
+    color: #5548d9;
 }
 
 .stat-number {
     font-size: 27px;
     font-weight: 700;
-    color: #111827;
+    color: #171a2b;
 }
 
 .stat-label {
-    color: #6b7280;
+    color: #73798c;
     font-size: 13px;
     margin-top: 4px;
 }
@@ -294,16 +294,16 @@ body {
 
 .btn-success,
 .btn-primary-custom {
-    background: #22c55e;
-    border-color: #22c55e;
-    color: #111827;
+    background: #6d5dfc;
+    border-color: #6d5dfc;
+    color: #171a2b;
     font-weight: 600;
 }
 
 .btn-success:hover,
 .btn-primary-custom:hover {
-    background: #16a34a;
-    border-color: #16a34a;
+    background: #5548d9;
+    border-color: #5548d9;
     color: white;
 }
 
@@ -314,7 +314,7 @@ body {
 
 .form-label {
     margin-bottom: 6px;
-    color: #374151;
+    color: #34394d;
     font-size: 13px;
     font-weight: 600;
 }
@@ -322,15 +322,15 @@ body {
 .form-control,
 .form-select {
     min-height: 42px;
-    border: 1px solid #dbe2ea;
+    border: 1px solid #dfe3f0;
     border-radius: 8px;
     font-size: 14px;
 }
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+    border-color: #6d5dfc;
+    box-shadow: 0 0 0 3px rgba(109,93,252,0.14);
 }
 
 
@@ -362,7 +362,7 @@ body {
 .table tbody td {
     padding: 15px;
     border-bottom: 1px solid #eef2f7;
-    color: #374151;
+    color: #34394d;
     font-size: 13px;
 }
 
@@ -394,7 +394,7 @@ body {
 .badge-preparing    { background: #ffedd5; color: #c2410c; }
 .badge-ready        { background: #e0e7ff; color: #4338ca; }
 .badge-out          { background: #e0f2fe; color: #0369a1; }
-.badge-delivered    { background: #dcfce7; color: #15803d; }
+.badge-delivered    { background: #ece9ff; color: #15803d; }
 .badge-cancelled    { background: #fee2e2; color: #b91c1c; }
 
 
@@ -516,4 +516,253 @@ body {
 /* =========================================================
    SYSTEM DARK THEME
    ========================================================= */
-html[data-theme="dark"]{color-scheme:dark}html[data-theme="dark"] body{background:#0b1220;color:#e5e7eb}html[data-theme="dark"] .topbar,html[data-theme="dark"] .stat-card,html[data-theme="dark"] .section-card,html[data-theme="dark"] .content-card,html[data-theme="dark"] .report-card,html[data-theme="dark"] .profile-card,html[data-theme="dark"] .card{background:#111827!important;color:#e5e7eb!important;border-color:#273449!important}html[data-theme="dark"] .topbar-title,html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,html[data-theme="dark"] h4,html[data-theme="dark"] h5{color:#e5e7eb!important}html[data-theme="dark"] .text-muted,html[data-theme="dark"] .topbar-subtitle{color:#94a3b8!important}html[data-theme="dark"] .table{--bs-table-bg:transparent;--bs-table-color:#e5e7eb;--bs-table-border-color:#273449}html[data-theme="dark"] .form-control,html[data-theme="dark"] .form-select{background:#0f172a;color:#e5e7eb;border-color:#334155}.theme-toggle{width:100%;border:0;background:transparent}.theme-toggle .theme-label{flex:1;text-align:left}.theme-toggle .theme-state{font-size:11px;opacity:.7}
+html[data-theme="dark"]{color-scheme:dark}html[data-theme="dark"] body{background:#0b1220;color:#e5e7eb}html[data-theme="dark"] .topbar,html[data-theme="dark"] .stat-card,html[data-theme="dark"] .section-card,html[data-theme="dark"] .content-card,html[data-theme="dark"] .report-card,html[data-theme="dark"] .profile-card,html[data-theme="dark"] .card{background:#171a2b!important;color:#e5e7eb!important;border-color:#273449!important}html[data-theme="dark"] .topbar-title,html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,html[data-theme="dark"] h4,html[data-theme="dark"] h5{color:#e5e7eb!important}html[data-theme="dark"] .text-muted,html[data-theme="dark"] .topbar-subtitle{color:#94a3b8!important}html[data-theme="dark"] .table{--bs-table-bg:transparent;--bs-table-color:#e5e7eb;--bs-table-border-color:#273449}html[data-theme="dark"] .form-control,html[data-theme="dark"] .form-select{background:#0f172a;color:#e5e7eb;border-color:#334155}.theme-toggle{width:100%;border:0;background:transparent}.theme-toggle .theme-label{flex:1;text-align:left}.theme-toggle .theme-state{font-size:11px;opacity:.7}
+
+
+/* =========================================================
+   ADMIN COLOR TEST — MIDNIGHT INDIGO + LAVENDER
+   Scoped only to the admin portal.
+   ========================================================= */
+
+:root {
+    --admin-bg: #f5f7ff;
+    --admin-surface: rgba(255, 255, 255, .72);
+    --admin-surface-strong: rgba(255, 255, 255, .88);
+    --admin-text: #1e2333;
+    --admin-muted: #73798c;
+    --admin-border: rgba(109, 93, 252, .12);
+    --admin-primary: #6d5dfc;
+    --admin-primary-dark: #5548d9;
+    --admin-primary-soft: #ece9ff;
+    --admin-accent: #8b7dff;
+    --admin-sidebar: rgba(23, 26, 43, .92);
+    --admin-sidebar-soft: rgba(35, 38, 61, .90);
+}
+
+body {
+    background:
+        radial-gradient(
+            circle at 10% 8%,
+            rgba(109, 93, 252, .16),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 88% 18%,
+            rgba(139, 125, 255, .10),
+            transparent 26%
+        ),
+        linear-gradient(
+            135deg,
+            #f8f8ff 0%,
+            #f3f5ff 46%,
+            #f8f9fd 100%
+        ) !important;
+    color: var(--admin-text);
+}
+
+.sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            var(--admin-sidebar),
+            var(--admin-sidebar-soft)
+        ) !important;
+    border-right:
+        1px solid rgba(255, 255, 255, .07);
+    box-shadow:
+        18px 0 45px rgba(20, 22, 39, .18);
+}
+
+.brand-icon {
+    background:
+        linear-gradient(
+            135deg,
+            var(--admin-primary),
+            var(--admin-accent)
+        );
+    color: #ffffff;
+    box-shadow:
+        0 8px 20px rgba(109, 93, 252, .28);
+}
+
+.brand-text span {
+    color: #a99fff;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(109, 93, 252, .12);
+    color: #ffffff;
+}
+
+.sidebar .nav-link.active {
+    background:
+        linear-gradient(
+            135deg,
+            var(--admin-primary),
+            var(--admin-primary-dark)
+        ) !important;
+    color: #ffffff !important;
+    box-shadow:
+        0 10px 24px rgba(109, 93, 252, .24);
+}
+
+.topbar,
+.stat-card,
+.content-card,
+.section-card,
+.dashboard-card,
+.report-card,
+.profile-card,
+.card,
+.modal-content {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, .80),
+            rgba(255, 255, 255, .60)
+        ) !important;
+    border:
+        1px solid rgba(109, 93, 252, .10) !important;
+    box-shadow:
+        0 18px 45px rgba(50, 50, 93, .08) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.topbar-title,
+.stat-number {
+    color: var(--admin-text);
+}
+
+.topbar-subtitle,
+.stat-label,
+.text-muted {
+    color: var(--admin-muted) !important;
+}
+
+.stat-icon {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(109, 93, 252, .15),
+            rgba(139, 125, 255, .10)
+        );
+    color: var(--admin-primary);
+    border:
+        1px solid rgba(109, 93, 252, .12);
+}
+
+.btn-success,
+.btn-primary-custom {
+    background:
+        linear-gradient(
+            135deg,
+            var(--admin-primary),
+            var(--admin-primary-dark)
+        ) !important;
+    border-color:
+        var(--admin-primary-dark) !important;
+    color: #ffffff !important;
+    box-shadow:
+        0 10px 22px rgba(109, 93, 252, .20);
+}
+
+.btn-success:hover,
+.btn-primary-custom:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #7a6bff,
+            #5f50e7
+        ) !important;
+    border-color: #5f50e7 !important;
+    box-shadow:
+        0 14px 28px rgba(109, 93, 252, .28);
+}
+
+.btn-outline-success {
+    color: var(--admin-primary);
+    border-color: rgba(109, 93, 252, .38);
+}
+
+.btn-outline-success:hover {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    color: #fff;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--admin-primary) !important;
+    box-shadow:
+        0 0 0 3px rgba(109, 93, 252, .12) !important;
+}
+
+.table thead th {
+    background:
+        rgba(109, 93, 252, .055) !important;
+    color: #6e7384;
+}
+
+.table tbody tr:hover {
+    background:
+        rgba(109, 93, 252, .045) !important;
+}
+
+.badge-confirmed {
+    background: #e8e5ff;
+    color: #5548d9;
+}
+
+.badge-ready {
+    background: #eeeaff;
+    color: #6657e8;
+}
+
+.sidebar-toggle {
+    background:
+        linear-gradient(
+            135deg,
+            var(--admin-primary),
+            var(--admin-primary-dark)
+        );
+    color: #ffffff;
+}
+
+html[data-theme="dark"] body {
+    background:
+        radial-gradient(
+            circle at 10% 8%,
+            rgba(109, 93, 252, .12),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 88% 18%,
+            rgba(139, 125, 255, .08),
+            transparent 25%
+        ),
+        linear-gradient(
+            135deg,
+            #0e1020 0%,
+            #141626 48%,
+            #111321 100%
+        ) !important;
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .section-card,
+html[data-theme="dark"] .content-card,
+html[data-theme="dark"] .report-card,
+html[data-theme="dark"] .profile-card,
+html[data-theme="dark"] .card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(30, 33, 53, .82),
+            rgba(22, 24, 40, .68)
+        ) !important;
+    border-color:
+        rgba(139, 125, 255, .13) !important;
+}
+
