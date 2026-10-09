@@ -712,7 +712,35 @@ $latestLocation = $locations[0] ?? null;
         rel="stylesheet"
     >
 
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
     <style>
+
+        #adminLiveMap {
+            height: 430px;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--fv-border, #e5e9ed);
+        }
+
+        .live-tracking-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .live-tracking-pill {
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--fv-border, #e5e9ed);
+            background: rgba(255,255,255,.05);
+            font-size: .8rem;
+        }
 
         :root {
             --navy: #071a2b;
@@ -1372,6 +1400,40 @@ $latestLocation = $locations[0] ?? null;
                 </div>
 
                 <div class="card-body">
+
+                    <div id="live-tracking">
+
+                        <div
+                            id="adminLiveMap"
+                            aria-label="Live delivery map"
+                        ></div>
+
+                        <div class="live-tracking-meta">
+
+                            <span class="live-tracking-pill">
+                                <i class="bi bi-broadcast-pin me-1"></i>
+                                <span id="adminTrackingState">
+                                    <?= $delivery['status'] === 'out_for_delivery'
+                                        ? 'Live tracking active'
+                                        : 'Tracking available when out for delivery' ?>
+                                </span>
+                            </span>
+
+                            <span class="live-tracking-pill">
+                                <i class="bi bi-clock-history me-1"></i>
+                                Last update:
+                                <span id="adminLastUpdate">
+                                    <?= $latestLocation
+                                        ? htmlspecialchars($latestLocation['recorded_at'])
+                                        : 'No location yet' ?>
+                                </span>
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <hr class="my-4">
 
                     <?php if ($latestLocation): ?>
 
@@ -2171,6 +2233,157 @@ $latestLocation = $locations[0] ?? null;
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
 ></script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const deliveryId = <?= (int)$deliveryId ?>;
+
+    const initialLat =
+        <?= $latestLocation
+            ? (float)$latestLocation['latitude']
+            : 5.6037 ?>;
+
+    const initialLng =
+        <?= $latestLocation
+            ? (float)$latestLocation['longitude']
+            : -0.1870 ?>;
+
+    const hasInitialLocation =
+        <?= $latestLocation ? 'true' : 'false' ?>;
+
+    const map = L.map('adminLiveMap').setView(
+        [initialLat, initialLng],
+        hasInitialLocation ? 16 : 12
+    );
+
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }
+    ).addTo(map);
+
+    let marker = null;
+    let accuracyCircle = null;
+    let firstLiveLocation = !hasInitialLocation;
+
+    function renderLocation(location) {
+
+        if (!location) {
+            return;
+        }
+
+        const lat = parseFloat(location.latitude);
+        const lng = parseFloat(location.longitude);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return;
+        }
+
+        if (!marker) {
+
+            marker = L.marker([lat, lng])
+                .addTo(map)
+                .bindPopup('Delivery partner');
+
+        } else {
+
+            marker.setLatLng([lat, lng]);
+        }
+
+        if (accuracyCircle) {
+            map.removeLayer(accuracyCircle);
+            accuracyCircle = null;
+        }
+
+        const accuracy =
+            parseFloat(location.accuracy);
+
+        if (Number.isFinite(accuracy) && accuracy > 0) {
+            accuracyCircle = L.circle(
+                [lat, lng],
+                {
+                    radius: accuracy,
+                    color: '#2563eb',
+                    fillOpacity: .08
+                }
+            ).addTo(map);
+        }
+
+        if (firstLiveLocation) {
+            map.setView([lat, lng], 16);
+            firstLiveLocation = false;
+        }
+
+        document
+            .getElementById('adminLastUpdate')
+            .textContent =
+                location.recorded_at
+                || 'Just now';
+    }
+
+    <?php if ($latestLocation): ?>
+    renderLocation({
+        latitude: <?= json_encode($latestLocation['latitude']) ?>,
+        longitude: <?= json_encode($latestLocation['longitude']) ?>,
+        accuracy: <?= json_encode($latestLocation['accuracy']) ?>,
+        recorded_at: <?= json_encode($latestLocation['recorded_at']) ?>
+    });
+    <?php endif; ?>
+
+    async function pollLocation() {
+
+        try {
+
+            const response = await fetch(
+                '../api/get_admin_delivery_location.php?delivery_id='
+                + encodeURIComponent(deliveryId),
+                {
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    cache: 'no-store'
+                }
+            );
+
+            const data = await response.json();
+
+            if (!data.success) {
+                return;
+            }
+
+            const state =
+                document.getElementById('adminTrackingState');
+
+            if (data.delivery_status === 'out_for_delivery') {
+                state.textContent = 'Live tracking active';
+            } else {
+                state.textContent =
+                    'Delivery status: '
+                    + String(data.delivery_status || '')
+                        .replaceAll('_', ' ');
+            }
+
+            if (data.location) {
+                renderLocation(data.location);
+            }
+
+        } catch (error) {
+            console.error(
+                'Unable to refresh delivery location.',
+                error
+            );
+        }
+    }
+
+    pollLocation();
+    setInterval(pollLocation, 5000);
+});
+</script>
 
 </body>
 
