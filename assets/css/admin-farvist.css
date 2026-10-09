@@ -1682,3 +1682,308 @@ html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link:h
     border-top-color:
         rgba(var(--fv-primary-rgb), 1) !important;
 }
+
+
+/* =========================================================
+   COMPACT / COLLAPSIBLE ADMIN SIDEBAR
+   ========================================================= */
+
+body.admin-farvist .sidebar {
+    width: 218px !important;
+    transition:
+        width .22s ease,
+        transform .22s ease,
+        background .22s ease;
+}
+
+body.admin-farvist .main-content {
+    margin-left: 218px !important;
+    transition:
+        margin-left .22s ease,
+        width .22s ease;
+}
+
+body.admin-farvist .sidebar-brand {
+    height: 72px !important;
+    min-height: 72px !important;
+    padding-inline: 10px;
+}
+
+body.admin-farvist .sidebar-brand a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-width: 0;
+}
+
+body.admin-farvist .brand-icon {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 11px !important;
+}
+
+body.admin-farvist .brand-text {
+    font-size: .95rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+body.admin-farvist .sidebar-nav {
+    padding: 10px 8px 8px !important;
+}
+
+body.admin-farvist .sidebar-section-title {
+    margin: 1px 5px 7px !important;
+    font-size: .62rem !important;
+    letter-spacing: .08em;
+}
+
+body.admin-farvist .sidebar .nav-link,
+body.admin-farvist .sidebar-footer .nav-link,
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    min-height: 35px !important;
+    padding: 6px 9px !important;
+    margin-bottom: 5px !important;
+    border-radius: 10px !important;
+    font-size: .78rem !important;
+    gap: 9px !important;
+}
+
+body.admin-farvist .sidebar .nav-link i,
+body.admin-farvist .sidebar-footer .nav-link i {
+    width: 18px;
+    min-width: 18px;
+    display: inline-flex;
+    justify-content: center;
+    font-size: .9rem !important;
+}
+
+body.admin-farvist .sidebar-footer {
+    padding: 8px !important;
+}
+
+body.admin-farvist .sidebar-profile {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 10px;
+    padding: 10px 7px 5px;
+    border-top:
+        1px solid rgba(var(--fv-primary-rgb), .18);
+}
+
+body.admin-farvist .sidebar-profile-link {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--fv-text);
+    text-decoration: none;
+}
+
+body.admin-farvist .sidebar-profile-avatar {
+    width: 35px;
+    height: 35px;
+    min-width: 35px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        );
+    border:
+        2px solid rgba(255,255,255,.36);
+    box-shadow:
+        0 6px 18px rgba(var(--fv-primary-rgb), .18);
+}
+
+body.admin-farvist .sidebar-profile-copy {
+    min-width: 0;
+    line-height: 1.2;
+}
+
+body.admin-farvist .sidebar-profile-copy strong,
+body.admin-farvist .sidebar-profile-copy small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.admin-farvist .sidebar-profile-copy strong {
+    font-size: .76rem;
+    font-weight: 800;
+    color: var(--fv-text);
+}
+
+body.admin-farvist .sidebar-profile-copy small {
+    margin-top: 3px;
+    font-size: .63rem;
+    color: var(--fv-muted);
+}
+
+body.admin-farvist .sidebar-collapse-button {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 9px;
+    color: var(--fv-primary);
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.07),
+            rgba(255,255,255,.02)
+        );
+    border:
+        1px solid rgba(var(--fv-primary-rgb), .32);
+    transition:
+        transform .18s ease,
+        background .18s ease,
+        border-color .18s ease;
+}
+
+body.admin-farvist .sidebar-collapse-button:hover {
+    background:
+        rgba(var(--fv-primary-rgb), .10);
+    border-color:
+        rgba(var(--fv-primary-rgb), .70);
+}
+
+/* Collapsed desktop state */
+@media (min-width: 901px) {
+
+    body.admin-farvist .sidebar.is-collapsed {
+        width: 68px !important;
+    }
+
+    body.admin-farvist.admin-sidebar-collapsed .main-content {
+        margin-left: 68px !important;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-brand {
+        justify-content: center;
+        padding-inline: 8px;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-brand a {
+        justify-content: center;
+        gap: 0;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .brand-text,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-section-title,
+    body.admin-farvist .sidebar.is-collapsed .nav-link span,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-meta,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-profile-copy {
+        display: none !important;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-nav,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-footer {
+        padding-inline: 7px !important;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .nav-link,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-footer .nav-link,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-accent-picker > .nav-link {
+        width: 44px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding: 6px !important;
+        justify-content: center !important;
+        gap: 0 !important;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .nav-link i,
+    body.admin-farvist .sidebar.is-collapsed .sidebar-footer .nav-link i {
+        width: auto;
+        min-width: 0;
+        margin: 0 !important;
+        font-size: 1rem !important;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-accent-picker {
+        display: flex;
+        justify-content: center;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-accent-menu {
+        left: 54px !important;
+        top: auto !important;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-profile {
+        position: relative;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 0 4px;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-profile-link {
+        flex: 0 0 auto;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-profile-avatar {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-collapse-button {
+        width: 36px;
+        min-width: 36px;
+        height: 30px;
+    }
+
+    body.admin-farvist .sidebar.is-collapsed .sidebar-collapse-button i {
+        font-size: .78rem;
+    }
+}
+
+/* Light profile styling */
+html[data-theme="light"] body.admin-farvist .sidebar-profile-copy strong {
+    color: #172033;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar-collapse-button {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.72),
+            rgba(255,255,255,.42)
+        );
+}
+
+/* Mobile remains a full-width drawer. */
+@media (max-width: 900px) {
+
+    body.admin-farvist .sidebar {
+        width: 245px !important;
+    }
+
+    body.admin-farvist .main-content,
+    body.admin-farvist.admin-sidebar-collapsed .main-content {
+        margin-left: 0 !important;
+    }
+
+    body.admin-farvist .sidebar-collapse-button {
+        display: none;
+    }
+}
