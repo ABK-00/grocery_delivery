@@ -222,32 +222,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <span>Orders</span>
 
         </a>
-
-
-        <a
-            href="../products.php"
-            class="staff-nav-link"
-        >
-
-            <i class="bi bi-box-seam-fill"></i>
-
-            <span>Products</span>
-
-        </a>
-
-
-        <a
-            href="../categories.php"
-            class="staff-nav-link"
-        >
-
-            <i class="bi bi-tags-fill"></i>
-
-            <span>Categories</span>
-
-        </a>
-
-    </div>
+</div>
 
 
     <div class="staff-footer">
