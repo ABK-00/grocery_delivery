@@ -154,33 +154,7 @@ if (!isset($_SESSION['user_name'])) {
             <i class="bi bi-box-seam"></i>
             My Deliveries
         </a>
-
-
-        <a href="availability.php">
-
-            <i class="bi bi-toggle-on"></i>
-            Availability
-
-        </a>
-
-
-        <a href="profile.php">
-
-            <i class="bi bi-person"></i>
-            My Profile
-
-        </a>
-
-
-        <a href="../customer/track_order.php">
-
-            <i class="bi bi-geo-alt"></i>
-            Tracking
-
-        </a>
-
-
-        <div class="delivery-logout">
+<div class="delivery-logout">
 
             <a href="../logout.php">
 
