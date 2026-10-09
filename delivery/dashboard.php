@@ -5,6 +5,7 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole('delivery_partner');
+requireCompanyAccess();
 
 $userId = $_SESSION['user_id'];
 
