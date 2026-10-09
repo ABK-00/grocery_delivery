@@ -16,7 +16,11 @@ if (!isset($_SESSION['user_name'])) {
     top: 0;
     width: 250px;
     height: 100vh;
-    background: #101827;
+    background: rgba(15, 23, 42, .88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(255,255,255,.08);
+    box-shadow: 14px 0 40px rgba(2,8,23,.20);
     color: white;
     z-index: 1000;
     overflow-y: auto;
@@ -41,7 +45,7 @@ if (!isset($_SESSION['user_name'])) {
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    background: #198754;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -59,15 +63,18 @@ if (!isset($_SESSION['user_name'])) {
     padding: 12px 15px;
     color: #adb5bd;
     text-decoration: none;
-    border-radius: 10px;
+    border-radius: 13px;
     margin-bottom: 5px;
+    border: 1px solid transparent;
     transition: .2s;
 }
 
 .delivery-nav a:hover,
 .delivery-nav a.active {
-    background: #198754;
-    color: white;
+    background: linear-gradient(135deg, rgba(34,197,94,.95), rgba(22,163,74,.88));
+    color: #07120c;
+    border-color: rgba(255,255,255,.14);
+    box-shadow: 0 10px 24px rgba(34,197,94,.18);
 }
 
 .delivery-nav i {
@@ -207,3 +214,4 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+<script src="../assets/js/theme.js"></script>
