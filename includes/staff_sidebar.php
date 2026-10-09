@@ -12,7 +12,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     top: 0;
     width: 250px;
     height: 100vh;
-    background: #0f172a;
+    background: rgba(15, 23, 42, .88);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(255,255,255,.08);
+    box-shadow: 14px 0 40px rgba(2,8,23,.20);
     color: white;
     z-index: 1000;
     display: flex;
@@ -36,7 +40,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     width: 42px;
     height: 42px;
     border-radius: 11px;
-    background: #16a34a;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -72,8 +76,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     color: #cbd5e1;
     text-decoration: none;
     padding: 12px 14px;
-    border-radius: 10px;
+    border-radius: 13px;
     margin-bottom: 5px;
+    border: 1px solid transparent;
     transition: .2s;
 }
 
@@ -82,13 +87,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 }
 
 .staff-nav-link:hover {
-    background: rgba(255,255,255,.06);
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.08);
     color: white;
 }
 
 .staff-nav-link.active {
-    background: #166534;
-    color: white;
+    background: linear-gradient(135deg, rgba(34,197,94,.95), rgba(22,163,74,.88));
+    color: #07120c;
+    border-color: rgba(255,255,255,.14);
+    box-shadow: 0 10px 24px rgba(34,197,94,.18);
 }
 
 .staff-footer {
@@ -140,8 +148,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     height: 42px;
     border: none;
     border-radius: 10px;
-    background: #0f172a;
+    background: rgba(15,23,42,.88);
     color: white;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     align-items: center;
     justify-content: center;
     font-size: 20px;
@@ -275,3 +285,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 </script>
+<script src="../assets/js/theme.js"></script>
