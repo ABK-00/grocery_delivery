@@ -458,7 +458,6 @@ $partners = $stmt->fetchAll();
         rel="stylesheet"
     >
     <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-
 </head>
 
 
