@@ -97,7 +97,7 @@ if (empty($orders_columns)) {
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
         <link href="../assets/css/admin.css" rel="stylesheet">
     <link href="../assets/css/admin-farvist.css" rel="stylesheet">
-    </head>
+</head>
     <body class="admin-farvist">
         <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
         <main class="main-content">
