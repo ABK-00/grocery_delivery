@@ -1298,3 +1298,269 @@ body.admin-farvist .sidebar-accent-menu {
 body.admin-farvist .sidebar-accent-menu .fv-theme-option {
     font-size: .8rem;
 }
+
+
+/* =========================================================
+   SIDEBAR GLASS NAV REFINEMENT
+   Transparent/glass controls with accent outlines.
+   Active page becomes a solid accent highlight.
+   ========================================================= */
+
+body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,.055),
+            rgba(255,255,255,.025)
+        ) !important;
+    border-right:
+        1px solid rgba(var(--fv-primary-rgb), .18) !important;
+    box-shadow:
+        14px 0 42px rgba(15,23,42,.12) !important;
+    backdrop-filter:
+        blur(24px) saturate(145%) !important;
+    -webkit-backdrop-filter:
+        blur(24px) saturate(145%) !important;
+}
+
+body.admin-farvist .sidebar-nav {
+    padding-inline: 12px;
+}
+
+body.admin-farvist .sidebar-section-title {
+    padding-inline: 6px;
+    margin-bottom: 8px;
+}
+
+body.admin-farvist .sidebar .nav-link,
+body.admin-farvist .sidebar-footer .nav-link,
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    min-height: 44px;
+    margin-bottom: 8px;
+    padding: 10px 13px;
+    border-radius: 14px;
+    color: var(--fv-text) !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.07),
+            rgba(255,255,255,.025)
+        ) !important;
+
+    border:
+        1px solid
+        rgba(var(--fv-primary-rgb), .46) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 8px 22px rgba(15,23,42,.06);
+
+    backdrop-filter:
+        blur(14px) saturate(135%);
+    -webkit-backdrop-filter:
+        blur(14px) saturate(135%);
+
+    transition:
+        background .18s ease,
+        border-color .18s ease,
+        box-shadow .18s ease,
+        transform .18s ease;
+}
+
+body.admin-farvist .sidebar .nav-link i,
+body.admin-farvist .sidebar-footer .nav-link i {
+    color: var(--fv-primary);
+}
+
+body.admin-farvist .sidebar .nav-link:hover,
+body.admin-farvist .sidebar-footer .nav-link:hover,
+body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    color: var(--fv-text) !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(var(--fv-primary-rgb), .11),
+            rgba(255,255,255,.045)
+        ) !important;
+
+    border-color:
+        rgba(var(--fv-primary-rgb), .78) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        0 10px 26px rgba(var(--fv-primary-rgb), .10);
+
+    transform: translateX(2px);
+}
+
+body.admin-farvist .sidebar .nav-link.active {
+    color: #fff !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        ) !important;
+
+    border-color:
+        rgba(var(--fv-primary-rgb), .98) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.18),
+        0 12px 30px rgba(var(--fv-primary-rgb), .26) !important;
+}
+
+body.admin-farvist .sidebar .nav-link.active i {
+    color: #fff !important;
+}
+
+body.admin-farvist .sidebar-footer {
+    padding: 12px;
+    border-top:
+        1px solid rgba(var(--fv-primary-rgb), .18) !important;
+}
+
+body.admin-farvist .sidebar-brand {
+    border-bottom:
+        1px solid rgba(var(--fv-primary-rgb), .16) !important;
+}
+
+/* Light mode: pale translucent glass, never a black sidebar. */
+html[data-theme="light"] body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,.68),
+            rgba(248,250,252,.46)
+        ) !important;
+
+    border-right-color:
+        rgba(var(--fv-primary-rgb), .20) !important;
+
+    box-shadow:
+        14px 0 40px rgba(51,65,85,.08) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link,
+html[data-theme="light"] body.admin-farvist .sidebar-footer .nav-link,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link {
+    color: #334155 !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.62),
+            rgba(255,255,255,.34)
+        ) !important;
+
+    border-color:
+        rgba(var(--fv-primary-rgb), .44) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.88),
+        0 7px 20px rgba(51,65,85,.05);
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link:hover,
+html[data-theme="light"] body.admin-farvist .sidebar-footer .nav-link:hover,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    color: #0f172a !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(var(--fv-primary-rgb), .10),
+            rgba(255,255,255,.72)
+        ) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link.active {
+    color: #fff !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        ) !important;
+}
+
+/* Dark mode: smoky glass rather than solid black/navy. */
+html[data-theme="dark"] body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(21,30,45,.54),
+            rgba(15,23,42,.36)
+        ) !important;
+
+    border-right-color:
+        rgba(var(--fv-primary-rgb), .24) !important;
+
+    box-shadow:
+        14px 0 44px rgba(2,6,23,.20) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .sidebar .nav-link,
+html[data-theme="dark"] body.admin-farvist .sidebar-footer .nav-link,
+html[data-theme="dark"] body.admin-farvist .sidebar-accent-picker > .nav-link {
+    color: #e5e7eb !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.07),
+            rgba(255,255,255,.025)
+        ) !important;
+
+    border-color:
+        rgba(var(--fv-primary-rgb), .50) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .sidebar .nav-link:hover,
+html[data-theme="dark"] body.admin-farvist .sidebar-footer .nav-link:hover,
+html[data-theme="dark"] body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    color: #fff !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(var(--fv-primary-rgb), .13),
+            rgba(255,255,255,.045)
+        ) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .sidebar .nav-link.active {
+    color: #fff !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        ) !important;
+}
+
+/* Theme and accent controls should stay glass until selected/interacted with. */
+body.admin-farvist .sidebar-footer .theme-toggle,
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.06),
+            rgba(255,255,255,.02)
+        ) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar-footer .theme-toggle,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.64),
+            rgba(255,255,255,.34)
+        ) !important;
+}
