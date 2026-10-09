@@ -1,10 +1,14 @@
 (function () {
-    const STORAGE_KEY = 'gd-theme';
+    const THEME_KEY = 'gd-theme';
+    const ACCENT_KEY = 'gd-accent-theme';
+
+    const allowedThemes = ['light', 'dark'];
+    const allowedAccents = ['sapphire', 'teal', 'coral', 'slate'];
 
     function preferredTheme() {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(THEME_KEY);
 
-        if (saved === 'light' || saved === 'dark') {
+        if (allowedThemes.includes(saved)) {
             return saved;
         }
 
@@ -14,15 +18,28 @@
             : 'light';
     }
 
+    function preferredAccent() {
+        const saved = localStorage.getItem(ACCENT_KEY);
+
+        return allowedAccents.includes(saved)
+            ? saved
+            : 'sapphire';
+    }
+
     function applyTheme(theme) {
+        const safeTheme =
+            allowedThemes.includes(theme)
+            ? theme
+            : 'light';
+
         document.documentElement.setAttribute(
             'data-theme',
-            theme
+            safeTheme
         );
 
         localStorage.setItem(
-            STORAGE_KEY,
-            theme
+            THEME_KEY,
+            safeTheme
         );
 
         document
@@ -44,7 +61,7 @@
                     );
 
                 const isDark =
-                    theme === 'dark';
+                    safeTheme === 'dark';
 
                 if (icon) {
                     icon.className =
@@ -73,6 +90,65 @@
                         ? 'true'
                         : 'false'
                 );
+
+                button.setAttribute(
+                    'title',
+                    isDark
+                        ? 'Switch to light mode'
+                        : 'Switch to dark mode'
+                );
+            });
+    }
+
+    function applyAccent(accent) {
+        const safeAccent =
+            allowedAccents.includes(accent)
+            ? accent
+            : 'sapphire';
+
+        document.documentElement.setAttribute(
+            'data-accent-theme',
+            safeAccent
+        );
+
+        localStorage.setItem(
+            ACCENT_KEY,
+            safeAccent
+        );
+
+        document
+            .querySelectorAll('[data-accent-option]')
+            .forEach(function (button) {
+                const selected =
+                    button.dataset.accentOption
+                    === safeAccent;
+
+                button.classList.toggle(
+                    'active',
+                    selected
+                );
+
+                button.setAttribute(
+                    'aria-pressed',
+                    selected
+                        ? 'true'
+                        : 'false'
+                );
+            });
+
+        document
+            .querySelectorAll('[data-accent-label]')
+            .forEach(function (element) {
+                const labels = {
+                    sapphire: 'Sapphire',
+                    teal: 'Teal',
+                    coral: 'Coral',
+                    slate: 'Slate Grey'
+                };
+
+                element.textContent =
+                    labels[safeAccent]
+                    || 'Sapphire';
             });
     }
 
@@ -82,6 +158,10 @@
 
             applyTheme(
                 preferredTheme()
+            );
+
+            applyAccent(
+                preferredAccent()
             );
 
             document
@@ -103,6 +183,21 @@
                                 current === 'dark'
                                 ? 'light'
                                 : 'dark'
+                            );
+                        }
+                    );
+                });
+
+            document
+                .querySelectorAll('[data-accent-option]')
+                .forEach(function (button) {
+
+                    button.addEventListener(
+                        'click',
+                        function () {
+
+                            applyAccent(
+                                button.dataset.accentOption
                             );
                         }
                     );
