@@ -874,7 +874,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 <?php include "../includes/admin_sidebar.php"; ?>
 <?php include "../includes/loader.php"; ?>
