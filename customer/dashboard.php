@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includes/functions.php';
 requireRole('customer');
 
 $userId = $_SESSION['user_id'];
-$userName = $_SESSION['user_name'] ?? 'Customer';
+$userName = $_SESSION['name'] ?? 'Customer';
 
 /*
 |--------------------------------------------------------------------------
@@ -148,6 +148,7 @@ $stmt = $conn->query("
         p.unit,
         p.image,
         c.name AS category_name,
+        co.storefront_slug,
 
         (
             SELECT pi.image
@@ -162,7 +163,24 @@ $stmt = $conn->query("
     LEFT JOIN categories c
         ON c.id = p.category_id
 
+    INNER JOIN companies co
+        ON co.id = p.company_id
+
     WHERE p.status = 'active'
+      AND co.status = 'active'
+      AND (
+            (
+                co.subscription_plan = 'trial'
+                AND co.trial_ends_at IS NOT NULL
+                AND co.trial_ends_at >= NOW()
+            )
+            OR
+            (
+                co.subscription_plan IN ('monthly', 'quarterly', 'yearly')
+                AND co.subscription_ends_at IS NOT NULL
+                AND co.subscription_ends_at >= NOW()
+            )
+      )
 
     ORDER BY p.created_at DESC
 
@@ -184,7 +202,7 @@ function customerProductImage($product)
             $product['image'];
     }
 
-    return '../assets/images/product-placeholder.jpg';
+    return '../assets/images/product-placeholder.svg';
 }
 
 
@@ -894,7 +912,7 @@ function orderStatusLabel($status)
                             <div class="product-card">
 
                                 <a
-                                    href="../product.php?id=<?= $product['id'] ?>"
+                                    href="../product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode($product['storefront_slug']) ?>"
                                     class="text-decoration-none"
                                 >
 
@@ -940,7 +958,7 @@ function orderStatusLabel($status)
                                         </div>
 
                                         <a
-                                            href="../product.php?id=<?= $product['id'] ?>"
+                                            href="../product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode($product['storefront_slug']) ?>"
                                             class="btn btn-sm btn-outline-success"
                                         >
                                             <i class="bi bi-cart-plus"></i>
