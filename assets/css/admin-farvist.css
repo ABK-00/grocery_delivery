@@ -633,3 +633,442 @@ body.admin-farvist .sidebar-toggle {
         padding-inline: 12px;
     }
 }
+
+
+/* =========================================================
+   USER-SELECTABLE SYSTEM ACCENTS
+   Sapphire / Teal / Coral / Slate Grey
+   ========================================================= */
+
+html[data-accent-theme="sapphire"] body.admin-farvist {
+    --fv-primary: #2563eb;
+    --fv-primary-2: #0ea5e9;
+    --fv-primary-rgb: 37, 99, 235;
+    --fv-primary-soft: #dbeafe;
+    --fv-primary-contrast: #ffffff;
+}
+
+html[data-accent-theme="teal"] body.admin-farvist {
+    --fv-primary: #0f9f95;
+    --fv-primary-2: #14b8a6;
+    --fv-primary-rgb: 20, 184, 166;
+    --fv-primary-soft: #ccfbf1;
+    --fv-primary-contrast: #ffffff;
+}
+
+html[data-accent-theme="coral"] body.admin-farvist {
+    --fv-primary: #f05f57;
+    --fv-primary-2: #fb7185;
+    --fv-primary-rgb: 240, 95, 87;
+    --fv-primary-soft: #ffe4e6;
+    --fv-primary-contrast: #ffffff;
+}
+
+html[data-accent-theme="slate"] body.admin-farvist {
+    --fv-primary: #64748b;
+    --fv-primary-2: #94a3b8;
+    --fv-primary-rgb: 100, 116, 139;
+    --fv-primary-soft: #e2e8f0;
+    --fv-primary-contrast: #ffffff;
+}
+
+/* Fallback before JavaScript initializes. */
+body.admin-farvist {
+    --fv-primary: #2563eb;
+    --fv-primary-2: #0ea5e9;
+    --fv-primary-rgb: 37, 99, 235;
+    --fv-primary-soft: #dbeafe;
+    --fv-primary-contrast: #ffffff;
+}
+
+/* Accent-driven components */
+body.admin-farvist .brand-icon,
+body.admin-farvist .fv-avatar,
+body.admin-farvist .fv-primary-btn,
+body.admin-farvist .sidebar .nav-link.active {
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        ) !important;
+    color: var(--fv-primary-contrast) !important;
+}
+
+body.admin-farvist .brand-icon,
+body.admin-farvist .fv-avatar {
+    box-shadow:
+        0 0 28px rgba(var(--fv-primary-rgb), .22);
+}
+
+body.admin-farvist .brand-text span,
+body.admin-farvist .fv-plan {
+    color: var(--fv-primary) !important;
+}
+
+body.admin-farvist .sidebar .nav-link.active {
+    box-shadow:
+        0 10px 28px rgba(var(--fv-primary-rgb), .24);
+}
+
+body.admin-farvist .sidebar .nav-link:hover,
+body.admin-farvist .fv-icon-btn:hover,
+body.admin-farvist .fv-glass-btn:hover,
+body.admin-farvist .fv-action:hover {
+    border-color:
+        rgba(var(--fv-primary-rgb), .20) !important;
+    background:
+        rgba(var(--fv-primary-rgb), .075) !important;
+}
+
+body.admin-farvist .fv-eyebrow {
+    color: var(--fv-primary) !important;
+    background:
+        rgba(var(--fv-primary-rgb), .085) !important;
+    border-color:
+        rgba(var(--fv-primary-rgb), .18) !important;
+}
+
+body.admin-farvist .fv-primary-btn {
+    box-shadow:
+        0 10px 30px rgba(var(--fv-primary-rgb), .22);
+}
+
+body.admin-farvist .fv-primary-btn:hover {
+    color: #fff !important;
+    box-shadow:
+        0 14px 34px rgba(var(--fv-primary-rgb), .30);
+}
+
+body.admin-farvist .fv-hover-lift:hover {
+    border-color:
+        rgba(var(--fv-primary-rgb), .22);
+}
+
+body.admin-farvist .fv-action-icon {
+    color: var(--fv-primary) !important;
+    background:
+        rgba(var(--fv-primary-rgb), .10) !important;
+    border-color:
+        rgba(var(--fv-primary-rgb), .14) !important;
+}
+
+body.admin-farvist .fv-store-panel {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(var(--fv-primary-rgb), .10),
+            rgba(255,255,255,.035)
+        ) !important;
+}
+
+/* Make the four KPI icon tiles follow the selected accent family. */
+body.admin-farvist .fv-icon-tile {
+    background:
+        linear-gradient(
+            135deg,
+            var(--fv-primary),
+            var(--fv-primary-2)
+        ) !important;
+}
+
+body.admin-farvist .fv-card-glow::before {
+    background:
+        rgba(var(--fv-primary-rgb), .18) !important;
+}
+
+/* =========================================================
+   LIGHT MODE
+   ========================================================= */
+
+html[data-theme="light"] body.admin-farvist {
+    --fv-text: #172033;
+    --fv-muted: #6b7280;
+    --fv-border: rgba(100,116,139,.16);
+    --fv-border-strong: rgba(var(--fv-primary-rgb), .28);
+
+    color: var(--fv-text) !important;
+
+    background:
+        radial-gradient(
+            40rem 40rem at 90% -8%,
+            rgba(var(--fv-primary-rgb), .14),
+            transparent 62%
+        ),
+        radial-gradient(
+            30rem 30rem at -6% 35%,
+            rgba(var(--fv-primary-rgb), .07),
+            transparent 60%
+        ),
+        linear-gradient(
+            135deg,
+            #f8fafc,
+            #f3f6fb 48%,
+            #f8fafc
+        ) !important;
+}
+
+html[data-theme="light"] body.admin-farvist::before {
+    opacity: .20;
+    background-image:
+        linear-gradient(rgba(15,23,42,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15,23,42,.025) 1px, transparent 1px);
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255,255,255,.80),
+            rgba(245,248,252,.72)
+        ) !important;
+    border-right-color:
+        rgba(100,116,139,.14) !important;
+    box-shadow:
+        16px 0 46px rgba(30,41,59,.08);
+}
+
+html[data-theme="light"] body.admin-farvist .brand-text {
+    color: #111827 !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link {
+    color: #596273 !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link:hover {
+    color: #111827 !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link.active {
+    color: #ffffff !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar-section-title {
+    color: #94a3b8;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar-footer {
+    border-top-color:
+        rgba(100,116,139,.12) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .fv-card {
+    color: #172033;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.84),
+            rgba(255,255,255,.62)
+        ) !important;
+    border-color:
+        rgba(100,116,139,.15) !important;
+    box-shadow:
+        0 18px 44px rgba(30,41,59,.08);
+}
+
+html[data-theme="light"] body.admin-farvist .fv-page-title,
+html[data-theme="light"] body.admin-farvist .fv-section-title,
+html[data-theme="light"] body.admin-farvist .fv-store-name,
+html[data-theme="light"] body.admin-farvist .fv-stat-value,
+html[data-theme="light"] body.admin-farvist .fv-order-number {
+    color: #111827 !important;
+}
+
+html[data-theme="light"] body.admin-farvist .fv-action {
+    color: #283044;
+    background: rgba(255,255,255,.46);
+}
+
+html[data-theme="light"] body.admin-farvist .fv-action:hover {
+    color: #111827;
+}
+
+html[data-theme="light"] body.admin-farvist .fv-table {
+    color: #283044;
+}
+
+html[data-theme="light"] body.admin-farvist .fv-table th {
+    color: #8791a3;
+    border-bottom-color:
+        rgba(100,116,139,.14);
+}
+
+html[data-theme="light"] body.admin-farvist .fv-table td {
+    border-bottom-color:
+        rgba(100,116,139,.10);
+}
+
+html[data-theme="light"] body.admin-farvist .fv-glass-btn,
+html[data-theme="light"] body.admin-farvist .fv-icon-btn {
+    color: #354052;
+    background: rgba(255,255,255,.60);
+    border-color: rgba(100,116,139,.16);
+}
+
+html[data-theme="light"] body.admin-farvist .fv-avatar {
+    color: #fff !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar-toggle {
+    color: #172033 !important;
+    background: rgba(255,255,255,.75) !important;
+    border-color: rgba(100,116,139,.15);
+}
+
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+
+html[data-theme="dark"] body.admin-farvist {
+    --fv-text: #f6f7fb;
+    --fv-muted: #9ca3af;
+    --fv-border: rgba(255,255,255,.10);
+    --fv-border-strong: rgba(var(--fv-primary-rgb), .28);
+
+    background:
+        radial-gradient(
+            42rem 42rem at 88% -10%,
+            rgba(var(--fv-primary-rgb), .17),
+            transparent 62%
+        ),
+        radial-gradient(
+            34rem 34rem at -5% 35%,
+            rgba(var(--fv-primary-rgb), .08),
+            transparent 60%
+        ),
+        linear-gradient(
+            135deg,
+            #09111f,
+            #101827 48%,
+            #0a1220
+        ) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .sidebar {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(10,18,31,.91),
+            rgba(8,15,27,.84)
+        ) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .fv-card {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(24,36,54,.73),
+            rgba(15,25,40,.57)
+        ) !important;
+    border-color:
+        rgba(148,163,184,.13) !important;
+}
+
+html[data-theme="dark"] body.admin-farvist .fv-page-title,
+html[data-theme="dark"] body.admin-farvist .fv-section-title,
+html[data-theme="dark"] body.admin-farvist .fv-store-name,
+html[data-theme="dark"] body.admin-farvist .fv-stat-value,
+html[data-theme="dark"] body.admin-farvist .fv-order-number {
+    color: #f8fafc !important;
+}
+
+/* =========================================================
+   THEME PICKER
+   ========================================================= */
+
+body.admin-farvist .fv-theme-picker {
+    position: relative;
+}
+
+body.admin-farvist .fv-theme-menu {
+    min-width: 218px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid var(--fv-border);
+    background:
+        rgba(15,23,42,.90);
+    box-shadow:
+        0 22px 55px rgba(0,0,0,.28);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+}
+
+html[data-theme="light"] body.admin-farvist .fv-theme-menu {
+    background:
+        rgba(255,255,255,.91);
+    box-shadow:
+        0 22px 55px rgba(30,41,59,.14);
+}
+
+body.admin-farvist .fv-theme-title {
+    padding: 6px 8px 9px;
+    color: var(--fv-muted);
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+body.admin-farvist .fv-theme-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px;
+    margin: 2px 0;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--fv-text);
+    font-size: .83rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+body.admin-farvist .fv-theme-option:hover,
+body.admin-farvist .fv-theme-option.active {
+    background:
+        rgba(var(--fv-primary-rgb), .09);
+    border-color:
+        rgba(var(--fv-primary-rgb), .15);
+}
+
+body.admin-farvist .fv-theme-swatch {
+    width: 23px;
+    height: 23px;
+    border-radius: 8px;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.20);
+}
+
+body.admin-farvist .swatch-sapphire {
+    background:
+        linear-gradient(135deg,#2563eb,#0ea5e9);
+}
+
+body.admin-farvist .swatch-teal {
+    background:
+        linear-gradient(135deg,#0f9f95,#14b8a6);
+}
+
+body.admin-farvist .swatch-coral {
+    background:
+        linear-gradient(135deg,#f05f57,#fb7185);
+}
+
+body.admin-farvist .swatch-slate {
+    background:
+        linear-gradient(135deg,#64748b,#94a3b8);
+}
+
+body.admin-farvist .fv-theme-check {
+    margin-left: auto;
+    opacity: 0;
+    color: var(--fv-primary);
+}
+
+body.admin-farvist .fv-theme-option.active .fv-theme-check {
+    opacity: 1;
+}
+
