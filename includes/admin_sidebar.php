@@ -583,4 +583,4 @@ document.addEventListener(
 );
 </script>
 
-<script src="<?= BASE_URL ?>/assets/js/theme.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/theme.js?v=20261009-2"></script>
