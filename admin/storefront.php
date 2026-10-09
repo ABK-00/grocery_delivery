@@ -530,6 +530,7 @@ $storeUrl =
 
     </style>
 
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
 <body class="admin-farvist">
