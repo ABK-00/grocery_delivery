@@ -1616,3 +1616,69 @@ html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link:h
 html[data-theme="light"] body.admin-farvist .sidebar .nav-link.active {
     border-color: rgba(var(--fv-primary-rgb), .98) !important;
 }
+
+
+/* =========================================================
+   SIDEBAR COMPACT + STRONGER TOP STROKE
+   ========================================================= */
+
+body.admin-farvist .sidebar .nav-link,
+body.admin-farvist .sidebar-footer .nav-link,
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    min-height: 38px !important;
+    padding: 7px 11px !important;
+    margin-bottom: 6px !important;
+    border-radius: 11px !important;
+    font-size: .82rem !important;
+
+    border-top-width: 2px !important;
+    border-top-color:
+        rgba(var(--fv-primary-rgb), .92) !important;
+}
+
+body.admin-farvist .sidebar .nav-link i,
+body.admin-farvist .sidebar-footer .nav-link i {
+    font-size: .95rem !important;
+}
+
+body.admin-farvist .sidebar .nav-link:hover,
+body.admin-farvist .sidebar-footer .nav-link:hover,
+body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    border-top-color:
+        rgba(var(--fv-primary-rgb), 1) !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        0 8px 20px rgba(var(--fv-primary-rgb), .12) !important;
+}
+
+body.admin-farvist .sidebar .nav-link.active {
+    min-height: 38px !important;
+    padding: 7px 11px !important;
+    border-width: 1px !important;
+    border-top-width: 2px !important;
+}
+
+body.admin-farvist .sidebar-nav {
+    padding-inline: 10px !important;
+}
+
+body.admin-farvist .sidebar-footer {
+    padding: 10px !important;
+}
+
+/* Light mode keeps the accent stroke strong and crisp */
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link,
+html[data-theme="light"] body.admin-farvist .sidebar-footer .nav-link,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link {
+    border-top-width: 2px !important;
+    border-top-color:
+        rgba(var(--fv-primary-rgb), .88) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link:hover,
+html[data-theme="light"] body.admin-farvist .sidebar-footer .nav-link:hover,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    border-top-color:
+        rgba(var(--fv-primary-rgb), 1) !important;
+}
