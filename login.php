@@ -17,9 +17,7 @@ $error = '';
 |--------------------------------------------------------------------------
  */
 
-$customerMode =
-    isset($_GET['customer'])
-    || ($_POST['customer_mode'] ?? '') === '1';
+$customerMode = true;
 
 
 /*
@@ -207,13 +205,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 |--------------------------------------------------------------------------
 */
 
-if (
-    $customerMode
-    && $user['role'] !== 'customer'
-) {
+if ($user['role'] !== 'customer') {
 
     throw new RuntimeException(
-        'This login is for customer accounts. Please use the main login for your business account.'
+        'This login is for customer accounts. Please use your role-specific portal.'
     );
 }
 
