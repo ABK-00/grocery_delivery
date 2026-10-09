@@ -1,207 +1,398 @@
 <?php
 
-require_once __DIR__ . "/../config/db.php";
-require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-requireRole("admin");
+requireRole('admin');
 requireCompanyAccess();
+
 $companyId = currentCompanyId();
+$userName = $_SESSION['name'] ?? 'Admin';
 
-// Statistics
-$totalUsers = $conn->query("
-    SELECT COUNT(*) FROM users
-")->fetchColumn();
+function dashboardCount(
+    PDO $conn,
+    string $sql,
+    array $params = []
+): int {
+    $stmt = $conn->prepare($sql);
+    $stmt->execute($params);
 
-$totalCustomers = $conn->query("
-    SELECT COUNT(*) FROM users
-    WHERE role = 'customer'
-")->fetchColumn();
-
-$totalStaff = $conn->query("
-    SELECT COUNT(*) FROM users
-    WHERE role = 'staff'
-")->fetchColumn();
-
-$totalDeliveryPartners = $conn->query("
-    SELECT COUNT(*) FROM users
-    WHERE role = 'delivery_partner'
-")->fetchColumn();
-
-$totalOrders = 0;
-$totalProducts = 0;
-$totalRevenue = 0;
-
-try {
-    $totalOrders = $conn->query("
-        SELECT COUNT(*) FROM orders
-    ")->fetchColumn();
-} catch (PDOException $e) {
-    $totalOrders = 0;
+    return (int) $stmt->fetchColumn();
 }
 
-try {
-    $totalProducts = $conn->query("
-        SELECT COUNT(*) FROM products
-    ")->fetchColumn();
-} catch (PDOException $e) {
-    $totalProducts = 0;
+function dashboardAmount(
+    PDO $conn,
+    string $sql,
+    array $params = []
+): float {
+    $stmt = $conn->prepare($sql);
+    $stmt->execute($params);
+
+    return (float) $stmt->fetchColumn();
 }
 
-try {
-    $totalRevenue = $conn->query("
-        SELECT COALESCE(SUM(total), 0)
+$totalStaff = dashboardCount(
+    $conn,
+    "
+        SELECT COUNT(*)
+        FROM users
+        WHERE company_id = ?
+          AND role = 'staff'
+    ",
+    [$companyId]
+);
+
+$totalDeliveryPartners = dashboardCount(
+    $conn,
+    "
+        SELECT COUNT(*)
+        FROM users
+        WHERE company_id = ?
+          AND role = 'delivery_partner'
+    ",
+    [$companyId]
+);
+
+$totalProducts = dashboardCount(
+    $conn,
+    "
+        SELECT COUNT(*)
+        FROM products
+        WHERE company_id = ?
+    ",
+    [$companyId]
+);
+
+$totalOrders = dashboardCount(
+    $conn,
+    "
+        SELECT COUNT(*)
         FROM orders
-        WHERE status = 'delivered'
-    ")->fetchColumn();
-} catch (PDOException $e) {
-    $totalRevenue = 0;
+        WHERE company_id = ?
+    ",
+    [$companyId]
+);
+
+$totalCustomers = dashboardCount(
+    $conn,
+    "
+        SELECT COUNT(DISTINCT user_id)
+        FROM orders
+        WHERE company_id = ?
+    ",
+    [$companyId]
+);
+
+$activeOrders = dashboardCount(
+    $conn,
+    "
+        SELECT COUNT(*)
+        FROM orders
+        WHERE company_id = ?
+          AND status NOT IN ('delivered', 'cancelled')
+    ",
+    [$companyId]
+);
+
+$totalRevenue = dashboardAmount(
+    $conn,
+    "
+        SELECT COALESCE(SUM(total_amount), 0)
+        FROM orders
+        WHERE company_id = ?
+          AND status = 'delivered'
+    ",
+    [$companyId]
+);
+
+$todayRevenue = dashboardAmount(
+    $conn,
+    "
+        SELECT COALESCE(SUM(total_amount), 0)
+        FROM orders
+        WHERE company_id = ?
+          AND status = 'delivered'
+          AND DATE(created_at) = CURDATE()
+    ",
+    [$companyId]
+);
+
+$recentStmt = $conn->prepare("
+    SELECT
+        o.id,
+        o.order_number,
+        o.total_amount,
+        o.status,
+        o.payment_status,
+        o.created_at,
+        u.name AS customer_name
+    FROM orders o
+    INNER JOIN users u
+        ON u.id = o.user_id
+    WHERE o.company_id = ?
+    ORDER BY o.created_at DESC
+    LIMIT 6
+");
+
+$recentStmt->execute([$companyId]);
+$recentOrders = $recentStmt->fetchAll();
+
+$companyStmt = $conn->prepare("
+    SELECT
+        c.company_name,
+        c.company_code,
+        c.storefront_slug,
+        c.subscription_plan,
+        c.trial_ends_at,
+        c.subscription_ends_at,
+        COALESCE(cs.display_name, c.company_name) AS display_name,
+        COALESCE(cs.store_status, 'closed') AS store_status
+    FROM companies c
+    LEFT JOIN company_storefronts cs
+        ON cs.company_id = c.id
+    WHERE c.id = ?
+    LIMIT 1
+");
+
+$companyStmt->execute([$companyId]);
+$company = $companyStmt->fetch() ?: [];
+
+$storeName =
+    $company['display_name']
+    ?? $company['company_name']
+    ?? 'Your Store';
+
+$storeSlug =
+    $company['storefront_slug']
+    ?? '';
+
+$storeOpen =
+    ($company['store_status'] ?? 'closed')
+    === 'open';
+
+$subscriptionPlan =
+    $company['subscription_plan']
+    ?? 'trial';
+
+$subscriptionEnd =
+    $subscriptionPlan === 'trial'
+    ? ($company['trial_ends_at'] ?? null)
+    : ($company['subscription_ends_at'] ?? null);
+
+$adminInitials = '';
+
+foreach (
+    preg_split('/\s+/', trim($userName))
+    as $part
+) {
+    if ($part !== '') {
+        $adminInitials .= strtoupper(
+            mb_substr($part, 0, 1)
+        );
+    }
+
+    if (mb_strlen($adminInitials) >= 2) {
+        break;
+    }
+}
+
+if ($adminInitials === '') {
+    $adminInitials = 'AD';
+}
+
+function dashboardStatusClass(string $status): string
+{
+    $allowed = [
+        'pending',
+        'confirmed',
+        'preparing',
+        'ready',
+        'out_for_delivery',
+        'delivered',
+        'cancelled'
+    ];
+
+    return in_array($status, $allowed, true)
+        ? $status
+        : 'pending';
 }
 
 ?>
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
 
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
 
-    <title>Admin Dashboard | Grocery Delivery</title>
+    <title>
+        Admin Dashboard | Grocery Delivery
+    </title>
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
+        rel="stylesheet"
+    >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-        rel="stylesheet">    <link
+        rel="stylesheet"
+    >
+
+    <link
         href="../assets/css/admin.css"
-        rel="stylesheet">
+        rel="stylesheet"
+    >
 
-    <style>
-        .stat-card {
-            border: none;
-            border-radius: 16px;
-            background: white;
-            padding: 22px;
-            height: 100%;
-            box-shadow: 0 3px 15px rgba(0,0,0,.04);
-        }
-
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            background: #dcfce7;
-            color: #16a34a;
-        }
-
-        .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .quick-card {
-            background: white;
-            border: none;
-            border-radius: 16px;
-            padding: 25px;
-            height: 100%;
-            box-shadow: 0 3px 15px rgba(0,0,0,.04);
-            transition: .2s;
-        }
-
-        .quick-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,.08);
-        }
-
-        .quick-icon {
-            font-size: 30px;
-            color: #16a34a;
-            margin-bottom: 15px;
-        }
-    </style>
+    <link
+        href="../assets/css/admin-farvist.css"
+        rel="stylesheet"
+    >
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
-<!-- SIDEBAR -->
-
-<?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
-<?php include "../includes/loader.php"; ?>
-
-
-
-<!-- MAIN CONTENT -->
+<?php require_once __DIR__ . '/../includes/admin_sidebar.php'; ?>
+<?php include __DIR__ . '/../includes/loader.php'; ?>
 
 <main class="main-content">
 
-    <!-- TOP BAR -->
+    <div class="fv-topbar">
 
-    <div class="topbar">
-
-        <div class="topbar-left">
-
-            <button
-                class="sidebar-toggle"
-                id="sidebarToggle"
-                type="button"
-            >
-                <i class="bi bi-list"></i>
-            </button>
-
-            <div>
-                <h1 class="topbar-title">
-                    Welcome, <?= htmlspecialchars($_SESSION['user_name'] ?? 'Admin') ?> 👋
-                </h1>
-
-                <p class="topbar-subtitle">
-                    Here's what's happening with your grocery delivery system.
-                </p>
-            </div>
-
+        <div class="fv-eyebrow mb-0">
+            <i class="bi bi-stars"></i>
+            Company Portal
         </div>
+
+        <div class="fv-topbar-spacer"></div>
+
+        <a
+            href="profile.php"
+            class="fv-icon-btn"
+            title="Profile"
+        >
+            <i class="bi bi-person"></i>
+        </a>
+
+        <button
+            type="button"
+            class="fv-icon-btn"
+            data-theme-toggle
+            title="Toggle theme"
+        >
+            <i class="bi bi-moon-stars-fill theme-icon"></i>
+        </button>
+
+        <a
+            href="profile.php"
+            class="fv-avatar"
+            title="<?= e($userName) ?>"
+        >
+            <?= e($adminInitials) ?>
+        </a>
+
+    </div>
+
+
+    <div class="fv-heading-row">
 
         <div>
-            <span class="badge bg-success px-3 py-2">
-                Admin
-            </span>
+
+            <div class="fv-eyebrow">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Overview
+            </div>
+
+            <h1 class="fv-page-title">
+                Welcome back, <?= e($userName) ?>.
+            </h1>
+
+            <p class="fv-page-subtitle">
+                Here's a live snapshot of <?= e($storeName) ?>.
+            </p>
+
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+
+            <?php if ($storeSlug !== ''): ?>
+
+                <a
+                    href="/somame_ent/store.php?store=<?= urlencode($storeSlug) ?>"
+                    target="_blank"
+                    class="fv-glass-btn"
+                >
+                    <i class="bi bi-box-arrow-up-right"></i>
+                    View Store
+                </a>
+
+            <?php endif; ?>
+
+            <a
+                href="products.php"
+                class="fv-primary-btn"
+            >
+                <i class="bi bi-plus-lg"></i>
+                Add Product
+            </a>
+
         </div>
 
     </div>
 
 
-    <!-- STATISTICS -->
-
     <div class="row g-4 mb-4">
 
-        <div class="col-lg-3 col-md-6">
+        <div class="col-sm-6 col-xl-3">
 
-            <div class="stat-card">
+            <div
+                class="fv-card fv-card-glow fv-hover-lift"
+                style="--tile-glow:rgba(245,158,11,.18)"
+            >
 
-                <div class="d-flex justify-content-between">
+                <div class="fv-card-body">
 
-                    <div>
-                        <small class="text-muted">
-                            Total Users
-                        </small>
+                    <div class="fv-stat-head">
 
-                        <div class="stat-number">
-                            <?= $totalUsers ?>
-                        </div>
+                        <span class="fv-icon-tile tile-amber">
+                            <i class="bi bi-bag-check-fill"></i>
+                        </span>
+
+                        <span class="fv-chip chip-amber">
+                            <?= $activeOrders ?> active
+                        </span>
+
                     </div>
 
-                    <div class="stat-icon">
-                        <i class="bi bi-people"></i>
+                    <div class="fv-stat-value">
+                        <?= number_format($totalOrders) ?>
+                    </div>
+
+                    <div class="fv-stat-label">
+                        Total orders
                     </div>
 
                 </div>
@@ -211,78 +402,105 @@ try {
         </div>
 
 
-        <div class="col-lg-3 col-md-6">
+        <div class="col-sm-6 col-xl-3">
 
-            <div class="stat-card">
+            <div
+                class="fv-card fv-card-glow fv-hover-lift"
+                style="--tile-glow:rgba(52,211,153,.15)"
+            >
 
-                <div class="d-flex justify-content-between">
+                <div class="fv-card-body">
 
-                    <div>
-                        <small class="text-muted">
+                    <div class="fv-stat-head">
+
+                        <span class="fv-icon-tile tile-emerald">
+                            <i class="bi bi-cash-stack"></i>
+                        </span>
+
+                        <span class="fv-chip chip-success">
+                            GH₵<?= number_format($todayRevenue, 2) ?> today
+                        </span>
+
+                    </div>
+
+                    <div class="fv-stat-value">
+                        GH₵<?= number_format($totalRevenue, 2) ?>
+                    </div>
+
+                    <div class="fv-stat-label">
+                        Delivered revenue
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-sm-6 col-xl-3">
+
+            <div
+                class="fv-card fv-card-glow fv-hover-lift"
+                style="--tile-glow:rgba(56,189,248,.15)"
+            >
+
+                <div class="fv-card-body">
+
+                    <div class="fv-stat-head">
+
+                        <span class="fv-icon-tile tile-sky">
+                            <i class="bi bi-box-seam-fill"></i>
+                        </span>
+
+                        <span class="fv-chip chip-sky">
+                            Inventory
+                        </span>
+
+                    </div>
+
+                    <div class="fv-stat-value">
+                        <?= number_format($totalProducts) ?>
+                    </div>
+
+                    <div class="fv-stat-label">
+                        Products
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-sm-6 col-xl-3">
+
+            <div
+                class="fv-card fv-card-glow fv-hover-lift"
+                style="--tile-glow:rgba(251,113,133,.14)"
+            >
+
+                <div class="fv-card-body">
+
+                    <div class="fv-stat-head">
+
+                        <span class="fv-icon-tile tile-rose">
+                            <i class="bi bi-people-fill"></i>
+                        </span>
+
+                        <span class="fv-chip chip-rose">
                             Customers
-                        </small>
+                        </span>
 
-                        <div class="stat-number">
-                            <?= $totalCustomers ?>
-                        </div>
                     </div>
 
-                    <div class="stat-icon">
-                        <i class="bi bi-person"></i>
+                    <div class="fv-stat-value">
+                        <?= number_format($totalCustomers) ?>
                     </div>
 
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="col-lg-3 col-md-6">
-
-            <div class="stat-card">
-
-                <div class="d-flex justify-content-between">
-
-                    <div>
-                        <small class="text-muted">
-                            Staff
-                        </small>
-
-                        <div class="stat-number">
-                            <?= $totalStaff ?>
-                        </div>
-                    </div>
-
-                    <div class="stat-icon">
-                        <i class="bi bi-person-badge"></i>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="col-lg-3 col-md-6">
-
-            <div class="stat-card">
-
-                <div class="d-flex justify-content-between">
-
-                    <div>
-                        <small class="text-muted">
-                            Delivery Partners
-                        </small>
-
-                        <div class="stat-number">
-                            <?= $totalDeliveryPartners ?>
-                        </div>
-                    </div>
-
-                    <div class="stat-icon">
-                        <i class="bi bi-bicycle"></i>
+                    <div class="fv-stat-label">
+                        Customers served
                     </div>
 
                 </div>
@@ -293,191 +511,437 @@ try {
 
     </div>
 
-
-    <!-- BUSINESS STATISTICS -->
 
     <div class="row g-4 mb-4">
 
-        <div class="col-lg-4">
+        <div class="col-xl-8">
 
-            <div class="stat-card">
+            <section class="fv-card h-100">
 
-                <small class="text-muted">
-                    Total Orders
-                </small>
+                <div class="fv-card-header">
 
-                <div class="stat-number mt-2">
-                    <?= $totalOrders ?>
+                    <div>
+
+                        <h2 class="fv-section-title">
+                            Recent orders
+                        </h2>
+
+                        <p class="fv-section-subtitle">
+                            Latest customer activity for your store.
+                        </p>
+
+                    </div>
+
+                    <a
+                        href="orders.php"
+                        class="fv-glass-btn"
+                    >
+                        View all
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+
                 </div>
 
-                <small class="text-success">
-                    <i class="bi bi-arrow-up"></i>
-                    Orders processed
-                </small>
+                <div class="fv-table-wrap">
 
-            </div>
+                    <?php if ($recentOrders): ?>
+
+                        <table class="fv-table">
+
+                            <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Status</th>
+                                <th>Payment</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+
+                            <?php foreach ($recentOrders as $order): ?>
+
+                                <tr>
+
+                                    <td>
+
+                                        <a
+                                            href="order_details.php?id=<?= (int)$order['id'] ?>"
+                                            class="text-decoration-none"
+                                        >
+
+                                            <div class="fv-order-number">
+                                                <?= e($order['order_number']) ?>
+                                            </div>
+
+                                            <div class="fv-customer">
+                                                <?= e($order['customer_name']) ?>
+                                            </div>
+
+                                        </a>
+
+                                    </td>
+
+                                    <td>
+
+                                        <span
+                                            class="fv-status status-<?= e(
+                                                dashboardStatusClass(
+                                                    $order['status']
+                                                )
+                                            ) ?>"
+                                        >
+                                            <?= e(
+                                                ucwords(
+                                                    str_replace(
+                                                        '_',
+                                                        ' ',
+                                                        $order['status']
+                                                    )
+                                                )
+                                            ) ?>
+                                        </span>
+
+                                    </td>
+
+                                    <td>
+
+                                        <?php
+                                        $paymentPaid =
+                                            ($order['payment_status'] ?? '')
+                                            === 'paid';
+                                        ?>
+
+                                        <span
+                                            class="fv-chip <?= $paymentPaid
+                                                ? 'chip-success'
+                                                : 'chip-amber' ?>"
+                                        >
+                                            <?= $paymentPaid
+                                                ? 'Paid'
+                                                : 'Pending' ?>
+                                        </span>
+
+                                    </td>
+
+                                    <td class="text-end fw-bold">
+                                        GH₵<?= number_format(
+                                            (float)$order['total_amount'],
+                                            2
+                                        ) ?>
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                            </tbody>
+
+                        </table>
+
+                    <?php else: ?>
+
+                        <div class="text-center py-5">
+
+                            <i
+                                class="bi bi-receipt fs-1"
+                                style="color:#6d6e78"
+                            ></i>
+
+                            <div class="mt-3 fw-bold">
+                                No orders yet
+                            </div>
+
+                            <div class="text-muted small mt-1">
+                                New customer orders will appear here.
+                            </div>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                </div>
+
+            </section>
 
         </div>
 
 
-        <div class="col-lg-4">
+        <div class="col-xl-4">
 
-            <div class="stat-card">
+            <section class="fv-card fv-store-panel h-100">
 
-                <small class="text-muted">
-                    Products
-                </small>
+                <div class="fv-card-body">
 
-                <div class="stat-number mt-2">
-                    <?= $totalProducts ?>
+                    <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+
+                        <div>
+
+                            <div class="fv-eyebrow">
+                                <i class="bi bi-shop-window"></i>
+                                Storefront
+                            </div>
+
+                            <div class="fv-store-name">
+                                <?= e($storeName) ?>
+                            </div>
+
+                        </div>
+
+                        <span class="fv-chip <?= $storeOpen
+                            ? 'chip-success'
+                            : 'chip-rose' ?>"
+                        >
+                            <span
+                                class="fv-store-status <?= $storeOpen
+                                    ? ''
+                                    : 'closed' ?>"
+                            ></span>
+
+                            <?= $storeOpen
+                                ? 'Open'
+                                : 'Closed' ?>
+                        </span>
+
+                    </div>
+
+                    <div class="mb-4">
+
+                        <div class="text-muted small mb-1">
+                            Subscription
+                        </div>
+
+                        <div class="fv-plan">
+                            <?= e(
+                                ucwords(
+                                    str_replace(
+                                        '_',
+                                        ' ',
+                                        $subscriptionPlan
+                                    )
+                                )
+                            ) ?>
+                        </div>
+
+                        <?php if ($subscriptionEnd): ?>
+
+                            <div class="text-muted small mt-1">
+                                Access until
+                                <?= e(
+                                    date(
+                                        'M j, Y',
+                                        strtotime($subscriptionEnd)
+                                    )
+                                ) ?>
+                            </div>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                    <div class="row g-3 mb-4">
+
+                        <div class="col-6">
+
+                            <div
+                                class="p-3 rounded-4"
+                                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)"
+                            >
+
+                                <div class="text-muted small">
+                                    Staff
+                                </div>
+
+                                <div class="fs-4 fw-bold mt-1">
+                                    <?= number_format($totalStaff) ?>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-6">
+
+                            <div
+                                class="p-3 rounded-4"
+                                style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)"
+                            >
+
+                                <div class="text-muted small">
+                                    Delivery
+                                </div>
+
+                                <div class="fs-4 fw-bold mt-1">
+                                    <?= number_format($totalDeliveryPartners) ?>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <a
+                        href="storefront.php"
+                        class="fv-primary-btn w-100"
+                    >
+                        <i class="bi bi-sliders"></i>
+                        Manage Storefront
+                    </a>
+
                 </div>
 
-                <small class="text-success">
-                    Products in inventory
-                </small>
-
-            </div>
-
-        </div>
-
-
-        <div class="col-lg-4">
-
-            <div class="stat-card">
-
-                <small class="text-muted">
-                    Delivered Revenue
-                </small>
-
-                <div class="stat-number mt-2">
-                    ₵<?= number_format((float)$totalRevenue, 2) ?>
-                </div>
-
-                <small class="text-success">
-                    Completed orders
-                </small>
-
-            </div>
+            </section>
 
         </div>
 
     </div>
 
-
-    <!-- QUICK ACTIONS -->
-
-    <h5 class="mb-3">
-        Quick Actions
-    </h5>
 
     <div class="row g-4">
 
-        <div class="col-lg-3 col-md-6">
+        <div class="col-12">
 
-            <a href="staff.php"
-               class="text-decoration-none text-dark">
+            <section class="fv-card">
 
-                <div class="quick-card">
+                <div class="fv-card-header">
 
-                    <div class="quick-icon">
-                        <i class="bi bi-person-plus"></i>
+                    <div>
+
+                        <h2 class="fv-section-title">
+                            Quick actions
+                        </h2>
+
+                        <p class="fv-section-subtitle">
+                            Common tasks for running your store.
+                        </p>
+
                     </div>
-
-                    <h5>
-                        Add Staff
-                    </h5>
-
-                    <p class="text-muted mb-0">
-                        Create and manage shop staff accounts.
-                    </p>
 
                 </div>
 
-            </a>
+                <div class="fv-card-body pt-3">
 
-        </div>
+                    <div class="row g-3">
+
+                        <div class="col-md-6 col-xl-3">
+
+                            <a
+                                href="products.php"
+                                class="fv-action h-100"
+                            >
+
+                                <span class="fv-action-icon">
+                                    <i class="bi bi-box-seam"></i>
+                                </span>
+
+                                <span>
+                                    <span class="fv-action-title d-block">
+                                        Products
+                                    </span>
+
+                                    <span class="fv-action-copy d-block">
+                                        Add or update inventory.
+                                    </span>
+                                </span>
+
+                            </a>
+
+                        </div>
 
 
-        <div class="col-lg-3 col-md-6">
+                        <div class="col-md-6 col-xl-3">
 
-            <a href="delivery_partners.php"
-               class="text-decoration-none text-dark">
+                            <a
+                                href="staff.php"
+                                class="fv-action h-100"
+                            >
 
-                <div class="quick-card">
+                                <span class="fv-action-icon">
+                                    <i class="bi bi-person-plus"></i>
+                                </span>
 
-                    <div class="quick-icon">
-                        <i class="bi bi-bicycle"></i>
+                                <span>
+                                    <span class="fv-action-title d-block">
+                                        Staff
+                                    </span>
+
+                                    <span class="fv-action-copy d-block">
+                                        Manage staff accounts.
+                                    </span>
+                                </span>
+
+                            </a>
+
+                        </div>
+
+
+                        <div class="col-md-6 col-xl-3">
+
+                            <a
+                                href="delivery_partners.php"
+                                class="fv-action h-100"
+                            >
+
+                                <span class="fv-action-icon">
+                                    <i class="bi bi-bicycle"></i>
+                                </span>
+
+                                <span>
+                                    <span class="fv-action-title d-block">
+                                        Delivery team
+                                    </span>
+
+                                    <span class="fv-action-copy d-block">
+                                        Manage delivery partners.
+                                    </span>
+                                </span>
+
+                            </a>
+
+                        </div>
+
+
+                        <div class="col-md-6 col-xl-3">
+
+                            <a
+                                href="reports.php"
+                                class="fv-action h-100"
+                            >
+
+                                <span class="fv-action-icon">
+                                    <i class="bi bi-bar-chart"></i>
+                                </span>
+
+                                <span>
+                                    <span class="fv-action-title d-block">
+                                        Reports
+                                    </span>
+
+                                    <span class="fv-action-copy d-block">
+                                        Review store performance.
+                                    </span>
+                                </span>
+
+                            </a>
+
+                        </div>
+
                     </div>
-
-                    <h5>
-                        Add Delivery Partner
-                    </h5>
-
-                    <p class="text-muted mb-0">
-                        Register drivers and delivery partners.
-                    </p>
 
                 </div>
 
-            </a>
-
-        </div>
-
-
-        <div class="col-lg-3 col-md-6">
-
-            <a href="products.php"
-               class="text-decoration-none text-dark">
-
-                <div class="quick-card">
-
-                    <div class="quick-icon">
-                        <i class="bi bi-box-seam"></i>
-                    </div>
-
-                    <h5>
-                        Manage Products
-                    </h5>
-
-                    <p class="text-muted mb-0">
-                        Add, edit and manage grocery products.
-                    </p>
-
-                </div>
-
-            </a>
-
-        </div>
-
-
-        <div class="col-lg-3 col-md-6">
-
-            <a href="orders.php"
-               class="text-decoration-none text-dark">
-
-                <div class="quick-card">
-
-                    <div class="quick-icon">
-                        <i class="bi bi-receipt"></i>
-                    </div>
-
-                    <h5>
-                        View Orders
-                    </h5>
-
-                    <p class="text-muted mb-0">
-                        Monitor and manage customer orders.
-                    </p>
-
-                </div>
-
-            </a>
+            </section>
 
         </div>
 
     </div>
 
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
 
 </body>
 </html>
