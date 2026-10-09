@@ -914,7 +914,7 @@ $latestLocation = $locations[0] ?? null;
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 <?php include "../includes/admin_sidebar.php"; ?>
 <?php include "../includes/loader.php"; ?>
