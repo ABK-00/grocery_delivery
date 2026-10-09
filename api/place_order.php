@@ -3,11 +3,9 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-requireLogin();
-requireCompanyAccess();
-$companyId = currentCompanyId();
+requireRole('customer');
 
-$userId = $_SESSION['user_id'];
+$userId = (int) $_SESSION['user_id'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Location: ../checkout.php");
@@ -37,6 +35,7 @@ try {
         SELECT
             c.product_id,
             c.quantity,
+            p.company_id,
             p.name,
             p.price,
             p.stock,
@@ -45,16 +44,76 @@ try {
         INNER JOIN products p
             ON p.id = c.product_id
         WHERE c.user_id = ?
-          AND p.company_id = ?
         FOR UPDATE
     ");
 
-    $stmt->execute([$userId, $companyId]);
+    $stmt->execute([$userId]);
 
     $cartItems = $stmt->fetchAll();
 
     if (!$cartItems) {
         throw new Exception('Your cart is empty.');
+    }
+
+    $companyIds = array_values(array_unique(array_map(
+        static fn(array $item): int => (int) $item['company_id'],
+        $cartItems
+    )));
+
+    if (count($companyIds) !== 1) {
+        throw new Exception(
+            'Your cart must contain products from only one store.'
+        );
+    }
+
+    $companyId = $companyIds[0];
+
+    $companyStmt = $conn->prepare("
+        SELECT
+            c.id,
+            c.status,
+            c.subscription_plan,
+            c.trial_ends_at,
+            c.subscription_ends_at,
+            COALESCE(cs.store_status, 'open') AS store_status
+        FROM companies c
+        LEFT JOIN company_storefronts cs
+            ON cs.company_id = c.id
+        WHERE c.id = ?
+        LIMIT 1
+    ");
+
+    $companyStmt->execute([$companyId]);
+    $company = $companyStmt->fetch();
+
+    if (!$company || $company['status'] !== 'active') {
+        throw new Exception('This store is currently unavailable.');
+    }
+
+    if (($company['store_status'] ?? 'open') !== 'open') {
+        throw new Exception('This store is currently closed.');
+    }
+
+    $subscriptionValid = false;
+
+    if ($company['subscription_plan'] === 'trial') {
+        $subscriptionValid =
+            !empty($company['trial_ends_at'])
+            && strtotime($company['trial_ends_at']) >= time();
+    } elseif (
+        in_array(
+            $company['subscription_plan'],
+            ['monthly', 'quarterly', 'yearly'],
+            true
+        )
+    ) {
+        $subscriptionValid =
+            !empty($company['subscription_ends_at'])
+            && strtotime($company['subscription_ends_at']) >= time();
+    }
+
+    if (!$subscriptionValid) {
+        throw new Exception('This store is temporarily unavailable.');
     }
 
     $subtotal = 0;
