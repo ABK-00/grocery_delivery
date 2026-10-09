@@ -5,8 +5,6 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole("customer");
-requireCompanyAccess();
-$companyId = currentCompanyId();
 
 $orderId = isset($_GET['order']) ? (int) $_GET['order'] : 0;
 
@@ -56,12 +54,11 @@ $stmt = $conn->prepare("
 
     WHERE o.id = ?
       AND o.user_id = ?
-      AND o.company_id = ?
 
     LIMIT 1
 ");
 
-$stmt->execute([$orderId, $userId, $companyId]);
+$stmt->execute([$orderId, $userId]);
 $order = $stmt->fetch();
 
 if (!$order) {
@@ -389,7 +386,7 @@ $mapLng = $latestLocation
 
 
         <a
-            href="orders.php"
+            href="../orders.php"
             class="btn btn-outline-secondary"
         >
 
