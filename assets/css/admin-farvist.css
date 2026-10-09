@@ -1564,3 +1564,55 @@ html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link {
             rgba(255,255,255,.34)
         ) !important;
 }
+
+
+/* =========================================================
+   SIDEBAR BUTTON BORDER REFINEMENT
+   Inactive = top accent border only.
+   Active = full accent fill.
+   ========================================================= */
+
+body.admin-farvist .sidebar .nav-link,
+body.admin-farvist .sidebar-footer .nav-link,
+body.admin-farvist .sidebar-accent-picker > .nav-link {
+    border-left: 1px solid rgba(255,255,255,.08) !important;
+    border-right: 1px solid rgba(255,255,255,.08) !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+    border-top: 1px solid rgba(var(--fv-primary-rgb), .70) !important;
+}
+
+body.admin-farvist .sidebar .nav-link:hover,
+body.admin-farvist .sidebar-footer .nav-link:hover,
+body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    border-left-color: rgba(255,255,255,.10) !important;
+    border-right-color: rgba(255,255,255,.10) !important;
+    border-bottom-color: rgba(255,255,255,.10) !important;
+    border-top-color: rgba(var(--fv-primary-rgb), .95) !important;
+}
+
+body.admin-farvist .sidebar .nav-link.active {
+    border-color: rgba(var(--fv-primary-rgb), .98) !important;
+}
+
+/* Light mode */
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link,
+html[data-theme="light"] body.admin-farvist .sidebar-footer .nav-link,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link {
+    border-left-color: rgba(148,163,184,.18) !important;
+    border-right-color: rgba(148,163,184,.18) !important;
+    border-bottom-color: rgba(148,163,184,.18) !important;
+    border-top-color: rgba(var(--fv-primary-rgb), .62) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link:hover,
+html[data-theme="light"] body.admin-farvist .sidebar-footer .nav-link:hover,
+html[data-theme="light"] body.admin-farvist .sidebar-accent-picker > .nav-link:hover {
+    border-left-color: rgba(148,163,184,.22) !important;
+    border-right-color: rgba(148,163,184,.22) !important;
+    border-bottom-color: rgba(148,163,184,.22) !important;
+    border-top-color: rgba(var(--fv-primary-rgb), .95) !important;
+}
+
+html[data-theme="light"] body.admin-farvist .sidebar .nav-link.active {
+    border-color: rgba(var(--fv-primary-rgb), .98) !important;
+}
