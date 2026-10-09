@@ -371,6 +371,7 @@ $totalRevenue = (float)$stat->fetchColumn();
     <link
         href="../assets/css/admin.css"
         rel="stylesheet">
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 
     <style>
         .order-number {
@@ -395,7 +396,7 @@ $totalRevenue = (float)$stat->fetchColumn();
 
 </head>
 
-<body>
+<body class="admin-farvist">
 
 <?php require_once __DIR__ . "/../includes/admin_sidebar.php"; ?>
 <?php include "../includes/loader.php"; ?>
