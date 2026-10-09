@@ -56,6 +56,48 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </div>
 
     <div class="sidebar-footer">
+
+        <div class="dropdown sidebar-accent-picker">
+            <button
+                type="button"
+                class="nav-link"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                <i class="bi bi-palette2"></i>
+                <span>Accent</span>
+                <small class="ms-auto" data-accent-label>Sapphire</small>
+            </button>
+
+            <div class="dropdown-menu sidebar-accent-menu fv-theme-menu">
+                <div class="fv-theme-title">System accent</div>
+
+                <button type="button" class="fv-theme-option" data-accent-option="sapphire">
+                    <span class="fv-theme-swatch swatch-sapphire"></span>
+                    <span>Sapphire Blue</span>
+                    <i class="bi bi-check2 fv-theme-check"></i>
+                </button>
+
+                <button type="button" class="fv-theme-option" data-accent-option="teal">
+                    <span class="fv-theme-swatch swatch-teal"></span>
+                    <span>Teal</span>
+                    <i class="bi bi-check2 fv-theme-check"></i>
+                </button>
+
+                <button type="button" class="fv-theme-option" data-accent-option="coral">
+                    <span class="fv-theme-swatch swatch-coral"></span>
+                    <span>Coral</span>
+                    <i class="bi bi-check2 fv-theme-check"></i>
+                </button>
+
+                <button type="button" class="fv-theme-option" data-accent-option="slate">
+                    <span class="fv-theme-swatch swatch-slate"></span>
+                    <span>Slate Grey</span>
+                    <i class="bi bi-check2 fv-theme-check"></i>
+                </button>
+            </div>
+        </div>
+
         <button type="button" class="nav-link theme-toggle" data-theme-toggle>
             <i class="bi bi-moon-stars-fill theme-icon"></i>
             <span class="theme-label">Dark Theme</span>
