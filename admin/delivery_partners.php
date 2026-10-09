@@ -129,16 +129,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_partner"])) {
                 $partnerStmt = $conn->prepare("
                     INSERT INTO delivery_partners
                     (
+                        company_id,
                         user_id,
                         vehicle_type,
                         vehicle_registration,
                         status
                     )
                     VALUES
-                    (?, ?, ?, 'available')
+                    (?, ?, ?, ?, 'available')
                 ");
 
                 $partnerStmt->execute([
+                    $companyId,
                     $userId,
                     $vehicle_type,
                     $vehicle_registration
@@ -254,14 +256,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_partner"])) {
                         vehicle_type = ?,
                         vehicle_registration = ?
                     WHERE id = ?
-                    AND user_id = ?
+                      AND user_id = ?
+                      AND company_id = ?
                 ");
 
                 $partnerStmt->execute([
                     $vehicle_type,
                     $vehicle_registration,
                     $partnerId,
-                    $userId
+                    $userId,
+                    $companyId
                 ]);
 
                 $conn->commit();
@@ -295,11 +299,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_status"])) {
             SELECT dp.status
             FROM delivery_partners dp
             INNER JOIN users u ON u.id = dp.user_id
-            WHERE dp.id = ? AND u.company_id = ?
+            WHERE dp.id = ?
+              AND dp.company_id = ?
+              AND u.company_id = ?
             LIMIT 1
         ");
 
-        $stmt->execute([$partnerId, $companyId]);
+        $stmt->execute([
+            $partnerId,
+            $companyId,
+            $companyId
+        ]);
 
         $partner = $stmt->fetch();
 
@@ -313,12 +323,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_status"])) {
             $update = $conn->prepare("
                 UPDATE delivery_partners
                 SET status = ?
-                WHERE id = ? AND user_id IN (SELECT id FROM users WHERE company_id = ?)
+                WHERE id = ?
+                  AND company_id = ?
+                  AND user_id IN (
+                      SELECT id
+                      FROM users
+                      WHERE company_id = ?
+                  )
             ");
 
             $update->execute([
                 $newStatus,
                 $partnerId,
+                $companyId,
                 $companyId
             ]);
 
@@ -366,7 +383,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["toggle_account"])) {
                 UPDATE users
                 SET status = ?
                 WHERE id = ?
-                AND role = 'delivery_partner'
+                  AND role = 'delivery_partner'
+                  AND company_id = ?
             ");
 
             $update->execute([
@@ -399,10 +417,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_partner"])) {
 
         $stmt = $conn->prepare("
             DELETE FROM delivery_partners
-            WHERE user_id = ? AND user_id IN (SELECT id FROM users WHERE company_id = ?)
+            WHERE user_id = ?
+              AND company_id = ?
+              AND user_id IN (
+                  SELECT id
+                  FROM users
+                  WHERE company_id = ?
+              )
         ");
 
-        $stmt->execute([$userId, $companyId]);
+        $stmt->execute([
+            $userId,
+            $companyId,
+            $companyId
+        ]);
 
         $stmt = $conn->prepare("
             DELETE FROM users
@@ -449,9 +477,13 @@ $stmt = $conn->prepare("
     INNER JOIN users u
         ON u.id = dp.user_id
     WHERE u.company_id = ?
+      AND dp.company_id = ?
     ORDER BY dp.created_at DESC
 ");
-$stmt->execute([$companyId]);
+$stmt->execute([
+    $companyId,
+    $companyId
+]);
 
 $partners = $stmt->fetchAll();
 
