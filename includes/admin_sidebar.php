@@ -245,6 +245,7 @@ if ($sidebarInitials === '') {
                 type="button"
                 class="nav-link"
                 data-bs-toggle="dropdown"
+                data-bs-boundary="viewport"
                 aria-expanded="false"
                 title="Accent theme"
             >
@@ -392,6 +393,17 @@ if ($sidebarInitials === '') {
     id="sidebarOverlay"
 ></div>
 
+<button
+    type="button"
+    class="admin-mobile-sidebar-toggle"
+    id="adminMobileSidebarToggle"
+    aria-label="Open admin menu"
+    aria-expanded="false"
+    title="Open menu"
+>
+    <i class="bi bi-list"></i>
+</button>
+
 
 <script>
 document.addEventListener(
@@ -401,8 +413,13 @@ document.addEventListener(
         const sidebar =
             document.getElementById('adminSidebar');
 
-        const mobileToggle =
+        const pageMobileToggle =
             document.getElementById('sidebarToggle');
+
+        const floatingMobileToggle =
+            document.getElementById(
+                'adminMobileSidebarToggle'
+            );
 
         const overlay =
             document.getElementById('sidebarOverlay');
@@ -489,6 +506,12 @@ document.addEventListener(
 
         if (window.innerWidth > 900) {
             setCollapsed(initiallyCollapsed);
+        } else {
+            sidebar.classList.remove('is-collapsed');
+            document.body.classList.remove(
+                'admin-sidebar-collapsed'
+            );
+            syncMobileMenuState();
         }
 
         if (collapseButton) {
@@ -510,46 +533,124 @@ document.addEventListener(
             );
         }
 
-        if (
-            mobileToggle
-            && sidebar
-            && overlay
-        ) {
+        function syncMobileMenuState() {
 
-            mobileToggle.addEventListener(
-                'click',
-                function () {
-                    sidebar.classList.toggle('show');
-                    overlay.classList.toggle('show');
-                }
+            if (
+                !sidebar
+                || !overlay
+            ) {
+                return;
+            }
+
+            const open =
+                sidebar.classList.contains('show');
+
+            overlay.classList.toggle(
+                'show',
+                open
             );
 
+            if (floatingMobileToggle) {
+
+                floatingMobileToggle.setAttribute(
+                    'aria-expanded',
+                    open
+                        ? 'true'
+                        : 'false'
+                );
+
+                floatingMobileToggle.setAttribute(
+                    'aria-label',
+                    open
+                        ? 'Close admin menu'
+                        : 'Open admin menu'
+                );
+
+                floatingMobileToggle.setAttribute(
+                    'title',
+                    open
+                        ? 'Close menu'
+                        : 'Open menu'
+                );
+
+                floatingMobileToggle.classList.toggle(
+                    'is-open',
+                    open
+                );
+
+                const icon =
+                    floatingMobileToggle.querySelector('i');
+
+                if (icon) {
+                    icon.className =
+                        open
+                        ? 'bi bi-x-lg'
+                        : 'bi bi-list';
+                }
+            }
+        }
+
+        function toggleMobileMenu() {
+
+            if (
+                !sidebar
+                || window.innerWidth > 900
+            ) {
+                return;
+            }
+
+            sidebar.classList.toggle('show');
+            syncMobileMenuState();
+        }
+
+        [
+            pageMobileToggle,
+            floatingMobileToggle
+        ]
+            .filter(Boolean)
+            .forEach(function (button) {
+
+                button.addEventListener(
+                    'click',
+                    toggleMobileMenu
+                );
+            });
+
+        if (overlay) {
             overlay.addEventListener(
                 'click',
                 function () {
+
+                    if (!sidebar) {
+                        return;
+                    }
+
                     sidebar.classList.remove('show');
-                    overlay.classList.remove('show');
+                    syncMobileMenuState();
                 }
             );
-
-            document
-                .querySelectorAll(
-                    '.sidebar .nav-link'
-                )
-                .forEach(function (link) {
-
-                    link.addEventListener(
-                        'click',
-                        function () {
-
-                            if (window.innerWidth <= 900) {
-                                sidebar.classList.remove('show');
-                                overlay.classList.remove('show');
-                            }
-                        }
-                    );
-                });
         }
+
+        document
+            .querySelectorAll(
+                '.sidebar a.nav-link'
+            )
+            .forEach(function (link) {
+
+                link.addEventListener(
+                    'click',
+                    function () {
+
+                        if (
+                            window.innerWidth <= 900
+                            && sidebar
+                        ) {
+                            sidebar.classList.remove('show');
+                            syncMobileMenuState();
+                        }
+                    }
+                );
+            });
 
         window.addEventListener(
             'resize',
@@ -563,7 +664,16 @@ document.addEventListener(
                     sidebar.classList.remove(
                         'is-collapsed'
                     );
+
+                    syncMobileMenuState();
                 } else {
+                    sidebar.classList.remove('show');
+
+                    if (overlay) {
+                        overlay.classList.remove('show');
+                    }
+
+                    syncMobileMenuState();
                     let collapsed = false;
 
                     try {
