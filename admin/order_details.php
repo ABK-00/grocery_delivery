@@ -872,6 +872,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
     </style>
 
+    <link href="../assets/css/admin-farvist.css" rel="stylesheet">
 </head>
 
 <body class="admin-farvist">
