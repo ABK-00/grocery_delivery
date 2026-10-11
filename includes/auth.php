@@ -7,24 +7,6 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/../config/app.php';
 /*
 |--------------------------------------------------------------------------
-| APPLICATION BASE URL
-|--------------------------------------------------------------------------
-|
-| Your project is:
-| C:\xampppp\htdocs\somame_ent
-|
-| Browser:
-| http://localhost/somame_ent/
-|--------------------------------------------------------------------------
-*/
-
-if (!defined('BASE_URL')) {
-    require_once __DIR__ . '/../config/app.php';
-}
-
-
-/*
-|--------------------------------------------------------------------------
 | LOGIN CHECK
 |--------------------------------------------------------------------------
 */
@@ -51,7 +33,7 @@ function requireLogin(): void
         header(
             'Location: '
                 . BASE_URL
-                . '/login.php'
+                . '/access.php'
         );
 
         exit;
@@ -304,7 +286,7 @@ function redirectByRole(): void
             header(
                 'Location: '
                     . BASE_URL
-                    . '/login.php'
+                    . '/access.php'
             );
 
             exit;
