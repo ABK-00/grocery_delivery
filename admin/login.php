@@ -5,8 +5,23 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/app.php';
 
 $error = '';
+$registrationSuccess = null;
+
+if (
+    isset($_GET['registered'])
+    && $_GET['registered'] === '1'
+    && !empty($_SESSION['company_registration_success'])
+) {
+    $registrationSuccess =
+        $_SESSION['company_registration_success'];
+
+    unset(
+        $_SESSION['company_registration_success']
+    );
+}
 
 
 /*
@@ -24,7 +39,7 @@ if (
     && ($_SESSION['role'] ?? '') === 'admin'
 ) {
     header(
-        'Location: /somame_ent/admin/dashboard.php'
+        'Location: /BASE_URL/admin/dashboard.php'
     );
     exit;
 }
@@ -304,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             header(
-                'Location: /somame_ent/admin/dashboard.php'
+                'Location: /BASE_URL/admin/dashboard.php'
             );
 
             exit;
@@ -827,6 +842,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </p>
 
 
+                        <?php if ($registrationSuccess): ?>
+
+                            <div class="alert alert-success">
+
+                                <strong>
+                                    Company registered successfully.
+                                </strong>
+
+                                <div class="mt-2">
+                                    Company:
+                                    <?= htmlspecialchars(
+                                        $registrationSuccess['company_name']
+                                    ) ?>
+                                </div>
+
+                                <div>
+                                    Company Code:
+                                    <strong>
+                                        <?= htmlspecialchars(
+                                            $registrationSuccess['company_code']
+                                        ) ?>
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    Administrator:
+                                    <?= htmlspecialchars(
+                                        $registrationSuccess['admin_email']
+                                    ) ?>
+                                </div>
+
+                                <div class="mt-2 small">
+                                    Your 30-day free trial is now active.
+                                    Sign in below to continue.
+                                </div>
+
+                            </div>
+
+                        <?php endif; ?>
                         <?php if ($error): ?>
 
                             <div
@@ -921,7 +975,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             class="text-center mt-4">
 
                             <a
-                                href="/somame_ent/login.php?customer=1"
+                                href="/BASE_URL/login.php?customer=1"
                                 class="text-muted text-decoration-none small">
 
                                 <i
@@ -939,7 +993,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
                             <a
-                                href="/somame_ent/super_admin/login.php"
+                                href="/BASE_URL/super_admin/login.php"
                                 class="text-muted text-decoration-none small">
 
                                 <i

@@ -1,16 +1,10 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| SESSION
-|--------------------------------------------------------------------------
-*/
-
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-
+require_once __DIR__ . '/../config/app.php';
 /*
 |--------------------------------------------------------------------------
 | APPLICATION BASE URL
@@ -25,7 +19,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 */
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', '/somame_ent');
+    require_once __DIR__ . '/../config/app.php';
 }
 
 
@@ -70,16 +64,27 @@ function requireLogin(): void
 | REQUIRE ROLE
 |--------------------------------------------------------------------------
 */
-
 function roleLoginUrl(string $role): string
 {
     return match ($role) {
-        'super_admin' => BASE_URL . '/super_admin/login.php',
-        'admin' => BASE_URL . '/admin/login.php',
-        'staff' => BASE_URL . '/staff/login.php',
-        'delivery_partner' => BASE_URL . '/delivery/login.php',
-        'customer' => BASE_URL . '/login.php?customer=1',
-        default => BASE_URL . '/login.php?customer=1',
+
+        'super_admin' =>
+        BASE_URL . '/super_admin/login.php',
+
+        'admin' =>
+        BASE_URL . '/admin/login.php',
+
+        'staff' =>
+        BASE_URL . '/staff/login.php',
+
+        'delivery_partner' =>
+        BASE_URL . '/delivery/login.php',
+
+        'customer' =>
+        BASE_URL . '/login.php?customer=1',
+
+        default =>
+        BASE_URL . '/access.php',
     };
 }
 

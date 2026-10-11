@@ -1,0 +1,35 @@
+{
+  "name": "somame_ent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tw:watch": "tailwindcss -i ./assets/css/input.css -o ./assets/css/app.css --watch",
+    "tw:build": "tailwindcss -i ./assets/css/input.css -o ./assets/css/app.css --minify",
+    "ts:watch": "tsc --watch",
+    "ts:build": "tsc",
+    "dev": "npm run tw:watch & npm run ts:watch",
+    "dev:build": "npm run tw:build & npm run ts:build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ABK-00/grocery_delivery.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ABK-00/grocery_delivery/issues"
+  },
+  "homepage": "https://github.com/ABK-00/grocery_delivery#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.5.1": true
+  }
+}
