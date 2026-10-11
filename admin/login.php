@@ -39,7 +39,7 @@ if (
     && ($_SESSION['role'] ?? '') === 'admin'
 ) {
     header(
-        'Location: /BASE_URL/admin/dashboard.php'
+        'Location: ' . BASE_URL . '/admin/dashboard.php'
     );
     exit;
 }
@@ -319,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             header(
-                'Location: /BASE_URL/admin/dashboard.php'
+                'Location: ' . BASE_URL . '/admin/dashboard.php'
             );
 
             exit;
@@ -975,7 +975,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             class="text-center mt-4">
 
                             <a
-                                href="/BASE_URL/login.php?customer=1"
+                                href="<?= BASE_URL ?>/login.php?customer=1"
                                 class="text-muted text-decoration-none small">
 
                                 <i
@@ -993,7 +993,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
                             <a
-                                href="/BASE_URL/super_admin/login.php"
+                                href="<?= BASE_URL ?>/super_admin/login.php"
                                 class="text-muted text-decoration-none small">
 
                                 <i
