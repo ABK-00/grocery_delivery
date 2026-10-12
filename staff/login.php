@@ -24,7 +24,7 @@ if (
     && ($_SESSION['role'] ?? '') === 'staff'
 ) {
     header(
-        'Location: /somame_ent/staff/dashboard.php'
+        'Location: ' . BASE_URL . '/staff/dashboard.php'
     );
 
     exit;
@@ -270,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             header(
-                'Location: /somame_ent/staff/dashboard.php'
+                'Location: ' . BASE_URL . '/staff/dashboard.php'
             );
 
             exit;
@@ -1072,7 +1072,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             class="text-center mt-4">
 
                             <a
-                                href="/somame_ent/admin/login.php"
+                                href="<?= BASE_URL ?>/admin/login.php"
                                 class="portal-link">
 
                                 <i
@@ -1090,7 +1090,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
                             <a
-                                href="/somame_ent/login.php?customer=1"
+                                href="<?= BASE_URL ?>/login.php?customer=1"
                                 class="portal-link">
 
                                 <i
