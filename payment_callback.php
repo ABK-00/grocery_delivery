@@ -91,6 +91,7 @@ try {
             p.amount,
             p.currency,
             p.status AS payment_record_status,
+            p.created_at AS payment_created_at,
             o.order_number,
             o.total_amount,
             o.payment_status,
@@ -177,7 +178,13 @@ try {
 
         $updateOrder = $conn->prepare("
             UPDATE orders
-            SET payment_status = 'failed'
+            SET
+                payment_status = 'failed',
+                status = CASE
+                    WHEN status = 'pending'
+                    THEN 'cancelled'
+                    ELSE status
+                END
             WHERE id = ?
               AND user_id = ?
               AND payment_status <> 'paid'
@@ -271,6 +278,13 @@ try {
     $gatewayStatus =
         (string) ($transaction['status'] ?? 'failed');
 
+    $paymentCreatedAt =
+        strtotime((string) $payment['payment_created_at']);
+
+    $paymentExpired =
+        $paymentCreatedAt !== false
+        && (time() - $paymentCreatedAt) >= PAYMENT_SESSION_TIMEOUT_SECONDS;
+
     $paymentStatus = in_array(
         $gatewayStatus,
         ['pending', 'ongoing', 'processing'],
@@ -278,6 +292,10 @@ try {
     )
         ? 'pending'
         : 'failed';
+
+    if ($paymentExpired && $paymentStatus !== 'paid') {
+        $paymentStatus = 'failed';
+    }
 
     if ($paymentStatus === 'failed') {
         releaseOrderStock(
