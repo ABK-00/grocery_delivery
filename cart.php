@@ -73,7 +73,7 @@ function cartProductImage(array $product): string
         ?: ($product['image'] ?? '');
 
     if ($image === '') {
-        return '/somame_ent/assets/images/product-placeholder.svg';
+        return BASE_URL . '/assets/images/product-placeholder.svg';
     }
 
     if (
@@ -85,7 +85,7 @@ function cartProductImage(array $product): string
 
     $filename = basename(str_replace('\\', '/', $image));
 
-    return '/somame_ent/assets/images/products/'
+    return BASE_URL . '/assets/images/products/'
         . rawurlencode($filename);
 }
 
@@ -240,7 +240,7 @@ include __DIR__ . '/includes/customer_sidebar.php';
                                 class="cart-img"
                                 src="<?= e(cartProductImage($item)) ?>"
                                 alt="<?= e($item['name']) ?>"
-                                onerror="this.onerror=null;this.src='/somame_ent/assets/images/product-placeholder.svg';"
+                                onerror="this.onerror=null;this.src='<?= BASE_URL ?>/assets/images/product-placeholder.svg';"
                             >
                         </div>
 
