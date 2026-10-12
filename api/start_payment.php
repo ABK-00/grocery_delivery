@@ -4,11 +4,9 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/paystack.php';
 require_once __DIR__ . '/../includes/auth.php';
 
-requireLogin();
-requireCompanyAccess();
-$companyId=currentCompanyId();
+requireRole('customer');
 
-$userId = $_SESSION['user_id'];
+$userId = currentUserId();
 
 $orderId = filter_input(
     INPUT_GET,
@@ -16,15 +14,13 @@ $orderId = filter_input(
     FILTER_VALIDATE_INT
 );
 
-if (!$orderId) {
-    die('Invalid order.');
+if (!$userId || !$orderId) {
+    http_response_code(400);
+    exit('Invalid order.');
 }
 
 try {
 
-    /*
-     * Get order.
-     */
     $stmt = $conn->prepare("
         SELECT
             o.id,
@@ -37,160 +33,59 @@ try {
         INNER JOIN users u
             ON u.id = o.user_id
         WHERE o.id = ?
-        AND o.user_id = ?
-        AND o.company_id = ?
+          AND o.user_id = ?
         LIMIT 1
     ");
 
     $stmt->execute([
         $orderId,
-        $userId,
-        $companyId
+        $userId
     ]);
 
     $order = $stmt->fetch();
 
     if (!$order) {
-        die('Order not found.');
+        http_response_code(404);
+        exit('Order not found.');
     }
 
     if ($order['payment_status'] === 'paid') {
         header(
-            "Location: ../order_success.php?order=" .
-            urlencode($order['order_number']) .
-            "&paid=1"
+            'Location: '
+            . BASE_URL
+            . '/order_success.php?order='
+            . urlencode($order['order_number'])
+            . '&paid=1'
         );
         exit;
     }
 
-    /*
-     * Generate Paystack reference.
-     */
-    $reference =
-        'GROC-' .
-        date('YmdHis') .
-        '-' .
-        strtoupper(bin2hex(random_bytes(4)));
-
-    /*
-     * Amount must be sent in pesewas.
-     */
     $amount =
-        (int)round(
-            (float)$order['total_amount'] * 100
+        (int) round(
+            (float) $order['total_amount'] * 100
         );
 
-    /*
-     * Initialize transaction.
-     */
-    $payload = [
-
-        'email' => $order['email'],
-
-        'amount' => $amount,
-
-        'currency' => 'GHS',
-
-        'reference' => $reference,
-
-        'callback_url' =>
-            PAYSTACK_CALLBACK_URL,
-
-        'channels' => [
-            'card',
-            'mobile_money',
-            'bank_transfer',
-            'ussd'
-        ],
-
-        'metadata' => json_encode([
-            'order_id' => (int)$order['id'],
-            'order_number' => $order['order_number'],
-            'customer_id' => (int)$userId
-        ])
-    ];
-
-    $ch = curl_init(
-        PAYSTACK_BASE_URL .
-        '/transaction/initialize'
-    );
-
-    curl_setopt_array($ch, [
-
-        CURLOPT_POST => true,
-
-        CURLOPT_POSTFIELDS =>
-            json_encode($payload),
-
-        CURLOPT_RETURNTRANSFER => true,
-
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' .
-            PAYSTACK_SECRET_KEY,
-
-            'Content-Type: application/json'
-        ],
-
-        CURLOPT_TIMEOUT => 30,
-
-        CURLOPT_SSL_VERIFYPEER => true
-
-    ]);
-
-    $response = curl_exec($ch);
-
-    if ($response === false) {
-
-        $error = curl_error($ch);
-
-        curl_close($ch);
-
-        die(
-            'Paystack connection failed: ' .
-            htmlspecialchars($error)
-        );
+    if ($amount <= 0) {
+        throw new RuntimeException('Invalid payment amount.');
     }
 
-    $httpCode =
-        curl_getinfo(
-            $ch,
-            CURLINFO_HTTP_CODE
-        );
+    $reference =
+        'GROC-'
+        . date('YmdHis')
+        . '-'
+        . strtoupper(bin2hex(random_bytes(4)));
 
-    curl_close($ch);
+    $conn->beginTransaction();
 
-    $result =
-        json_decode(
-            $response,
-            true
-        );
-
-    if (
-        $httpCode < 200 ||
-        $httpCode >= 300 ||
-        empty($result['status'])
-    ) {
-
-        die(
-            'Paystack error: ' .
-            htmlspecialchars(
-                $result['message'] ??
-                'Unable to initialize payment.'
-            )
-        );
-    }
-
-    /*
-     * Get the temporary payment record.
-     */
     $paymentStmt = $conn->prepare("
         SELECT id
         FROM payments
         WHERE order_id = ?
-        AND user_id = ?
-        AND status = 'pending'
+          AND user_id = ?
+          AND status = 'pending'
         ORDER BY id DESC
         LIMIT 1
+        FOR UPDATE
     ");
 
     $paymentStmt->execute([
@@ -200,31 +95,54 @@ try {
 
     $payment = $paymentStmt->fetch();
 
-    /*
-     * Update payment reference.
-     */
     if ($payment) {
 
         $updatePayment = $conn->prepare("
             UPDATE payments
-            SET reference = ?
+            SET
+                reference = ?,
+                amount = ?,
+                currency = 'GHS',
+                gateway = 'paystack'
             WHERE id = ?
         ");
 
         $updatePayment->execute([
             $reference,
+            $order['total_amount'],
             $payment['id']
+        ]);
+
+    } else {
+
+        $insertPayment = $conn->prepare("
+            INSERT INTO payments
+            (
+                order_id,
+                user_id,
+                reference,
+                amount,
+                currency,
+                status,
+                gateway
+            )
+            VALUES
+            (?, ?, ?, ?, 'GHS', 'pending', 'paystack')
+        ");
+
+        $insertPayment->execute([
+            $orderId,
+            $userId,
+            $reference,
+            $order['total_amount']
         ]);
     }
 
-    /*
-     * Update order reference.
-     */
     $updateOrder = $conn->prepare("
         UPDATE orders
         SET payment_reference = ?
         WHERE id = ?
-        AND user_id = ?
+          AND user_id = ?
     ");
 
     $updateOrder->execute([
@@ -233,22 +151,101 @@ try {
         $userId
     ]);
 
-    /*
-     * Redirect customer to Paystack.
-     */
+    $conn->commit();
+
+    $payload = [
+        'email' => $order['email'],
+        'amount' => $amount,
+        'currency' => 'GHS',
+        'reference' => $reference,
+        'callback_url' => PAYSTACK_CALLBACK_URL,
+        'channels' => [
+            'card',
+            'mobile_money',
+            'bank_transfer',
+            'ussd'
+        ],
+        'metadata' => [
+            'order_id' => (int) $order['id'],
+            'order_number' => $order['order_number'],
+            'customer_id' => (int) $userId,
+            'customer_name' => $order['name']
+        ]
+    ];
+
+    $ch = curl_init(
+        PAYSTACK_BASE_URL
+        . '/transaction/initialize'
+    );
+
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . PAYSTACK_SECRET_KEY,
+            'Content-Type: application/json'
+        ],
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => true
+    ]);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        throw new RuntimeException(
+            'Paystack connection failed: ' . $error
+        );
+    }
+
+    $httpCode = curl_getinfo(
+        $ch,
+        CURLINFO_HTTP_CODE
+    );
+
+    curl_close($ch);
+
+    $result = json_decode(
+        $response,
+        true
+    );
+
+    if (
+        $httpCode < 200
+        || $httpCode >= 300
+        || empty($result['status'])
+        || empty($result['data']['authorization_url'])
+    ) {
+        throw new RuntimeException(
+            $result['message']
+                ?? 'Unable to initialize payment.'
+        );
+    }
+
     header(
-        "Location: " .
-        $result['data']['authorization_url']
+        'Location: '
+        . $result['data']['authorization_url']
     );
 
     exit;
 
 } catch (Throwable $e) {
 
-    die(
-        'Payment initialization error: ' .
-        htmlspecialchars(
-            $e->getMessage()
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
+
+    http_response_code(500);
+
+    exit(
+        'Payment initialization error: '
+        . htmlspecialchars(
+            $e->getMessage(),
+            ENT_QUOTES,
+            'UTF-8'
         )
     );
 }
