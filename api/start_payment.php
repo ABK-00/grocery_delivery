@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/paystack.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 requireRole('customer');
 
@@ -21,12 +22,19 @@ if (!$userId || !$orderId) {
 
 try {
 
+    $conn->beginTransaction();
+
+    /*
+     * Lock the order so concurrent retries cannot initialize multiple
+     * Paystack transactions for the same order.
+     */
     $stmt = $conn->prepare("
         SELECT
             o.id,
             o.order_number,
             o.total_amount,
             o.payment_status,
+            o.stock_released_at,
             u.email,
             u.name
         FROM orders o
@@ -35,6 +43,7 @@ try {
         WHERE o.id = ?
           AND o.user_id = ?
         LIMIT 1
+        FOR UPDATE
     ");
 
     $stmt->execute([
@@ -45,11 +54,14 @@ try {
     $order = $stmt->fetch();
 
     if (!$order) {
+        $conn->rollBack();
         http_response_code(404);
         exit('Order not found.');
     }
 
     if ($order['payment_status'] === 'paid') {
+        $conn->commit();
+
         header(
             'Location: '
             . BASE_URL
@@ -60,25 +72,30 @@ try {
         exit;
     }
 
+    if ($order['stock_released_at'] !== null) {
+        $conn->rollBack();
+
+        throw new RuntimeException(
+            'This unpaid order has already released its stock. Please place the order again.'
+        );
+    }
+
     $amount =
         (int) round(
             (float) $order['total_amount'] * 100
         );
 
     if ($amount <= 0) {
+        $conn->rollBack();
         throw new RuntimeException('Invalid payment amount.');
     }
 
-    $reference =
-        'GROC-'
-        . date('YmdHis')
-        . '-'
-        . strtoupper(bin2hex(random_bytes(4)));
-
-    $conn->beginTransaction();
-
+    /*
+     * Lock the latest pending payment. If it already has an authorization
+     * URL, reuse it instead of creating another Paystack transaction.
+     */
     $paymentStmt = $conn->prepare("
-        SELECT id
+        SELECT id, reference, authorization_url
         FROM payments
         WHERE order_id = ?
           AND user_id = ?
@@ -94,6 +111,32 @@ try {
     ]);
 
     $payment = $paymentStmt->fetch();
+
+    if (
+        $payment
+        && !empty($payment['authorization_url'])
+        && !empty($payment['reference'])
+        && str_starts_with($payment['reference'], 'GROC-')
+    ) {
+        $authorizationUrl = $payment['authorization_url'];
+
+        $conn->commit();
+
+        header('Location: ' . $authorizationUrl);
+        exit;
+    }
+
+    $reference =
+        $payment
+        && !empty($payment['reference'])
+        && str_starts_with($payment['reference'], 'GROC-')
+            ? $payment['reference']
+            : (
+                'GROC-'
+                . date('YmdHis')
+                . '-'
+                . strtoupper(bin2hex(random_bytes(4)))
+            );
 
     if ($payment) {
 
@@ -112,6 +155,8 @@ try {
             $order['total_amount'],
             $payment['id']
         ]);
+
+        $paymentId = (int) $payment['id'];
 
     } else {
 
@@ -136,6 +181,8 @@ try {
             $reference,
             $order['total_amount']
         ]);
+
+        $paymentId = (int) $conn->lastInsertId();
     }
 
     $updateOrder = $conn->prepare("
@@ -150,8 +197,6 @@ try {
         $orderId,
         $userId
     ]);
-
-    $conn->commit();
 
     $payload = [
         'email' => $order['email'],
@@ -225,11 +270,24 @@ try {
         );
     }
 
-    header(
-        'Location: '
-        . $result['data']['authorization_url']
-    );
+    $authorizationUrl =
+        (string) $result['data']['authorization_url'];
 
+    $saveAuthorization = $conn->prepare("
+        UPDATE payments
+        SET authorization_url = ?
+        WHERE id = ?
+          AND status = 'pending'
+    ");
+
+    $saveAuthorization->execute([
+        $authorizationUrl,
+        $paymentId
+    ]);
+
+    $conn->commit();
+
+    header('Location: ' . $authorizationUrl);
     exit;
 
 } catch (Throwable $e) {
