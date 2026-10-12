@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.*
+!.env.example
+config/paystack.local.php
+.DS_Store
+Thumbs.db
