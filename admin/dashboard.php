@@ -403,7 +403,7 @@ function dashboardStatusClass(string $status): string
             <?php if ($storeSlug !== ''): ?>
 
                 <a
-                    href="/somame_ent/store.php?store=<?= urlencode($storeSlug) ?>"
+                    href="<?= BASE_URL ?>/store.php?store=<?= urlencode($storeSlug) ?>"
                     target="_blank"
                     class="fv-glass-btn"
                 >
