@@ -21,7 +21,7 @@ if (
 ) {
 
     header(
-        'Location: /somame_ent/super_admin/dashboard.php'
+        'Location: ' . BASE_URL . '/super_admin/dashboard.php'
     );
 
     exit;
@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             header(
-                'Location: /somame_ent/super_admin/dashboard.php'
+                'Location: ' . BASE_URL . '/super_admin/dashboard.php'
             );
 
             exit;
@@ -964,7 +964,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </small>
 
                             <a
-                                href="/somame_ent/login.php"
+                                href="<?= BASE_URL ?>/access.php"
                                 class="system-login-link ms-1">
                                 Main Login
                             </a>
