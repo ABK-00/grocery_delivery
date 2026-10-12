@@ -95,7 +95,7 @@ try {
      * URL, reuse it instead of creating another Paystack transaction.
      */
     $paymentStmt = $conn->prepare("
-        SELECT id, reference, authorization_url
+        SELECT id, reference, authorization_url, created_at
         FROM payments
         WHERE order_id = ?
           AND user_id = ?
@@ -111,6 +111,55 @@ try {
     ]);
 
     $payment = $paymentStmt->fetch();
+
+    if ($payment) {
+        $paymentCreatedAt = strtotime((string) $payment['created_at']);
+        $paymentExpired =
+            $paymentCreatedAt !== false
+            && (time() - $paymentCreatedAt) >= PAYMENT_SESSION_TIMEOUT_SECONDS;
+
+        if ($paymentExpired) {
+            releaseOrderStock(
+                $conn,
+                (int) $order['id']
+            );
+
+            $expirePayment = $conn->prepare("
+                UPDATE payments
+                SET status = 'failed'
+                WHERE id = ?
+                  AND status = 'pending'
+            ");
+            $expirePayment->execute([
+                $payment['id']
+            ]);
+
+            $expireOrder = $conn->prepare("
+                UPDATE orders
+                SET
+                    payment_status = 'failed',
+                    status = 'cancelled'
+                WHERE id = ?
+                  AND user_id = ?
+                  AND payment_status <> 'paid'
+            ");
+            $expireOrder->execute([
+                $orderId,
+                $userId
+            ]);
+
+            $conn->commit();
+
+            header(
+                'Location: '
+                . BASE_URL
+                . '/order_details.php?id='
+                . urlencode($orderId)
+                . '&payment=expired'
+            );
+            exit;
+        }
+    }
 
     if (
         $payment
