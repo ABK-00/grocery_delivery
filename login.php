@@ -7,6 +7,11 @@ require_once __DIR__ . '/config/app.php';
 
 $error = '';
 
+if (empty($_SESSION['customer_login_csrf'])) {
+    $_SESSION['customer_login_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -113,6 +118,9 @@ if (isset($_SESSION['user_id'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    $csrf =
+        (string) ($_POST['csrf_token'] ?? '');
+
     $email = strtolower(
         trim($_POST['email'] ?? '')
     );
@@ -121,6 +129,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
     if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['customer_login_csrf'],
+            $csrf
+        )
+    ) {
+
+        $error =
+            'Your session expired. Refresh the page and try again.';
+    } elseif (
         !filter_var(
             $email,
             FILTER_VALIDATE_EMAIL
@@ -413,6 +431,10 @@ if ($user['role'] !== 'customer') {
                 ? (int)$user['company_id']
                 : null;
 
+
+            unset(
+                $_SESSION['customer_login_csrf']
+            );
 
             /*
             |--------------------------------------------------------------------------
@@ -1129,16 +1151,15 @@ if ($user['role'] !== 'customer') {
 
                         <!-- LOGIN FORM -->
 
-                        <?php if ($customerMode): ?>
+                        <form method="POST">
 
                             <input
                                 type="hidden"
-                                name="customer_mode"
-                                value="1">
-
-                        <?php endif; ?>
-
-                        <form method="POST">
+                                name="csrf_token"
+                                value="<?= htmlspecialchars(
+                                    $_SESSION['customer_login_csrf']
+                                ) ?>"
+                            >
 
 
                             <div class="mb-3">
@@ -1221,11 +1242,10 @@ if ($user['role'] !== 'customer') {
                                 </div>
 
 
-                                <a
-                                    href="#"
-                                    class="small signup-link">
-                                    Forgot password?
-                                </a>
+                                <span
+                                    class="small text-muted">
+                                    Password reset coming soon
+                                </span>
 
                             </div>
 
@@ -1256,7 +1276,7 @@ if ($user['role'] !== 'customer') {
 
 
                             <a
-                                href="register.php"
+                                href="<?= BASE_URL ?>/register.php"
                                 class="signup-link ms-1">
                                 Create an account
                             </a>
@@ -1279,16 +1299,17 @@ if ($user['role'] !== 'customer') {
 
                                     <strong
                                         class="d-block">
-                                        Business account?
+                                        Business or delivery account?
                                     </strong>
 
                                     <span
                                         class="text-muted">
-
-                                        Company administrators,
-                                        staff and delivery partners
-                                        also sign in from this page.
-
+                                        Use the correct role portal from
+                                        <a
+                                            href="<?= BASE_URL ?>/access.php"
+                                            class="signup-link">
+                                            account access
+                                        </a>.
                                     </span>
 
                                 </div>
@@ -1302,7 +1323,7 @@ if ($user['role'] !== 'customer') {
                             class="text-center mt-4">
 
                             <a
-                                href="index.php"
+                                href="<?= BASE_URL ?>/index.php"
                                 class="text-muted text-decoration-none small">
 
                                 <i
