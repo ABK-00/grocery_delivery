@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/functions.php';
 function singleProductImage(array $product): string
 {
     $placeholder =
-        '/somame_ent/assets/images/product-placeholder.svg';
+        BASE_URL . '/assets/images/product-placeholder.svg';
 
     $image = '';
 
@@ -34,7 +34,13 @@ function singleProductImage(array $product): string
     $image = ltrim($image, '/');
 
     if (str_starts_with($image, 'somame_ent/')) {
-        return '/' . $image;
+        return
+            BASE_URL
+            . '/'
+            . substr(
+                $image,
+                strlen('somame_ent/')
+            );
     }
 
     if (
@@ -43,7 +49,7 @@ function singleProductImage(array $product): string
             'assets/images/products/'
         )
     ) {
-        return '/somame_ent/' . $image;
+        return BASE_URL . '/' . $image;
     }
 
     $filename = basename($image);
@@ -55,7 +61,8 @@ function singleProductImage(array $product): string
 
     if (is_file($physicalFile)) {
         return
-            '/somame_ent/assets/images/products/'
+            BASE_URL
+            . '/assets/images/products/'
             . rawurlencode($filename);
     }
 
@@ -511,7 +518,7 @@ if (
 
 
                 header(
-                    'Location: /somame_ent/cart.php?added=1'
+                    'Location: ' . BASE_URL . '/cart.php?added=1'
                 );
 
                 exit;
@@ -696,7 +703,7 @@ $cartCount = (int)$stmt->fetchColumn();
                 class="d-flex align-items-center justify-content-between gap-3">
 
                 <a
-                    href="/somame_ent/store.php?store=<?= urlencode($storeSlug) ?>"
+                    href="<?= BASE_URL ?>/store.php?store=<?= urlencode($storeSlug) ?>"
                     class="btn btn-light border">
 
                     <i class="bi bi-arrow-left me-1"></i>
@@ -716,7 +723,7 @@ $cartCount = (int)$stmt->fetchColumn();
 
 
                 <a
-                    href="/somame_ent/cart.php"
+                    href="<?= BASE_URL ?>/cart.php"
                     class="btn btn-light border position-relative">
 
                     <i class="bi bi-cart3"></i>
@@ -771,7 +778,7 @@ $cartCount = (int)$stmt->fetchColumn();
                         class="product-main-image"
                         onerror="
         this.onerror=null;
-        this.src='/somame_ent/assets/images/product-placeholder.svg';
+        this.src=BASE_URL . '/assets/images/product-placeholder.svg';
     ">
 
                 </div>
@@ -1079,7 +1086,7 @@ $cartCount = (int)$stmt->fetchColumn();
                     <div class="modal-footer">
 
                         <a
-                            href="/somame_ent/cart.php"
+                            href="<?= BASE_URL ?>/cart.php"
                             class="btn btn-outline-secondary">
                             Keep Current Cart
                         </a>
