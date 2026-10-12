@@ -3,24 +3,17 @@
 session_start();
 
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/auth.php';
 
 $error = '';
 
+if (isLoggedIn()) {
+    redirectByRole();
+}
 
-/*
-|--------------------------------------------------------------------------
-| ALREADY LOGGED IN
-|--------------------------------------------------------------------------
-*/
-
-if (isset($_SESSION['user_id'])) {
-
-    $role = $_SESSION['role'] ?? '';
-
-    if ($role === 'customer') {
-        header('Location: ' . BASE_URL . '/marketplace.php');
-        exit;
-    }
+if (empty($_SESSION['customer_register_csrf'])) {
+    $_SESSION['customer_register_csrf'] =
+        bin2hex(random_bytes(32));
 }
 
 
@@ -31,6 +24,9 @@ if (isset($_SESSION['user_id'])) {
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $csrf =
+        (string) ($_POST['csrf_token'] ?? '');
 
     $name = trim($_POST['name'] ?? '');
 
@@ -57,7 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-    if ($name === '') {
+    if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['customer_register_csrf'],
+            $csrf
+        )
+    ) {
+
+        $error =
+            'Your session expired. Refresh the page and try again.';
+    } elseif ($name === '') {
 
         $error = 'Please enter your full name.';
     } elseif (
@@ -184,6 +190,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['company_id'] =
                 null;
 
+
+            unset(
+                $_SESSION['customer_register_csrf']
+            );
 
             /*
             |--------------------------------------------------------------------------
@@ -822,6 +832,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <form method="POST">
 
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= htmlspecialchars(
+                                    $_SESSION['customer_register_csrf']
+                                ) ?>"
+                            >
+
 
                             <div class="mb-3">
 
@@ -1066,7 +1084,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             class="text-center mt-4">
 
                             <a
-                                href="index.php"
+                                href="<?= BASE_URL ?>/index.php"
                                 class="text-decoration-none text-muted small">
 
                                 <i
