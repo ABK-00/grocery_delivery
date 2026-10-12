@@ -130,6 +130,7 @@ $old = [
     'company_name' => '',
     'company_email' => '',
     'company_phone' => '',
+    'company_whatsapp' => '',
     'admin_name' => '',
     'admin_email' => '',
     'admin_phone' => '',
@@ -416,8 +417,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $storefrontSlug,
             $companyEmail,
             $old['company_phone'],
-            $old['admin_whatsapp'] !== ''
-                ? $old['admin_whatsapp']
+            $old['company_whatsapp'] !== ''
+                ? $old['company_whatsapp']
                 : null
         ]);
 
@@ -461,8 +462,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $old['company_name'],
             $companyEmail,
             $old['company_phone'],
-            $old['admin_whatsapp'] !== ''
-                ? $old['admin_whatsapp']
+            $old['company_whatsapp'] !== ''
+                ? $old['company_whatsapp']
                 : $old['company_phone']
         ]);
 
@@ -1692,6 +1693,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     ) ?>"
                                             placeholder="024 000 0000"
                                             required>
+
+                                    </div>
+
+
+                                    <div class="col-md-6">
+
+                                        <label
+                                            class="form-label">
+                                            Company WhatsApp
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            name="company_whatsapp"
+                                            class="form-control"
+                                            value="<?= htmlspecialchars(
+                                                        $old['company_whatsapp']
+                                                    ) ?>"
+                                            placeholder="Optional">
 
                                     </div>
 
