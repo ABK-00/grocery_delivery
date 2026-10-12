@@ -83,6 +83,16 @@ $user = $userStmt->fetch();
 $error = $_SESSION['checkout_error'] ?? null;
 unset($_SESSION['checkout_error']);
 
+/*
+|--------------------------------------------------------------------------
+| CHECKOUT IDEMPOTENCY KEY
+|--------------------------------------------------------------------------
+| One key is generated per rendered checkout form. Repeated submissions of
+| the same form therefore resolve to the same order instead of creating
+| duplicate orders or reserving stock twice.
+*/
+$checkoutIdempotencyKey = bin2hex(random_bytes(32));
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -232,6 +242,12 @@ unset($_SESSION['checkout_error']);
 
 
     <form method="POST" action="api/place_order.php">
+
+        <input
+            type="hidden"
+            name="idempotency_key"
+            value="<?= e($checkoutIdempotencyKey) ?>"
+        >
 
         <div class="row">
 
