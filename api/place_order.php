@@ -15,6 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $deliveryAddress = trim($_POST['delivery_address'] ?? '');
 $deliveryPhone    = trim($_POST['delivery_phone'] ?? '');
 $notes            = trim($_POST['notes'] ?? '');
+$idempotencyKey    = strtolower(trim($_POST['idempotency_key'] ?? ''));
+
+if (!preg_match('/^[a-f0-9]{64}$/', $idempotencyKey)) {
+    $_SESSION['checkout_error'] =
+        'This checkout request is invalid. Please try again.';
+    header("Location: ../checkout.php");
+    exit;
+}
 
 if ($deliveryAddress === '' || $deliveryPhone === '') {
     $_SESSION['checkout_error'] = 'Delivery address and phone number are required.';
@@ -27,6 +35,38 @@ $deliveryFee = 20.00;
 try {
 
     $conn->beginTransaction();
+
+    /*
+     * If this checkout form was already processed, return the customer to
+     * the same order. This makes retries/double-clicks safe.
+     */
+    $existingOrderStmt = $conn->prepare("
+        SELECT id
+        FROM orders
+        WHERE idempotency_key = ?
+          AND user_id = ?
+        LIMIT 1
+        FOR UPDATE
+    ");
+
+    $existingOrderStmt->execute([
+        $idempotencyKey,
+        $userId
+    ]);
+
+    $existingOrder = $existingOrderStmt->fetch();
+
+    if ($existingOrder) {
+        $existingOrderId = (int) $existingOrder['id'];
+
+        $conn->commit();
+
+        header(
+            "Location: ../api/start_payment.php?order_id="
+            . urlencode($existingOrderId)
+        );
+        exit;
+    }
 
     /*
      * Get customer's cart.
@@ -172,6 +212,7 @@ try {
         (
             company_id,
             user_id,
+            idempotency_key,
             order_number,
             subtotal,
             delivery_fee,
@@ -183,12 +224,13 @@ try {
             payment_status
         )
         VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
     ");
 
     $insertOrder->execute([
         $companyId,
         $userId,
+        $idempotencyKey,
         $orderNumber,
         $subtotal,
         $deliveryFee,
@@ -320,6 +362,38 @@ try {
 
     if ($conn->inTransaction()) {
         $conn->rollBack();
+    }
+
+    /*
+     * A concurrent duplicate submission can reach the unique key at the
+     * same moment. After rollback, resolve it to the order that won the race.
+     */
+    if (
+        $e instanceof PDOException
+        && $e->getCode() === '23000'
+    ) {
+        $duplicateStmt = $conn->prepare("
+            SELECT id
+            FROM orders
+            WHERE idempotency_key = ?
+              AND user_id = ?
+            LIMIT 1
+        ");
+
+        $duplicateStmt->execute([
+            $idempotencyKey,
+            $userId
+        ]);
+
+        $duplicateOrderId = $duplicateStmt->fetchColumn();
+
+        if ($duplicateOrderId) {
+            header(
+                "Location: ../api/start_payment.php?order_id="
+                . urlencode((int) $duplicateOrderId)
+            );
+            exit;
+        }
     }
 
     $_SESSION['checkout_error'] =
