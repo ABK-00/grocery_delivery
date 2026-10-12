@@ -4,75 +4,90 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/paystack.php';
 require_once __DIR__ . '/includes/auth.php';
 
-requireLogin();
+requireRole('customer');
 
-$userId = $_SESSION['user_id'];
+$userId = currentUserId();
 
-$reference = $_GET['reference'] ?? '';
+$reference = trim(
+    (string) ($_GET['reference'] ?? '')
+);
 
-if (!$reference) {
-    die('Payment reference is missing.');
+if (!$userId || $reference === '') {
+    http_response_code(400);
+    exit('Payment reference is missing.');
 }
 
 try {
 
-    /*
-     * Verify transaction directly with Paystack.
-     */
     $url =
-        PAYSTACK_BASE_URL .
-        '/transaction/verify/' .
-        rawurlencode($reference);
+        PAYSTACK_BASE_URL
+        . '/transaction/verify/'
+        . rawurlencode($reference);
 
     $ch = curl_init($url);
 
     curl_setopt_array($ch, [
-
         CURLOPT_RETURNTRANSFER => true,
-
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . PAYSTACK_SECRET_KEY,
             'Content-Type: application/json'
         ],
-
         CURLOPT_TIMEOUT => 30,
-
         CURLOPT_SSL_VERIFYPEER => true
     ]);
 
     $response = curl_exec($ch);
 
     if ($response === false) {
-
         $error = curl_error($ch);
-
         curl_close($ch);
 
-        die('Payment verification failed: ' . $error);
+        throw new RuntimeException(
+            'Payment verification failed: ' . $error
+        );
     }
 
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $httpCode = curl_getinfo(
+        $ch,
+        CURLINFO_HTTP_CODE
+    );
 
     curl_close($ch);
 
-    $result = json_decode($response, true);
+    $result = json_decode(
+        $response,
+        true
+    );
 
     if (
-        $httpCode < 200 ||
-        $httpCode >= 300 ||
-        empty($result['status'])
+        $httpCode < 200
+        || $httpCode >= 300
+        || empty($result['status'])
+        || empty($result['data'])
     ) {
-        die('Unable to verify payment.');
+        throw new RuntimeException(
+            $result['message']
+                ?? 'Unable to verify payment.'
+        );
     }
 
     $transaction = $result['data'];
 
-    /*
-     * Find payment record.
-     */
+    if (
+        ($transaction['reference'] ?? '') !== $reference
+    ) {
+        throw new RuntimeException(
+            'Payment reference verification failed.'
+        );
+    }
+
     $stmt = $conn->prepare("
         SELECT
-            p.*,
+            p.id AS payment_id,
+            p.order_id,
+            p.amount,
+            p.currency,
+            p.status AS payment_record_status,
             o.order_number,
             o.total_amount,
             o.payment_status
@@ -80,70 +95,67 @@ try {
         INNER JOIN orders o
             ON o.id = p.order_id
         WHERE p.reference = ?
-        AND p.user_id = ?
+          AND p.user_id = ?
+          AND o.user_id = ?
         LIMIT 1
     ");
 
     $stmt->execute([
         $reference,
+        $userId,
         $userId
     ]);
 
     $payment = $stmt->fetch();
 
     if (!$payment) {
-        die('Payment record not found.');
+        http_response_code(404);
+        exit('Payment record not found.');
     }
 
-    /*
-     * Prevent amount manipulation.
-     */
     $expectedAmount =
-        (int)round((float)$payment['amount'] * 100);
+        (int) round(
+            (float) $payment['amount'] * 100
+        );
 
     $paidAmount =
-        (int)$transaction['amount'];
+        (int) ($transaction['amount'] ?? 0);
 
-    if ($expectedAmount !== $paidAmount) {
+    $gatewayCurrency =
+        strtoupper(
+            (string) ($transaction['currency'] ?? '')
+        );
+
+    if (
+        $expectedAmount !== $paidAmount
+        || $gatewayCurrency !== 'GHS'
+    ) {
 
         $update = $conn->prepare("
             UPDATE payments
             SET
                 status = 'failed',
                 gateway_response = ?
-            WHERE reference = ?
+            WHERE id = ?
         ");
 
         $update->execute([
             json_encode($transaction),
-            $reference
+            $payment['payment_id']
         ]);
 
-        die('Payment amount verification failed.');
+        throw new RuntimeException(
+            'Payment amount or currency verification failed.'
+        );
     }
 
-    /*
-     * Successful payment.
-     */
-    if ($transaction['status'] === 'success') {
+    if (
+        ($transaction['status'] ?? '') === 'success'
+    ) {
 
         $conn->beginTransaction();
 
         try {
-
-            /*
-             * Update payment.
-             */
-            $updatePayment = $conn->prepare("
-                UPDATE payments
-                SET
-                    status = 'paid',
-                    payment_method = ?,
-                    gateway_response = ?,
-                    paid_at = ?
-                WHERE reference = ?
-                AND status <> 'paid'
-            ");
 
             $paidAt = !empty($transaction['paid_at'])
                 ? date(
@@ -152,16 +164,23 @@ try {
                 )
                 : date('Y-m-d H:i:s');
 
+            $updatePayment = $conn->prepare("
+                UPDATE payments
+                SET
+                    status = 'paid',
+                    payment_method = ?,
+                    gateway_response = ?,
+                    paid_at = ?
+                WHERE id = ?
+            ");
+
             $updatePayment->execute([
                 $transaction['channel'] ?? null,
                 json_encode($transaction),
                 $paidAt,
-                $reference
+                $payment['payment_id']
             ]);
 
-            /*
-             * Update order.
-             */
             $updateOrder = $conn->prepare("
                 UPDATE orders
                 SET
@@ -172,7 +191,7 @@ try {
                         ELSE status
                     END
                 WHERE id = ?
-                AND user_id = ?
+                  AND user_id = ?
             ");
 
             $updateOrder->execute([
@@ -183,9 +202,11 @@ try {
             $conn->commit();
 
             header(
-                'Location: order_success.php?order=' .
-                urlencode($payment['order_number']) .
-                '&paid=1'
+                'Location: '
+                . BASE_URL
+                . '/order_success.php?order='
+                . urlencode($payment['order_number'])
+                . '&paid=1'
             );
 
             exit;
@@ -196,59 +217,76 @@ try {
                 $conn->rollBack();
             }
 
-            die(
-                'Payment was successful, but the order update failed. ' .
-                'Reference: ' .
-                htmlspecialchars($reference)
+            throw new RuntimeException(
+                'Payment succeeded but the order could not be updated. Reference: '
+                . $reference,
+                0,
+                $e
             );
         }
     }
 
-    /*
-     * Payment failed / abandoned / pending.
-     */
     $gatewayStatus =
-        $transaction['status'] ?? 'failed';
+        (string) ($transaction['status'] ?? 'failed');
 
-    $paymentStatus = 'failed';
-
-    if (
-        in_array(
-            $gatewayStatus,
-            ['pending', 'ongoing', 'processing'],
-            true
-        )
-    ) {
-        $paymentStatus = 'pending';
-    }
+    $paymentStatus = in_array(
+        $gatewayStatus,
+        ['pending', 'ongoing', 'processing'],
+        true
+    )
+        ? 'pending'
+        : 'failed';
 
     $update = $conn->prepare("
         UPDATE payments
         SET
             status = ?,
             gateway_response = ?
-        WHERE reference = ?
+        WHERE id = ?
     ");
 
     $update->execute([
         $paymentStatus,
         json_encode($transaction),
-        $reference
+        $payment['payment_id']
     ]);
 
+    if ($paymentStatus === 'failed') {
+        $updateOrder = $conn->prepare("
+            UPDATE orders
+            SET payment_status = 'failed'
+            WHERE id = ?
+              AND user_id = ?
+              AND payment_status <> 'paid'
+        ");
+
+        $updateOrder->execute([
+            $payment['order_id'],
+            $userId
+        ]);
+    }
+
     header(
-        'Location: order_details.php?id=' .
-        urlencode($payment['order_id']) .
-        '&payment=failed'
+        'Location: '
+        . BASE_URL
+        . '/order_details.php?id='
+        . urlencode($payment['order_id'])
+        . '&payment='
+        . urlencode($paymentStatus)
     );
 
     exit;
 
 } catch (Throwable $e) {
 
-    die(
-        'Payment verification error: ' .
-        htmlspecialchars($e->getMessage())
+    http_response_code(500);
+
+    exit(
+        'Payment verification error: '
+        . htmlspecialchars(
+            $e->getMessage(),
+            ENT_QUOTES,
+            'UTF-8'
+        )
     );
 }
-
