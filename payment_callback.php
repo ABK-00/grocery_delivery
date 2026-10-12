@@ -3,6 +3,7 @@
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/paystack.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/functions.php';
 
 requireRole('customer');
 
@@ -81,6 +82,8 @@ try {
         );
     }
 
+    $conn->beginTransaction();
+
     $stmt = $conn->prepare("
         SELECT
             p.id AS payment_id,
@@ -90,7 +93,8 @@ try {
             p.status AS payment_record_status,
             o.order_number,
             o.total_amount,
-            o.payment_status
+            o.payment_status,
+            o.stock_released_at
         FROM payments p
         INNER JOIN orders o
             ON o.id = p.order_id
@@ -98,6 +102,7 @@ try {
           AND p.user_id = ?
           AND o.user_id = ?
         LIMIT 1
+        FOR UPDATE
     ");
 
     $stmt->execute([
@@ -109,8 +114,29 @@ try {
     $payment = $stmt->fetch();
 
     if (!$payment) {
+        $conn->rollBack();
         http_response_code(404);
         exit('Payment record not found.');
+    }
+
+    /*
+     * Idempotent callback: if this payment/order was already finalized as
+     * paid, repeated browser redirects do not perform any side effects.
+     */
+    if (
+        $payment['payment_record_status'] === 'paid'
+        && $payment['payment_status'] === 'paid'
+    ) {
+        $conn->commit();
+
+        header(
+            'Location: '
+            . BASE_URL
+            . '/order_success.php?order='
+            . urlencode($payment['order_number'])
+            . '&paid=1'
+        );
+        exit;
     }
 
     $expectedAmount =
@@ -130,6 +156,10 @@ try {
         $expectedAmount !== $paidAmount
         || $gatewayCurrency !== 'GHS'
     ) {
+        releaseOrderStock(
+            $conn,
+            (int) $payment['order_id']
+        );
 
         $update = $conn->prepare("
             UPDATE payments
@@ -137,12 +167,28 @@ try {
                 status = 'failed',
                 gateway_response = ?
             WHERE id = ?
+              AND status <> 'paid'
         ");
 
         $update->execute([
             json_encode($transaction),
             $payment['payment_id']
         ]);
+
+        $updateOrder = $conn->prepare("
+            UPDATE orders
+            SET payment_status = 'failed'
+            WHERE id = ?
+              AND user_id = ?
+              AND payment_status <> 'paid'
+        ");
+
+        $updateOrder->execute([
+            $payment['order_id'],
+            $userId
+        ]);
+
+        $conn->commit();
 
         throw new RuntimeException(
             'Payment amount or currency verification failed.'
@@ -153,11 +199,21 @@ try {
         ($transaction['status'] ?? '') === 'success'
     ) {
 
-        $conn->beginTransaction();
+        /*
+         * A terminal failed payment releases stock. We do not silently
+         * convert such an order back to paid from a late callback because
+         * that could oversell inventory after it has been returned.
+         */
+        if ($payment['stock_released_at'] !== null) {
+            $conn->rollBack();
 
-        try {
+            throw new RuntimeException(
+                'This order was already closed after a failed payment. Please contact support with reference: '
+                . $reference
+            );
+        }
 
-            $paidAt = !empty($transaction['paid_at'])
+        $paidAt = !empty($transaction['paid_at'])
                 ? date(
                     'Y-m-d H:i:s',
                     strtotime($transaction['paid_at'])
@@ -199,31 +255,17 @@ try {
                 $userId
             ]);
 
-            $conn->commit();
+        $conn->commit();
 
-            header(
-                'Location: '
-                . BASE_URL
-                . '/order_success.php?order='
-                . urlencode($payment['order_number'])
-                . '&paid=1'
-            );
+        header(
+            'Location: '
+            . BASE_URL
+            . '/order_success.php?order='
+            . urlencode($payment['order_number'])
+            . '&paid=1'
+        );
 
-            exit;
-
-        } catch (Throwable $e) {
-
-            if ($conn->inTransaction()) {
-                $conn->rollBack();
-            }
-
-            throw new RuntimeException(
-                'Payment succeeded but the order could not be updated. Reference: '
-                . $reference,
-                0,
-                $e
-            );
-        }
+        exit;
     }
 
     $gatewayStatus =
@@ -237,12 +279,20 @@ try {
         ? 'pending'
         : 'failed';
 
+    if ($paymentStatus === 'failed') {
+        releaseOrderStock(
+            $conn,
+            (int) $payment['order_id']
+        );
+    }
+
     $update = $conn->prepare("
         UPDATE payments
         SET
             status = ?,
             gateway_response = ?
         WHERE id = ?
+          AND status <> 'paid'
     ");
 
     $update->execute([
@@ -266,6 +316,8 @@ try {
         ]);
     }
 
+    $conn->commit();
+
     header(
         'Location: '
         . BASE_URL
@@ -278,6 +330,10 @@ try {
     exit;
 
 } catch (Throwable $e) {
+
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
 
     http_response_code(500);
 
