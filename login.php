@@ -3,6 +3,7 @@
 session_start();
 
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/app.php';
 
 $error = '';
 
@@ -43,7 +44,7 @@ if (isset($_SESSION['user_id'])) {
         if ($role === 'customer') {
 
             header(
-                'Location: /somame_ent/marketplace.php'
+                'Location: ' . BASE_URL . '/marketplace.php'
             );
 
             exit;
@@ -59,7 +60,7 @@ if (isset($_SESSION['user_id'])) {
             case 'super_admin':
 
                 header(
-                    'Location: /somame_ent/super_admin/dashboard.php'
+                    'Location: ' . BASE_URL . '/super_admin/dashboard.php'
                 );
 
                 exit;
@@ -68,7 +69,7 @@ if (isset($_SESSION['user_id'])) {
             case 'admin':
 
                 header(
-                    'Location: /somame_ent/admin/dashboard.php'
+                    'Location: ' . BASE_URL . '/admin/dashboard.php'
                 );
 
                 exit;
@@ -77,7 +78,7 @@ if (isset($_SESSION['user_id'])) {
             case 'staff':
 
                 header(
-                    'Location: /somame_ent/staff/dashboard.php'
+                    'Location: ' . BASE_URL . '/staff/dashboard.php'
                 );
 
                 exit;
@@ -86,7 +87,7 @@ if (isset($_SESSION['user_id'])) {
             case 'delivery_partner':
 
                 header(
-                    'Location: /somame_ent/delivery/dashboard.php'
+                    'Location: ' . BASE_URL . '/delivery/dashboard.php'
                 );
 
                 exit;
@@ -95,7 +96,7 @@ if (isset($_SESSION['user_id'])) {
             case 'customer':
 
                 header(
-                    'Location: /somame_ent/marketplace.php'
+                    'Location: ' . BASE_URL . '/marketplace.php'
                 );
 
                 exit;
@@ -392,6 +393,7 @@ if ($user['role'] !== 'customer') {
             |--------------------------------------------------------------------------
             */
 
+            $_SESSION = [];
             session_regenerate_id(true);
 
             $_SESSION['user_id'] =
@@ -423,7 +425,7 @@ if ($user['role'] !== 'customer') {
                 case 'super_admin':
 
                     header(
-                        'Location: super_admin/dashboard.php'
+                        'Location: ' . BASE_URL . '/super_admin/dashboard.php'
                     );
 
                     exit;
@@ -432,7 +434,7 @@ if ($user['role'] !== 'customer') {
                 case 'admin':
 
                     header(
-                        'Location: admin/dashboard.php'
+                        'Location: ' . BASE_URL . '/admin/dashboard.php'
                     );
 
                     exit;
@@ -441,7 +443,7 @@ if ($user['role'] !== 'customer') {
                 case 'staff':
 
                     header(
-                        'Location: staff/dashboard.php'
+                        'Location: ' . BASE_URL . '/staff/dashboard.php'
                     );
 
                     exit;
@@ -450,7 +452,7 @@ if ($user['role'] !== 'customer') {
                 case 'delivery_partner':
 
                     header(
-                        'Location: delivery/dashboard.php'
+                        'Location: ' . BASE_URL . '/delivery/dashboard.php'
                     );
 
                     exit;
@@ -459,7 +461,7 @@ if ($user['role'] !== 'customer') {
                 case 'customer':
 
                     header(
-                        'Location: marketplace.php'
+                        'Location: ' . BASE_URL . '/marketplace.php'
                     );
 
                     exit;
