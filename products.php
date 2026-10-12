@@ -36,7 +36,7 @@ function money($amount): string
 function marketplaceProductImage(array $product): string
 {
     $placeholder =
-        '/somame_ent/assets/images/product-placeholder.svg';
+        BASE_URL . '/assets/images/product-placeholder.svg';
 
     $image = '';
 
@@ -89,7 +89,13 @@ function marketplaceProductImage(array $product): string
         )
     ) {
 
-        return '/' . $image;
+        return
+            BASE_URL
+            . '/'
+            . substr(
+                $image,
+                strlen('somame_ent/')
+            );
     }
 
 
@@ -101,7 +107,8 @@ function marketplaceProductImage(array $product): string
     ) {
 
         return
-            '/somame_ent/'
+            BASE_URL
+            . '/'
             . $image;
     }
 
@@ -123,7 +130,8 @@ function marketplaceProductImage(array $product): string
     ) {
 
         return
-            '/somame_ent/assets/images/products/'
+            BASE_URL
+            . '/assets/images/products/'
             . rawurlencode($filename);
     }
 
@@ -1212,7 +1220,7 @@ $customerName =
 
 
                 <a
-                    href="/somame_ent/marketplace.php"
+                    href="<?= BASE_URL ?>/marketplace.php"
                     class="d-flex align-items-center gap-2 text-dark">
 
                     <div class="brand-icon">
@@ -1244,19 +1252,19 @@ $customerName =
                     class="d-none d-md-flex align-items-center gap-4">
 
                     <a
-                        href="/somame_ent/marketplace.php"
+                        href="<?= BASE_URL ?>/marketplace.php"
                         class="nav-link-custom">
                         Stores
                     </a>
 
                     <a
-                        href="/somame_ent/products.php"
+                        href="<?= BASE_URL ?>/products.php"
                         class="nav-link-custom active">
                         Products
                     </a>
 
                     <a
-                        href="/somame_ent/orders.php"
+                        href="<?= BASE_URL ?>/orders.php"
                         class="nav-link-custom">
                         Orders
                     </a>
@@ -1280,7 +1288,7 @@ $customerName =
 
 
                     <a
-                        href="/somame_ent/cart.php"
+                        href="<?= BASE_URL ?>/cart.php"
                         class="btn btn-light border position-relative"
                         title="Cart">
 
@@ -1305,7 +1313,7 @@ $customerName =
 
 
                     <a
-                        href="/somame_ent/customer/profile.php"
+                        href="<?= BASE_URL ?>/customer/profile.php"
                         class="btn btn-light border"
                         title="Profile">
 
@@ -1381,7 +1389,7 @@ $customerName =
 
             <form
                 method="GET"
-                action="/somame_ent/products.php">
+                action="<?= BASE_URL ?>/products.php">
 
                 <div class="row g-2">
 
@@ -1470,7 +1478,7 @@ $customerName =
                             ): ?>
 
                                 <a
-                                    href="/somame_ent/products.php"
+                                    href="<?= BASE_URL ?>/products.php"
                                     class="btn btn-light border d-flex align-items-center"
                                     title="Clear filters">
 
@@ -1512,7 +1520,7 @@ $customerName =
 
 
                 <a
-                    href="/somame_ent/products.php?<?= http_build_query(
+                    href="<?= BASE_URL ?>/products.php?<?= http_build_query(
                                                         array_filter([
                                                             'q' => $search,
                                                             'store' => $store
@@ -1552,7 +1560,7 @@ $customerName =
 
 
                     <a
-                        href="/somame_ent/products.php?<?= h(
+                        href="<?= BASE_URL ?>/products.php?<?= h(
                                                             $query
                                                         ) ?>"
                         class="category-pill <?= $category === $categoryName
@@ -1605,7 +1613,7 @@ $customerName =
 
 
             <a
-                href="/somame_ent/marketplace.php"
+                href="<?= BASE_URL ?>/marketplace.php"
                 class="btn btn-outline-secondary btn-sm">
 
                 <i
@@ -1664,7 +1672,7 @@ $customerName =
                                 class="product-image-wrap">
 
                                 <a
-                                    href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                    href="<?= BASE_URL ?>/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
                                                                                                             $product['storefront_slug']
                                                                                                         ) ?>">
 
@@ -1679,7 +1687,7 @@ $customerName =
                                         loading="lazy"
                                         onerror="
                                         this.onerror=null;
-                                        this.src='/somame_ent/assets/images/product-placeholder.svg';
+                                        this.src=BASE_URL . '/assets/images/product-placeholder.svg';
                                     ">
 
                                 </a>
@@ -1709,7 +1717,7 @@ $customerName =
 
 
                                 <a
-                                    href="/somame_ent/store.php?store=<?= urlencode(
+                                    href="<?= BASE_URL ?>/store.php?store=<?= urlencode(
                                                                             $product['storefront_slug']
                                                                         ) ?>"
                                     class="store-name d-block mb-1">
@@ -1725,7 +1733,7 @@ $customerName =
 
 
                                 <a
-                                    href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                    href="<?= BASE_URL ?>/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
                                                                                                             $product['storefront_slug']
                                                                                                         ) ?>"
                                     class="product-name d-block mb-2">
@@ -1811,7 +1819,7 @@ $customerName =
 
 
                                     <a
-                                        href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                        href="<?= BASE_URL ?>/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
                                                                                                                 $product['storefront_slug']
                                                                                                             ) ?>"
                                         class="btn view-btn btn-sm"
@@ -1891,7 +1899,7 @@ $customerName =
 
 
                 <a
-                    href="/somame_ent/products.php"
+                    href="<?= BASE_URL ?>/products.php"
                     class="btn btn-success">
 
                     View All Products
