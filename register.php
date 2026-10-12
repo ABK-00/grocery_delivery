@@ -18,7 +18,7 @@ if (isset($_SESSION['user_id'])) {
     $role = $_SESSION['role'] ?? '';
 
     if ($role === 'customer') {
-        header('Location: /somame_ent/marketplace.php');
+        header('Location: ' . BASE_URL . '/marketplace.php');
         exit;
     }
 }
@@ -191,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             |--------------------------------------------------------------------------
             */
 
-            header('Location: /somame_ent/marketplace.php');
+            header('Location: ' . BASE_URL . '/marketplace.php');
             exit;
         } catch (Throwable $e) {
 
@@ -1054,7 +1054,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </span>
 
                             <a
-                                href="/somame_ent/login.php?customer=1"
+                                href="<?= BASE_URL ?>/login.php?customer=1"
                                 class="login-link ms-1">
                                 Sign in
                             </a>
