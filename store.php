@@ -53,7 +53,7 @@ function resolveStoredImage(
 ): string {
 
     $placeholder =
-        '/somame_ent/assets/images/product-placeholder.svg';
+        BASE_URL . '/assets/images/product-placeholder.svg';
 
     $stored = trim((string)$stored);
 
@@ -227,7 +227,8 @@ function resolveStoredImage(
         if (is_file($physicalPath)) {
 
             return
-                '/somame_ent/'
+                BASE_URL
+                . '/'
                 . $candidate;
         }
     }
@@ -251,7 +252,8 @@ function resolveStoredImage(
     ) {
 
         return
-            '/somame_ent/'
+            BASE_URL
+            . '/'
             . $stored;
     }
 
@@ -269,7 +271,7 @@ function resolveStoredImage(
 function storefrontProductImage(array $product): string
 {
     $placeholder =
-        '/somame_ent/assets/images/product-placeholder.svg';
+        BASE_URL . '/assets/images/product-placeholder.svg';
 
     /*
     |--------------------------------------------------------------------------
@@ -346,7 +348,13 @@ function storefrontProductImage(array $product): string
         )
     ) {
 
-        return '/' . $image;
+        return
+            BASE_URL
+            . '/'
+            . substr(
+                $image,
+                strlen('somame_ent/')
+            );
     }
 
 
@@ -364,7 +372,8 @@ function storefrontProductImage(array $product): string
     ) {
 
         return
-            '/somame_ent/'
+            BASE_URL
+            . '/'
             . $image;
     }
 
@@ -392,7 +401,8 @@ function storefrontProductImage(array $product): string
     ) {
 
         return
-            '/somame_ent/assets/images/products/'
+            BASE_URL
+            . '/assets/images/products/'
             . rawurlencode($filename);
     }
 
@@ -2104,7 +2114,7 @@ if ($whatsapp !== '') {
                     ): ?>
 
                         <a
-                            href="/somame_ent/marketplace.php"
+                            href="<?= BASE_URL ?>/marketplace.php"
                             class="btn btn-light border"
                             title="Back to Marketplace">
 
@@ -2120,7 +2130,7 @@ if ($whatsapp !== '') {
                     ): ?>
 
                         <a
-                            href="/somame_ent/super_admin/companies.php"
+                            href="<?= BASE_URL ?>/super_admin/companies.php"
                             class="btn btn-light border"
                             title="Back to Companies">
 
@@ -2133,7 +2143,7 @@ if ($whatsapp !== '') {
                     <?php else: ?>
 
                         <a
-                            href="/somame_ent/admin/storefront.php"
+                            href="<?= BASE_URL ?>/admin/storefront.php"
                             class="btn btn-light border"
                             title="Back to Storefront Management">
 
@@ -2157,7 +2167,7 @@ if ($whatsapp !== '') {
                                     ) ?>"
                             onerror="
                             this.onerror=null;
-                            this.src='/somame_ent/assets/images/product-placeholder.svg';
+                            this.src=BASE_URL . '/assets/images/product-placeholder.svg';
                         ">
 
 
@@ -2185,7 +2195,7 @@ if ($whatsapp !== '') {
                         class="d-flex align-items-center gap-2">
 
                         <a
-                            href="/somame_ent/orders.php"
+                            href="<?= BASE_URL ?>/orders.php"
                             class="btn btn-light border d-none d-sm-inline-flex">
 
                             <i
@@ -2197,7 +2207,7 @@ if ($whatsapp !== '') {
 
 
                         <a
-                            href="/somame_ent/cart.php"
+                            href="<?= BASE_URL ?>/cart.php"
                             class="btn btn-light border position-relative"
                             title="Cart">
 
@@ -2281,7 +2291,7 @@ if ($whatsapp !== '') {
                                 class="hero-logo"
                                 onerror="
                                 this.onerror=null;
-                                this.src='/somame_ent/assets/images/product-placeholder.svg';
+                                this.src=BASE_URL . '/assets/images/product-placeholder.svg';
                             ">
 
 
@@ -2682,7 +2692,7 @@ if ($whatsapp !== '') {
 
             <form
                 method="GET"
-                action="/somame_ent/store.php">
+                action="<?= BASE_URL ?>/store.php">
 
                 <input
                     type="hidden"
@@ -2759,7 +2769,7 @@ if ($whatsapp !== '') {
                             class="col-md-auto">
 
                             <a
-                                href="/somame_ent/store.php?store=<?= urlencode(
+                                href="<?= BASE_URL ?>/store.php?store=<?= urlencode(
                                                                         $storeSlug
                                                                     ) ?>"
                                 class="btn btn-light border search-control d-flex align-items-center">
@@ -2781,7 +2791,7 @@ if ($whatsapp !== '') {
                 class="category-scroll">
 
                 <a
-                    href="/somame_ent/store.php?store=<?= urlencode(
+                    href="<?= BASE_URL ?>/store.php?store=<?= urlencode(
                                                             $storeSlug
                                                         ) ?><?= $search !== ''
                                                                 ? '&q='
@@ -2804,7 +2814,7 @@ if ($whatsapp !== '') {
                 ): ?>
 
                     <a
-                        href="/somame_ent/store.php?store=<?= urlencode(
+                        href="<?= BASE_URL ?>/store.php?store=<?= urlencode(
                                                                 $storeSlug
                                                             ) ?>&category=<?= (int)$category['id'] ?><?= $search !== ''
                                                                                                             ? '&q='
@@ -2908,7 +2918,7 @@ if ($whatsapp !== '') {
                                 ): ?>
 
                                     <a
-                                        href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                        href="<?= BASE_URL ?>/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
                                                                                                                 $storeSlug
                                                                                                             ) ?>">
 
@@ -2923,7 +2933,7 @@ if ($whatsapp !== '') {
                                             loading="lazy"
                                             onerror="
                                             this.onerror=null;
-                                            this.src='/somame_ent/assets/images/product-placeholder.svg';
+                                            this.src=BASE_URL . '/assets/images/product-placeholder.svg';
                                         ">
 
                                     </a>
@@ -2942,7 +2952,7 @@ if ($whatsapp !== '') {
                                         loading="lazy"
                                         onerror="
                                         this.onerror=null;
-                                        this.src='/somame_ent/assets/images/product-placeholder.svg';
+                                        this.src=BASE_URL . '/assets/images/product-placeholder.svg';
                                     ">
 
                                 <?php endif; ?>
@@ -3063,7 +3073,7 @@ if ($whatsapp !== '') {
                                     ): ?>
 
                                         <a
-                                            href="/somame_ent/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
+                                            href="<?= BASE_URL ?>/product.php?id=<?= (int)$product['id'] ?>&store=<?= urlencode(
                                                                                                                     $storeSlug
                                                                                                                 ) ?>"
                                             class="btn btn-store btn-sm">
@@ -3152,7 +3162,7 @@ if ($whatsapp !== '') {
                 ): ?>
 
                     <a
-                        href="/somame_ent/store.php?store=<?= urlencode(
+                        href="<?= BASE_URL ?>/store.php?store=<?= urlencode(
                                                                 $storeSlug
                                                             ) ?>"
                         class="btn btn-store">
