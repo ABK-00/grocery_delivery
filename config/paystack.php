@@ -27,6 +27,12 @@ define(
     'https://api.paystack.co'
 );
 
+/*
+ * Keep this aligned with the Paystack integration Payment Session Timeout.
+ * 900 seconds = 15 minutes.
+ */
+define('PAYMENT_SESSION_TIMEOUT_SECONDS', 900);
+
 $httpsEnabled =
     !empty($_SERVER['HTTPS'])
     && strtolower((string) $_SERVER['HTTPS']) !== 'off';
