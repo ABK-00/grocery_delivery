@@ -12,7 +12,7 @@ if (
     isset($_SESSION['user_id'])
     && ($_SESSION['role'] ?? '') === 'delivery_partner'
 ) {
-    header('Location: /somame_ent/delivery/dashboard.php');
+    header('Location: ' . BASE_URL . '/delivery/dashboard.php');
     exit;
 }
 
@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['company_name'] = $user['company_name'];
 
             header(
-                'Location: /somame_ent/delivery/dashboard.php'
+                'Location: ' . BASE_URL . '/delivery/dashboard.php'
             );
 
             exit;
@@ -483,7 +483,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="text-center mt-4">
 
                         <a
-                            href="/somame_ent/admin/login.php"
+                            href="<?= BASE_URL ?>/admin/login.php"
                             class="portal-link"
                         >
                             Company Admin
@@ -492,7 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span class="text-muted mx-2">•</span>
 
                         <a
-                            href="/somame_ent/staff/login.php"
+                            href="<?= BASE_URL ?>/staff/login.php"
                             class="portal-link"
                         >
                             Staff
