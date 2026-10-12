@@ -1,43 +1,14 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| START SESSION
-|--------------------------------------------------------------------------
-*/
+require_once __DIR__ . '/config/app.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| REMEMBER CURRENT ROLE
-|--------------------------------------------------------------------------
-|
-| We need the role before destroying the session so we know
-| which login page to send the user back to.
-|--------------------------------------------------------------------------
-*/
-
-$role = $_SESSION['role'] ?? 'customer';
-
-
-/*
-|--------------------------------------------------------------------------
-| CLEAR SESSION DATA
-|--------------------------------------------------------------------------
-*/
+$role = $_SESSION['role'] ?? '';
 
 $_SESSION = [];
-
-
-/*
-|--------------------------------------------------------------------------
-| DELETE SESSION COOKIE
-|--------------------------------------------------------------------------
-*/
 
 if (ini_get('session.use_cookies')) {
 
@@ -54,126 +25,27 @@ if (ini_get('session.use_cookies')) {
     );
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| DESTROY SESSION
-|--------------------------------------------------------------------------
-*/
-
 session_destroy();
 
+$target = match ($role) {
+    'super_admin' =>
+        BASE_URL . '/super_admin/login.php',
 
-/*
-|--------------------------------------------------------------------------
-| REDIRECT USER TO CORRECT LOGIN PORTAL
-|--------------------------------------------------------------------------
-*/
+    'admin' =>
+        BASE_URL . '/admin/login.php',
 
-switch ($role) {
+    'staff' =>
+        BASE_URL . '/staff/login.php',
 
-    /*
-    |--------------------------------------------------------------------------
-    | SUPER ADMIN
-    |--------------------------------------------------------------------------
-    */
+    'delivery_partner' =>
+        BASE_URL . '/delivery/login.php',
 
-    case 'super_admin':
+    'customer' =>
+        BASE_URL . '/login.php?customer=1',
 
-        header(
-            'Location: /somame_ent/super_admin/login.php'
-        );
+    default =>
+        BASE_URL . '/access.php',
+};
 
-        exit;
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | COMPANY ADMIN
-    |--------------------------------------------------------------------------
-    */
-
-    case 'admin':
-
-        header(
-            'Location: /somame_ent/admin/login.php'
-        );
-
-        exit;
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | STAFF
-    |--------------------------------------------------------------------------
-    */
-
-    case 'staff':
-
-        header(
-            'Location: /somame_ent/staff/login.php'
-        );
-
-        exit;
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | DELIVERY PARTNER
-    |--------------------------------------------------------------------------
-    */
-
-    case 'delivery_partner':
-
-        /*
-         * Use dedicated delivery login once it exists.
-         */
-        if (
-            file_exists(
-                __DIR__
-                    . '/delivery/login.php'
-            )
-        ) {
-
-            header(
-                'Location: /somame_ent/delivery/login.php'
-            );
-        } else {
-
-            header(
-                'Location: /somame_ent/login.php'
-            );
-        }
-
-        exit;
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | CUSTOMER
-    |--------------------------------------------------------------------------
-    */
-
-    case 'customer':
-
-        header(
-            'Location: /somame_ent/login.php?customer=1'
-        );
-
-        exit;
-
-
-        /*
-    |--------------------------------------------------------------------------
-    | FALLBACK
-    |--------------------------------------------------------------------------
-    */
-
-    default:
-
-        header(
-            'Location: /somame_ent/login.php'
-        );
-
-        exit;
-}
+header('Location: ' . $target);
+exit;
