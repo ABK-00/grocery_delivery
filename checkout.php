@@ -71,9 +71,20 @@ $deliveryFee = 20.00;
 $total = $subtotal + $deliveryFee;
 
 $userStmt = $conn->prepare("
-    SELECT name, email, phone, whatsapp
-    FROM users
-    WHERE id = ?
+    SELECT
+        u.name,
+        u.email,
+        u.phone,
+        u.whatsapp,
+        ca.id AS default_address_id,
+        ca.recipient_name AS default_recipient_name,
+        ca.phone AS default_address_phone,
+        ca.address AS default_address
+    FROM users u
+    LEFT JOIN customer_addresses ca
+        ON ca.user_id = u.id
+       AND ca.is_default = 1
+    WHERE u.id = ?
     LIMIT 1
 ");
 
@@ -306,7 +317,7 @@ $checkoutIdempotencyKey = bin2hex(random_bytes(32));
                                 type="text"
                                 name="delivery_phone"
                                 class="form-control"
-                                value="<?= e($user['phone'] ?? '') ?>"
+                                value="<?= e($user['default_address_phone'] ?: ($user['phone'] ?? '')) ?>"
                                 required
                             >
 
@@ -327,7 +338,16 @@ $checkoutIdempotencyKey = bin2hex(random_bytes(32));
                             rows="4"
                             placeholder="Enter your complete delivery address"
                             required
-                        ></textarea>
+                        ><?= e($user['default_address'] ?? '') ?></textarea>
+
+                        <div class="form-text">
+                            <?php if (!empty($user['default_address_id'])): ?>
+                                Using your default saved address.
+                            <?php endif; ?>
+                            <a href="<?= BASE_URL ?>/customer/addresses.php">
+                                Manage saved addresses
+                            </a>
+                        </div>
 
                     </div>
 
