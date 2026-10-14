@@ -82,17 +82,32 @@ Core platform rules
 
 AI assistant
 ------------
-The application has role-scoped AI:
-- Customers: customer service, order/payment/delivery help, product discovery and optional personalization.
-- Admins: company operations assistant.
-- Staff: day-to-day order operations assistant.
-- Delivery partners: assigned-delivery assistant.
-- Super Admins: platform operations/executive assistant.
+The application uses the OpenAI Responses API with role-scoped tools.
 
-Customer personalization is opt-in/out from:
+Customer modes:
+- Customer Support Assistant: order, payment, delivery and product help.
+- Personal Shopping Assistant: preference-aware product discovery, basket planning and recommendations.
+
+Administrative modes:
+- Admin: company operations, inventory, order metrics and support queue.
+- Staff: order and inventory operations.
+- Delivery Partner: assigned-delivery guidance.
+- Super Admin: platform health, companies, subscriptions, support load and risk analysis.
+
+Customer personalization is controlled from:
 customer/preferences.php
 
-When personalization is disabled, saved preferences and purchase patterns are not supplied to the AI recommendation context.
+When personalization is disabled, saved preferences and purchase patterns are not supplied to personalized recommendation context.
+
+Platform AI controls:
+super_admin/platform_settings.php
+- enable/disable AI globally
+- daily request limit per user
+
+AI usage monitoring:
+super_admin/ai_usage.php
+
+AI credentials remain local/environment configuration only.
 
 Security notes
 --------------
@@ -112,3 +127,37 @@ https://github.com/ABK-00/grocery_delivery
 
 Active development branch:
 feature/storefront-management
+
+
+System health check
+-------------------
+Run this after pulling changes or applying migrations:
+
+C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64\php.exe scripts\system_health.php
+
+It checks:
+- PHP version/extensions
+- database connectivity
+- required tables and critical columns
+- Paystack configuration
+- OpenAI configuration
+- stale pending orders
+
+Continuous integration
+----------------------
+.github/workflows/quality.yml performs:
+- PHP syntax linting
+- Tailwind production build
+- TypeScript build
+
+Production readiness
+--------------------
+Before public deployment:
+- use HTTPS
+- configure a public Paystack webhook URL
+- configure OPENAI_API_KEY or config/ai.local.php
+- schedule expire_pending_orders.php
+- schedule subscription_maintenance.php
+- use production Paystack keys only on the production server
+- protect local secret files from source control
+- run scripts/system_health.php
