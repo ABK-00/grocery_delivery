@@ -226,12 +226,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
 
-            if (!$subscriptionValid) {
-
-                throw new RuntimeException(
-                    'Your company subscription has expired. Please contact the platform administrator.'
-                );
-            }
+            /*
+             * Administrators are still allowed to sign in when billing has
+             * expired so they can access Subscription & Billing and renew.
+             * Other admin pages are guarded by requireCompanyAccess().
+             */
 
 
             /*
@@ -319,7 +318,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             */
 
             header(
-                'Location: ' . BASE_URL . '/admin/dashboard.php'
+                'Location: '
+                . (
+                    $subscriptionValid
+                        ? BASE_URL . '/admin/dashboard.php'
+                        : BASE_URL . '/admin/subscription.php?expired=1'
+                )
             );
 
             exit;
