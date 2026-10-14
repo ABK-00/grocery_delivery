@@ -78,10 +78,10 @@ function uploadProductImage($file, $uploadDir)
 |--------------------------------------------------------------------------
 */
 if (
-    isset($_GET["delete_image"]) &&
-    is_numeric($_GET["delete_image"])
+    $_SERVER["REQUEST_METHOD"] === "POST"
+    && isset($_POST["delete_image"])
 ) {
-    $imageId = (int) $_GET["delete_image"];
+    $imageId = (int) ($_POST["image_id"] ?? 0);
 
     $stmt = $conn->prepare("
         SELECT pi.*
@@ -97,63 +97,73 @@ if (
         $imageId,
         $companyId
     ]);
+
     $image = $stmt->fetch();
 
     if ($image) {
+        $productId = (int) $image["product_id"];
 
-        $productId = $image["product_id"];
+        $conn->beginTransaction();
 
-        $delete = $conn->prepare("
-            DELETE FROM product_images
-            WHERE id = ?
-        ");
+        try {
+            $conn->prepare("
+                DELETE FROM product_images
+                WHERE id = ?
+            ")->execute([$imageId]);
 
-        $delete->execute([$imageId]);
-
-        $filePath = $uploadDir . $image["image"];
-
-        if (file_exists($filePath)) {
-            unlink($filePath);
-        }
-
-        /*
-        | If deleted image was primary,
-        | automatically make another image primary.
-        */
-        if ($image["is_primary"]) {
-
-            $newPrimary = $conn->prepare("
-                SELECT id
-                FROM product_images
-                WHERE product_id = ?
-                ORDER BY sort_order ASC, id ASC
-                LIMIT 1
-            ");
-
-            $newPrimary->execute([$productId]);
-
-            $newPrimaryId = $newPrimary->fetchColumn();
-
-            if ($newPrimaryId) {
-
-                $conn->prepare("
-                    UPDATE product_images
-                    SET is_primary = 0
+            if ($image["is_primary"]) {
+                $newPrimary = $conn->prepare("
+                    SELECT id
+                    FROM product_images
                     WHERE product_id = ?
-                ")->execute([$productId]);
+                    ORDER BY sort_order ASC, id ASC
+                    LIMIT 1
+                ");
 
-                $conn->prepare("
-                    UPDATE product_images
-                    SET is_primary = 1
-                    WHERE id = ?
-                ")->execute([$newPrimaryId]);
+                $newPrimary->execute([
+                    $productId
+                ]);
+
+                $newPrimaryId =
+                    $newPrimary->fetchColumn();
+
+                if ($newPrimaryId) {
+                    $conn->prepare("
+                        UPDATE product_images
+                        SET is_primary = 1
+                        WHERE id = ?
+                    ")->execute([
+                        $newPrimaryId
+                    ]);
+                }
             }
-        }
 
-        header("Location: products.php?success=image_deleted");
-        exit;
+            $conn->commit();
+
+            $filePath =
+                $uploadDir
+                . basename((string) $image["image"]);
+
+            if (is_file($filePath)) {
+                @unlink($filePath);
+            }
+
+            header(
+                "Location: products.php?success=image_deleted"
+            );
+            exit;
+        } catch (Throwable $e) {
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+
+            $message =
+                "Unable to delete product image.";
+            $messageType = "danger";
+        }
     }
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -161,10 +171,10 @@ if (
 |--------------------------------------------------------------------------
 */
 if (
-    isset($_GET["primary_image"]) &&
-    is_numeric($_GET["primary_image"])
+    $_SERVER["REQUEST_METHOD"] === "POST"
+    && isset($_POST["set_primary_image"])
 ) {
-    $imageId = (int) $_GET["primary_image"];
+    $imageId = (int) ($_POST["image_id"] ?? 0);
 
     $stmt = $conn->prepare("
         SELECT pi.product_id
@@ -180,26 +190,48 @@ if (
         $imageId,
         $companyId
     ]);
-    $productId = $stmt->fetchColumn();
 
-    if ($productId) {
+    $productId =
+        (int) ($stmt->fetchColumn() ?: 0);
 
-        $conn->prepare("
-            UPDATE product_images
-            SET is_primary = 0
-            WHERE product_id = ?
-        ")->execute([$productId]);
+    if ($productId > 0) {
+        $conn->beginTransaction();
 
-        $conn->prepare("
-            UPDATE product_images
-            SET is_primary = 1
-            WHERE id = ?
-        ")->execute([$imageId]);
+        try {
+            $conn->prepare("
+                UPDATE product_images
+                SET is_primary = 0
+                WHERE product_id = ?
+            ")->execute([
+                $productId
+            ]);
+
+            $conn->prepare("
+                UPDATE product_images
+                SET is_primary = 1
+                WHERE id = ?
+            ")->execute([
+                $imageId
+            ]);
+
+            $conn->commit();
+
+            header(
+                "Location: products.php?success=primary_set"
+            );
+            exit;
+        } catch (Throwable $e) {
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+
+            $message =
+                "Unable to change the primary image.";
+            $messageType = "danger";
+        }
     }
-
-    header("Location: products.php?success=primary_set");
-    exit;
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2034,25 +2066,38 @@ $totalStock = (float)$stat->fetchColumn();
 
                                                                 <?php if (!$img["is_primary"]): ?>
 
-                                                                    <a
-                                                                        href="?primary_image=<?= $img["id"] ?>"
-                                                                        class="btn btn-sm btn-outline-success">
-
-                                                                        <i class="bi bi-star"></i>
-
-                                                                    </a>
+                                                                    <form method="POST" class="d-inline">
+                                                                        <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
+                                                                        <input type="hidden" name="image_id" value="<?= (int)$img["id"] ?>">
+                                                                        <button
+                                                                            type="submit"
+                                                                            name="set_primary_image"
+                                                                            value="1"
+                                                                            class="btn btn-sm btn-outline-success"
+                                                                        >
+                                                                            <i class="bi bi-star"></i>
+                                                                        </button>
+                                                                    </form>
 
                                                                 <?php endif; ?>
 
 
-                                                                <a
-                                                                    href="?delete_image=<?= $img["id"] ?>"
-                                                                    class="btn btn-sm btn-outline-danger"
-                                                                    onclick="return confirm('Delete this image?');">
-
-                                                                    <i class="bi bi-trash"></i>
-
-                                                                </a>
+                                                                <form
+                                                                    method="POST"
+                                                                    class="d-inline"
+                                                                    onsubmit="return confirm('Delete this image?');"
+                                                                >
+                                                                    <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
+                                                                    <input type="hidden" name="image_id" value="<?= (int)$img["id"] ?>">
+                                                                    <button
+                                                                        type="submit"
+                                                                        name="delete_image"
+                                                                        value="1"
+                                                                        class="btn btn-sm btn-outline-danger"
+                                                                    >
+                                                                        <i class="bi bi-trash"></i>
+                                                                    </button>
+                                                                </form>
 
                                                             </div>
 
