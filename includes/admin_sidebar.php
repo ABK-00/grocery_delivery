@@ -211,6 +211,15 @@ if ($sidebarInitials === '') {
         </a>
 
         <a
+            href="<?= BASE_URL ?>/admin/subscription.php"
+            class="nav-link <?= $currentPage === 'subscription.php' ? 'active' : '' ?>"
+            title="Subscription & Billing"
+        >
+            <i class="bi bi-wallet2"></i>
+            <span>Subscription</span>
+        </a>
+
+        <a
             href="<?= BASE_URL ?>/admin/deliveries.php"
             class="nav-link <?= in_array(
                 $currentPage,
