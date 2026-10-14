@@ -51,6 +51,14 @@ if (!$order) {
     redirect("orders.php");
 }
 
+if (empty($_SESSION['reorder_csrf'])) {
+    $_SESSION['reorder_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
+$cartError = $_SESSION['cart_error'] ?? null;
+unset($_SESSION['cart_error']);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -308,6 +316,13 @@ if ($currentIndex === false) {
 
 <div class="container py-4">
 
+    <?php if ($cartError): ?>
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <?= e($cartError) ?>
+        </div>
+    <?php endif; ?>
+
     <?php if ($order['payment_status'] === 'failed'): ?>
 
         <div class="alert alert-danger d-flex align-items-start gap-3">
@@ -320,13 +335,39 @@ if ($currentIndex === false) {
                     This order is closed and any reserved stock has been released.
                     Please place a new order when you're ready.
                 </div>
-                <a
-                    href="<?= BASE_URL ?>/marketplace.php"
-                    class="btn btn-danger btn-sm mt-3"
-                >
-                    <i class="bi bi-shop"></i>
-                    Return to Marketplace
-                </a>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <form
+                        method="POST"
+                        action="<?= BASE_URL ?>/api/reorder.php"
+                        class="m-0"
+                    >
+                        <input
+                            type="hidden"
+                            name="order_id"
+                            value="<?= (int) $order['id'] ?>"
+                        >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= e($_SESSION['reorder_csrf']) ?>"
+                        >
+                        <button
+                            type="submit"
+                            class="btn btn-danger btn-sm"
+                        >
+                            <i class="bi bi-arrow-repeat"></i>
+                            Rebuild Cart
+                        </button>
+                    </form>
+
+                    <a
+                        href="<?= BASE_URL ?>/marketplace.php"
+                        class="btn btn-outline-danger btn-sm"
+                    >
+                        <i class="bi bi-shop"></i>
+                        Return to Marketplace
+                    </a>
+                </div>
             </div>
         </div>
 
