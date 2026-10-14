@@ -141,6 +141,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 if ($role === 'super_admin') {
+                    createNotification(
+                        $conn,
+                        (int) $ticket['user_id'],
+                        'support',
+                        'Support replied',
+                        'Support replied to ticket '
+                            . $ticket['ticket_number']
+                            . '.',
+                        BASE_URL
+                            . '/support_ticket.php?id='
+                            . $ticketId
+                    );
+
                     $stmt = $conn->prepare("
                         UPDATE support_tickets
                         SET
@@ -167,6 +180,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $userId
                     ]);
                 }
+
+                writeAuditLog(
+                    $conn,
+                    $userId,
+                    $ticket['company_id']
+                        ? (int) $ticket['company_id']
+                        : null,
+                    'support.reply_added',
+                    'support_ticket',
+                    (string) $ticketId,
+                    [
+                        'ticket_number' =>
+                            $ticket['ticket_number'],
+                        'actor_role' => $role
+                    ]
+                );
 
                 header(
                     'Location: '
@@ -207,6 +236,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $status,
                     $ticketId
                 ]);
+
+                createNotification(
+                    $conn,
+                    (int) $ticket['user_id'],
+                    'support',
+                    'Support ticket updated',
+                    'Ticket '
+                        . $ticket['ticket_number']
+                        . ' is now '
+                        . ucwords(str_replace('_', ' ', $status))
+                        . '.',
+                    BASE_URL
+                        . '/support_ticket.php?id='
+                        . $ticketId
+                );
+
+                writeAuditLog(
+                    $conn,
+                    $userId,
+                    $ticket['company_id']
+                        ? (int) $ticket['company_id']
+                        : null,
+                    'support.status_changed',
+                    'support_ticket',
+                    (string) $ticketId,
+                    [
+                        'from' => $ticket['status'],
+                        'to' => $status
+                    ]
+                );
 
                 header(
                     'Location: '
