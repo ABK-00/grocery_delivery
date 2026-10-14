@@ -558,7 +558,7 @@ function aiReadToolsForRole(string $role): array
         'type' => 'function',
         'name' => 'get_support_queue',
         'description' =>
-            'Summarize open support tickets visible to the current administrative role.',
+            'Summarize open support tickets visible to the current role. Vendor administrators see only tickets they personally opened; platform super administrators see the platform queue.',
         'parameters' => [
             'type' => 'object',
             'properties' => [
@@ -1072,10 +1072,6 @@ function executeAiReadTool(
             $stmt->bindValue(1, $limit, PDO::PARAM_INT);
             $stmt->execute();
         } else {
-            if (!$companyId) {
-                return ['tickets' => []];
-            }
-
             $stmt = $conn->prepare("
                 SELECT
                     st.ticket_number,
@@ -1087,14 +1083,14 @@ function executeAiReadTool(
                     u.name AS requester_name
                 FROM support_tickets st
                 INNER JOIN users u ON u.id = st.user_id
-                WHERE st.company_id = ?
+                WHERE st.user_id = ?
                   AND st.status IN ('open','in_progress')
                 ORDER BY
                     FIELD(st.priority,'urgent','high','normal','low'),
                     st.updated_at ASC
                 LIMIT ?
             ");
-            $stmt->bindValue(1, $companyId, PDO::PARAM_INT);
+            $stmt->bindValue(1, $userId, PDO::PARAM_INT);
             $stmt->bindValue(2, $limit, PDO::PARAM_INT);
             $stmt->execute();
         }
