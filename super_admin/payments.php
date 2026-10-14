@@ -44,6 +44,27 @@ $orderPayments = $conn->query("
     LIMIT 100
 ")->fetchAll();
 
+$refunds = $conn->query("
+    SELECT
+        r.id,
+        r.refund_reference,
+        r.amount,
+        r.currency,
+        r.status,
+        r.reason,
+        r.processed_at,
+        r.created_at,
+        o.order_number,
+        c.company_name,
+        p.reference AS payment_reference
+    FROM refunds r
+    INNER JOIN orders o ON o.id = r.order_id
+    INNER JOIN companies c ON c.id = o.company_id
+    INNER JOIN payments p ON p.id = r.payment_id
+    ORDER BY r.id DESC
+    LIMIT 100
+")->fetchAll();
+
 $subscriptionPayments = $conn->query("
     SELECT
         sp.id,
@@ -97,6 +118,23 @@ $subscriptionPayments = $conn->query("
 <td><?= e(date('d M Y H:i',strtotime($p['paid_at'] ?: $p['created_at']))) ?></td>
 </tr><?php endforeach; ?>
 <?php if(!$orderPayments): ?><tr><td colspan="7" class="text-center text-muted py-5">No order payments.</td></tr><?php endif; ?>
+</tbody></table></div>
+</div>
+
+<div class="content-card mb-4">
+<div class="p-4 border-bottom"><h5 class="mb-0 fw-bold">Refunds</h5></div>
+<div class="table-responsive"><table class="table mb-0"><thead><tr><th class="px-4">Refund</th><th>Order</th><th>Company</th><th>Payment</th><th>Amount</th><th>Status</th><th>Reason</th><th>Date</th></tr></thead><tbody>
+<?php foreach($refunds as $r): ?><tr>
+<td class="px-4"><code><?= e($r['refund_reference'] ?: 'Pending gateway reference') ?></code></td>
+<td><?= e($r['order_number']) ?></td>
+<td><?= e($r['company_name']) ?></td>
+<td><code><?= e($r['payment_reference']) ?></code></td>
+<td><?= e($r['currency']) ?> <?= number_format((float)$r['amount'],2) ?></td>
+<td><span class="badge <?= $r['status']==='processed'?'bg-success':($r['status']==='failed'?'bg-danger':'bg-warning text-dark') ?>"><?= e(ucwords(str_replace('_',' ',$r['status']))) ?></span></td>
+<td><?= e($r['reason'] ?: '—') ?></td>
+<td><?= e(date('d M Y H:i',strtotime($r['processed_at'] ?: $r['created_at']))) ?></td>
+</tr><?php endforeach; ?>
+<?php if(!$refunds): ?><tr><td colspan="8" class="text-center text-muted py-5">No refunds.</td></tr><?php endif; ?>
 </tbody></table></div>
 </div>
 
