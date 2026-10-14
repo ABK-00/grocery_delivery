@@ -20,7 +20,8 @@ $keys = [
     'subscription_monthly_price',
     'subscription_quarterly_price',
     'subscription_yearly_price',
-    'default_delivery_fee'
+    'default_delivery_fee',
+    'ai_daily_request_limit'
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -51,6 +52,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (str_starts_with($key, 'subscription_') || $key === 'default_delivery_fee') {
                     if ($value !== '' && (!is_numeric($value) || (float)$value < 0)) {
                         throw new RuntimeException('Prices and fees must be valid non-negative numbers.');
+                    }
+                }
+
+                if ($key === 'ai_daily_request_limit') {
+                    if (
+                        $value !== ''
+                        && (
+                            filter_var($value, FILTER_VALIDATE_INT) === false
+                            || (int) $value < 1
+                            || (int) $value > 1000
+                        )
+                    ) {
+                        throw new RuntimeException(
+                            'AI daily request limit must be between 1 and 1000.'
+                        );
                     }
                 }
 
@@ -146,6 +162,17 @@ foreach ($stmt->fetchAll() as $row) {
                 <div class="col-md-4">
                     <label class="form-label">Default Delivery Fee (GHS)</label>
                     <input type="number" step="0.01" min="0" class="form-control" name="default_delivery_fee" value="<?= e($settings['default_delivery_fee'] ?? '20.00') ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">AI Requests / User / Day</label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        class="form-control"
+                        name="ai_daily_request_limit"
+                        value="<?= e($settings['ai_daily_request_limit'] ?? '100') ?>"
+                    >
                 </div>
             </div>
 
