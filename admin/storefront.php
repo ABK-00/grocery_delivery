@@ -9,6 +9,19 @@ requireCompanyAccess();
 
 $companyId = currentCompanyId();
 
+$pageCsrf = csrfToken('admin_storefront');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'admin_storefront',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
+
 $msg = '';
 $err = '';
 
@@ -634,6 +647,7 @@ if (file_exists('../includes/admin_sidebar.php')) {
                 enctype="multipart/form-data"
                 class="store-card p-4"
             >
+                <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
                 <input
                     type="hidden"
