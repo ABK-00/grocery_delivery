@@ -10,6 +10,11 @@
         <a href="dashboard.php" class="nav-link <?= $currentPage === 'dashboard.php' ? 'active' : '' ?>"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
         <a href="companies.php" class="nav-link <?= in_array($currentPage, ['companies.php', 'company_details.php']) ? 'active' : '' ?>"><i class="bi bi-buildings-fill"></i><span>Companies</span></a>
         <a href="subscriptions.php" class="nav-link <?= $currentPage === 'subscriptions.php' ? 'active' : '' ?>"><i class="bi bi-credit-card-2-front-fill"></i><span>Subscriptions</span></a>
+        <a href="payments.php" class="nav-link <?= $currentPage === 'payments.php' ? 'active' : '' ?>"><i class="bi bi-cash-stack"></i><span>Payments</span></a>
+        <a href="users.php" class="nav-link <?= $currentPage === 'users.php' ? 'active' : '' ?>"><i class="bi bi-people"></i><span>Users</span></a>
+        <a href="reports.php" class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
+        <a href="audit_logs.php" class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>"><i class="bi bi-journal-text"></i><span>Audit Logs</span></a>
+        <a href="platform_settings.php" class="nav-link <?= $currentPage === 'platform_settings.php' ? 'active' : '' ?>"><i class="bi bi-gear"></i><span>Settings</span></a>
         <a href="<?= BASE_URL ?>/assistant.php" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a href="<?= BASE_URL ?>/notifications.php" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
