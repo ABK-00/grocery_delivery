@@ -230,6 +230,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $companyId
                 ]);
 
+                $customerId = orderCustomerId($conn, $orderId);
+
+                if ($customerId) {
+                    createNotification(
+                        $conn,
+                        $customerId,
+                        'order',
+                        'Order status updated',
+                        'Your order is now ' . ucwords(str_replace('_', ' ', $newStatus)) . '.',
+                        BASE_URL . '/order_details.php?id=' . $orderId
+                    );
+                }
+
+                writeAuditLog(
+                    $conn,
+                    currentUserId(),
+                    $companyId,
+                    'order.status_changed.staff',
+                    'order',
+                    $orderId,
+                    [
+                        'from' => $orderCheck['status'],
+                        'to' => $newStatus
+                    ]
+                );
+
                 $conn->commit();
 
                 $success = "Order status updated successfully.";
@@ -458,6 +484,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ");
 
                 $stmt->execute([$partnerId]);
+
+                $customerId = orderCustomerId($conn, $orderId);
+
+                if ($customerId) {
+                    createNotification(
+                        $conn,
+                        $customerId,
+                        'delivery',
+                        'Delivery partner assigned',
+                        'A delivery partner has been assigned to your order.',
+                        BASE_URL . '/customer/track_order.php?order_id=' . $orderId
+                    );
+                }
+
+                writeAuditLog(
+                    $conn,
+                    currentUserId(),
+                    $companyId,
+                    'delivery.assigned.staff',
+                    'order',
+                    $orderId,
+                    [
+                        'delivery_partner_id' => $partnerId
+                    ]
+                );
 
                 $conn->commit();
 
