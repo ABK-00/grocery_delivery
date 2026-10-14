@@ -7,6 +7,24 @@ requireRole('customer');
 
 header('Content-Type: application/json');
 
+$csrf = (string) ($_POST['csrf_token'] ?? '');
+
+if (
+    empty($_SESSION['cart_action_csrf'])
+    || $csrf === ''
+    || !hash_equals(
+        $_SESSION['cart_action_csrf'],
+        $csrf
+    )
+) {
+    http_response_code(419);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Your session expired. Refresh and try again.'
+    ]);
+    exit;
+}
+
 $userId = (int) $_SESSION['user_id'];
 $productId = (int) ($_POST['product_id'] ?? 0);
 
