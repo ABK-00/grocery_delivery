@@ -18,6 +18,11 @@ if ($orderId <= 0) {
 $message = "";
 $messageType = "success";
 
+if (empty($_SESSION['order_action_csrf'])) {
+    $_SESSION['order_action_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 /*
 |--------------------------------------------------------------------------
 | Helper
@@ -101,6 +106,19 @@ if (!$order) {
 */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status'])) {
 
+    $csrf = (string) ($_POST['csrf_token'] ?? '');
+
+    if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['order_action_csrf'],
+            $csrf
+        )
+    ) {
+        $message = "Your session expired. Refresh the page and try again.";
+        $messageType = "danger";
+    }
+
     $newStatus = trim($_POST['order_status'] ?? '');
 
     $allowedStatuses = [
@@ -113,7 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
         'cancelled'
     ];
 
-    if (!in_array($newStatus, $allowedStatuses, true)) {
+    if ($messageType === "danger") {
+        // CSRF validation already failed.
+    } elseif (!in_array($newStatus, $allowedStatuses, true)) {
 
         $message = "Invalid order status selected.";
         $messageType = "danger";
@@ -123,6 +143,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
         try {
 
             $conn->beginTransaction();
+
+            $lockOrder = $conn->prepare("
+                SELECT status, payment_status
+                FROM orders
+                WHERE id = ?
+                  AND company_id = ?
+                FOR UPDATE
+            ");
+            $lockOrder->execute([
+                $orderId,
+                $companyId
+            ]);
+            $lockedOrder = $lockOrder->fetch();
+
+            if (!$lockedOrder) {
+                throw new Exception("Order not found.");
+            }
+
+            validateOrderStatusTransition(
+                $lockedOrder['status'],
+                $newStatus,
+                $lockedOrder['payment_status']
+            );
+
+            if (
+                $newStatus === 'cancelled'
+                && $lockedOrder['payment_status'] !== 'paid'
+            ) {
+                releaseOrderStock(
+                    $conn,
+                    $orderId
+                );
+            }
 
             /*
              * If trying to move to out_for_delivery,
@@ -154,11 +207,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
                 UPDATE orders
                 SET status = ?
                 WHERE id = ?
+                  AND company_id = ?
             ");
 
             $updateOrder->execute([
                 $newStatus,
-                $orderId
+                $orderId,
+                $companyId
             ]);
 
             /*
@@ -345,9 +400,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
 */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_delivery'])) {
 
+    $csrf = (string) ($_POST['csrf_token'] ?? '');
+
+    if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['order_action_csrf'],
+            $csrf
+        )
+    ) {
+        $message = "Your session expired. Refresh the page and try again.";
+        $messageType = "danger";
+    }
+
     $partnerId = (int) ($_POST['delivery_partner_id'] ?? 0);
 
-    if ($partnerId <= 0) {
+    if ($messageType === "danger") {
+        // CSRF validation already failed.
+    } elseif ($partnerId <= 0) {
 
         $message = "Please select a delivery partner.";
         $messageType = "danger";
@@ -1517,6 +1587,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 </div>
 
                 <form method="POST">
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['order_action_csrf']) ?>"
+                                >
 
                     <div class="mb-3">
 
@@ -1722,6 +1797,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div class="modal-content">
 
             <form method="POST">
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['order_action_csrf']) ?>"
+                                >
 
                 <div class="modal-header">
 
