@@ -63,6 +63,39 @@ if (mb_strlen($message) > 4000) {
 
 $scope = aiScopeForRole($role);
 
+$dailyLimit = max(
+    1,
+    (int) platformSetting(
+        $conn,
+        'ai_daily_request_limit',
+        100
+    )
+);
+
+$usageStmt = $conn->prepare("
+    SELECT COUNT(*)
+    FROM ai_messages am
+    INNER JOIN ai_conversations ac
+        ON ac.id = am.conversation_id
+    WHERE ac.user_id = ?
+      AND am.role = 'user'
+      AND am.created_at >= CURDATE()
+      AND am.created_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+");
+
+$usageStmt->execute([$userId]);
+
+if ((int) $usageStmt->fetchColumn() >= $dailyLimit) {
+    http_response_code(429);
+
+    echo json_encode([
+        'success' => false,
+        'message' =>
+            'Your daily AI request limit has been reached. Try again tomorrow.'
+    ]);
+    exit;
+}
+
 try {
     $conn->beginTransaction();
 
