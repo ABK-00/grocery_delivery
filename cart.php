@@ -67,6 +67,10 @@ foreach ($items as $item) {
 $deliveryFee = 20.00;
 $total = $subtotal + ($items ? $deliveryFee : 0);
 
+$cartSuccess = $_SESSION['cart_success'] ?? null;
+$cartError = $_SESSION['cart_error'] ?? null;
+unset($_SESSION['cart_success'], $_SESSION['cart_error']);
+
 function cartProductImage(array $product): string
 {
     $image = $product['primary_image']
@@ -193,6 +197,24 @@ include __DIR__ . '/includes/customer_sidebar.php';
         </a>
 
     </div>
+
+    <?php if ($cartSuccess): ?>
+
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle me-1"></i>
+            <?= e($cartSuccess) ?>
+        </div>
+
+    <?php endif; ?>
+
+    <?php if ($cartError): ?>
+
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <?= e($cartError) ?>
+        </div>
+
+    <?php endif; ?>
 
     <?php if ($cartConflict): ?>
 
