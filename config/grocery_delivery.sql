@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS audit_logs;
 DROP TABLE IF EXISTS platform_settings;
 DROP TABLE IF EXISTS delivery_locations;
 DROP TABLE IF EXISTS deliveries;
+DROP TABLE IF EXISTS subscription_payments;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -609,6 +610,37 @@ CREATE TABLE payments (
         ON UPDATE CASCADE
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- SUBSCRIPTION PAYMENTS
+-- ============================================================
+
+CREATE TABLE subscription_payments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    company_id INT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    plan ENUM('monthly','quarterly','yearly') NOT NULL,
+    reference VARCHAR(100) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'GHS',
+    status ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+    authorization_url TEXT DEFAULT NULL,
+    gateway_response LONGTEXT DEFAULT NULL,
+    paid_at DATETIME DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_subscription_payment_reference (reference),
+    INDEX idx_subscription_payments_company (company_id, created_at),
+    INDEX idx_subscription_payments_status (status),
+    CONSTRAINT fk_subscription_payment_company
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_subscription_payment_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
 
