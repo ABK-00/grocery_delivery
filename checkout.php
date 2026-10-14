@@ -67,7 +67,7 @@ foreach ($cartItems as $item) {
 | For now we use a simple fixed delivery fee.
 | We can make this location-based later.
 */
-$deliveryFee = 20.00;
+$deliveryFee = (float) platformSetting($conn, 'default_delivery_fee', 20.00);
 $total = $subtotal + $deliveryFee;
 
 $userStmt = $conn->prepare("
