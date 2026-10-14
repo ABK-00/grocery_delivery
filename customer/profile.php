@@ -6,6 +6,19 @@ require_once "../includes/functions.php";
 
 requireRole('customer');
 
+$pageCsrf = csrfToken('customer_profile');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'customer_profile',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
+
 $userId = $_SESSION['user_id'];
 
 $success = "";
@@ -446,6 +459,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     <div class="card-body p-4">
 
                         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
                             <div class="row g-3">
 
@@ -573,6 +587,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     <div class="card-body p-4">
 
                         <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
                             <div class="mb-3">
 
