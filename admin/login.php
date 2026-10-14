@@ -970,6 +970,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         </form>
 
+                        <div class="text-end mt-2">
+                            <a
+                                href="<?= BASE_URL ?>/forgot_password.php"
+                                class="small text-decoration-none">
+                                Forgot password?
+                            </a>
+                        </div>
+
 
                         <div
                             class="text-center mt-4">
