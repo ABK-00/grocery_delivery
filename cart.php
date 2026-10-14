@@ -64,7 +64,12 @@ foreach ($items as $item) {
         * (float) $item['quantity'];
 }
 
-$deliveryFee = 20.00;
+$deliveryFee =
+    (float) platformSetting(
+        $conn,
+        'default_delivery_fee',
+        20.00
+    );
 $total = $subtotal + ($items ? $deliveryFee : 0);
 
 $cartSuccess = $_SESSION['cart_success'] ?? null;
