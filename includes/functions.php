@@ -93,3 +93,70 @@ function releaseOrderStock(PDO $conn, int $orderId): bool
 
     return $markStmt->rowCount() === 1;
 }
+
+
+/**
+ * Validate vendor-side order status transitions.
+ *
+ * Paid orders move forward through fulfillment. Unpaid orders may only be
+ * cancelled. Paid-order cancellation is blocked until a refund workflow exists.
+ */
+function validateOrderStatusTransition(
+    string $currentStatus,
+    string $newStatus,
+    string $paymentStatus
+): void {
+    $validStatuses = [
+        'pending',
+        'confirmed',
+        'preparing',
+        'ready',
+        'out_for_delivery',
+        'delivered',
+        'cancelled'
+    ];
+
+    if (!in_array($newStatus, $validStatuses, true)) {
+        throw new RuntimeException('Invalid order status.');
+    }
+
+    if ($newStatus === $currentStatus) {
+        return;
+    }
+
+    if (in_array($currentStatus, ['delivered', 'cancelled'], true)) {
+        throw new RuntimeException(
+            'A completed or cancelled order cannot be changed.'
+        );
+    }
+
+    if ($paymentStatus !== 'paid') {
+        if ($newStatus !== 'cancelled') {
+            throw new RuntimeException(
+                'This order cannot enter fulfillment until payment is confirmed.'
+            );
+        }
+
+        return;
+    }
+
+    if ($newStatus === 'cancelled') {
+        throw new RuntimeException(
+            'Paid orders cannot be cancelled until the refund workflow is available.'
+        );
+    }
+
+    $nextStatus = [
+        'pending' => 'confirmed',
+        'confirmed' => 'preparing',
+        'preparing' => 'ready',
+        'ready' => 'out_for_delivery',
+        'out_for_delivery' => 'delivered'
+    ];
+
+    if (($nextStatus[$currentStatus] ?? null) !== $newStatus) {
+        throw new RuntimeException(
+            'Invalid order status transition. Move the order through the fulfillment stages in sequence.'
+        );
+    }
+}
