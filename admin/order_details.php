@@ -465,6 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_delivery'])) {
             $partnerStmt = $conn->prepare("
                 SELECT
                     dp.id,
+                    dp.user_id,
                     dp.status,
                     u.name,
                     u.status AS account_status
@@ -602,6 +603,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_delivery'])) {
                     BASE_URL . '/customer/track_order.php?order_id=' . $orderId
                 );
             }
+
+            createNotification(
+                $conn,
+                (int) $partner['user_id'],
+                'delivery',
+                'New delivery assignment',
+                'You have been assigned order #' . $order['order_number'] . '.',
+                BASE_URL . '/delivery/orders.php'
+            );
 
             writeAuditLog(
                 $conn,
