@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 requireRole('customer');
 
@@ -30,7 +31,7 @@ if ($deliveryAddress === '' || $deliveryPhone === '') {
     exit;
 }
 
-$deliveryFee = 20.00;
+$deliveryFee = (float) platformSetting($conn, 'default_delivery_fee', 20.00);
 
 try {
 
