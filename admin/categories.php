@@ -40,7 +40,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["add_category"])) {
         $check = $conn->prepare("
             SELECT id
             FROM categories
-            WHERE name = ?
+            WHERE company_id = ?
+              AND name = ?
             LIMIT 1
         ");
 
@@ -59,6 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["add_category"])) {
             ");
 
             $stmt->execute([
+                $companyId,
                 $name,
                 $description !== "" ? $description : null
             ]);
@@ -88,12 +90,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["edit_category"])) {
         $check = $conn->prepare("
             SELECT id
             FROM categories
-            WHERE name = ?
-            AND id != ?
+            WHERE company_id = ?
+              AND name = ?
+              AND id != ?
             LIMIT 1
         ");
 
-        $check->execute([$name, $id]);
+        $check->execute([$companyId, $name, $id]);
 
         if ($check->fetch()) {
 
@@ -107,12 +110,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["edit_category"])) {
                 SET name = ?,
                     description = ?
                 WHERE id = ?
+                  AND company_id = ?
             ");
 
             $stmt->execute([
                 $name,
                 $description !== "" ? $description : null,
-                $id
+                $id,
+                $companyId
             ]);
 
             $message = "Category updated successfully.";
@@ -124,38 +129,49 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["edit_category"])) {
 /* =========================
    TOGGLE STATUS
 ========================= */
-if (isset($_GET["toggle"])) {
-
-    $id = (int)$_GET["toggle"];
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST"
+    && isset($_POST["toggle_category"])
+) {
+    $id = (int)($_POST["id"] ?? 0);
 
     $stmt = $conn->prepare("
         SELECT status
         FROM categories
         WHERE id = ?
+          AND company_id = ?
         LIMIT 1
     ");
 
-    $stmt->execute([$id]);
+    $stmt->execute([
+        $id,
+        $companyId
+    ]);
+
     $category = $stmt->fetch();
 
     if ($category) {
-
-        $newStatus = $category["status"] === "active"
-            ? "inactive"
-            : "active";
+        $newStatus =
+            $category["status"] === "active"
+                ? "inactive"
+                : "active";
 
         $update = $conn->prepare("
             UPDATE categories
             SET status = ?
             WHERE id = ?
+              AND company_id = ?
         ");
 
-        $update->execute([$newStatus, $id]);
+        $update->execute([
+            $newStatus,
+            $id,
+            $companyId
+        ]);
 
-        $message = "Category status updated successfully.";
-
+        $message =
+            "Category status updated successfully.";
     } else {
-
         $message = "Category not found.";
         $messageType = "danger";
     }
@@ -165,41 +181,54 @@ if (isset($_GET["toggle"])) {
 /* =========================
    DELETE CATEGORY
 ========================= */
-if (isset($_GET["delete"])) {
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST"
+    && isset($_POST["delete_category"])
+) {
+    $id = (int)($_POST["id"] ?? 0);
 
-    $id = (int)$_GET["delete"];
+    $checkProducts = $conn->prepare("
+        SELECT COUNT(*)
+        FROM products
+        WHERE category_id = ?
+          AND company_id = ?
+    ");
 
-    $productCount = 0;
-    try {
-        $checkProducts = $conn->prepare("
-            SELECT COUNT(*) 
-            FROM products
-            WHERE category_id = ? AND company_id = ?
-        ");
-        $checkProducts->execute([$id]);
-        $productCount = (int)$checkProducts->fetchColumn();
-    } catch (PDOException $e) {
-        $productCount = 0;
-    }
+    $checkProducts->execute([
+        $id,
+        $companyId
+    ]);
+
+    $productCount =
+        (int)$checkProducts->fetchColumn();
 
     if ($productCount > 0) {
-
-        $message = "This category cannot be deleted because it contains "
-                 . $productCount
-                 . " product(s). Move or delete the products first.";
+        $message =
+            "This category cannot be deleted because it contains "
+            . $productCount
+            . " product(s). Move or delete the products first.";
 
         $messageType = "danger";
-
     } else {
-
         $delete = $conn->prepare("
             DELETE FROM categories
-            WHERE id = ? AND company_id = ?
+            WHERE id = ?
+              AND company_id = ?
         ");
 
-        $delete->execute([$id]);
+        $delete->execute([
+            $id,
+            $companyId
+        ]);
 
-        $message = "Category deleted successfully.";
+        $message =
+            $delete->rowCount() === 1
+                ? "Category deleted successfully."
+                : "Category not found.";
+
+        if ($delete->rowCount() !== 1) {
+            $messageType = "danger";
+        }
     }
 }
 
@@ -231,7 +260,6 @@ try {
         ORDER BY c.created_at DESC
     ");
     $stmt->execute([$companyId]);
-    $stmt->execute([$companyId]);
     $categories = $stmt->fetchAll();
 } catch (PDOException $e) {
     $stmt = $conn->prepare("
@@ -246,6 +274,7 @@ try {
         WHERE c.company_id = ?
         ORDER BY c.created_at DESC
     ");
+    $stmt->execute([$companyId]);
     $categories = $stmt->fetchAll();
 }
 
@@ -797,34 +826,62 @@ try {
 
 
                                     <!-- Toggle -->
-                                    <a
-                                        href="?toggle=<?= (int)$category["id"] ?>"
-                                        class="action-btn toggle-btn"
-                                        title="<?= $category["status"] === "active" ? "Deactivate" : "Activate" ?>"
-                                        onclick="return confirm('Are you sure you want to <?= $category["status"] === "active" ? "deactivate" : "activate" ?> this category?');"
+                                    <form
+                                        method="POST"
+                                        class="d-inline"
+                                        onsubmit="return confirm('Are you sure you want to <?= $category["status"] === "active" ? "deactivate" : "activate" ?> this category?');"
                                     >
-                                        <?php if ($category["status"] === "active"): ?>
-
-                                            <i class="bi bi-pause-fill"></i>
-
-                                        <?php else: ?>
-
-                                            <i class="bi bi-play-fill"></i>
-
-                                        <?php endif; ?>
-
-                                    </a>
-
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="<?= e($pageCsrf) ?>"
+                                        >
+                                        <input
+                                            type="hidden"
+                                            name="id"
+                                            value="<?= (int)$category["id"] ?>"
+                                        >
+                                        <button
+                                            type="submit"
+                                            name="toggle_category"
+                                            value="1"
+                                            class="action-btn toggle-btn"
+                                            title="<?= $category["status"] === "active" ? "Deactivate" : "Activate" ?>"
+                                        >
+                                            <?php if ($category["status"] === "active"): ?>
+                                                <i class="bi bi-pause-fill"></i>
+                                            <?php else: ?>
+                                                <i class="bi bi-play-fill"></i>
+                                            <?php endif; ?>
+                                        </button>
+                                    </form>
 
                                     <!-- Delete -->
-                                    <a
-                                        href="?delete=<?= (int)$category["id"] ?>"
-                                        class="action-btn delete-btn"
-                                        title="Delete Category"
-                                        onclick="return confirm('Delete this category? This action cannot be undone.');"
+                                    <form
+                                        method="POST"
+                                        class="d-inline"
+                                        onsubmit="return confirm('Delete this category? This action cannot be undone.');"
                                     >
-                                        <i class="bi bi-trash-fill"></i>
-                                    </a>
+                                        <input
+                                            type="hidden"
+                                            name="csrf_token"
+                                            value="<?= e($pageCsrf) ?>"
+                                        >
+                                        <input
+                                            type="hidden"
+                                            name="id"
+                                            value="<?= (int)$category["id"] ?>"
+                                        >
+                                        <button
+                                            type="submit"
+                                            name="delete_category"
+                                            value="1"
+                                            class="action-btn delete-btn"
+                                            title="Delete Category"
+                                        >
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </form>
 
                                 </div>
 
