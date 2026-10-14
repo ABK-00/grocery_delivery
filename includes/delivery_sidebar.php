@@ -161,6 +161,10 @@ if (!isset($_SESSION['user_name'])) {
             <i class="bi bi-box-seam"></i>
             My Deliveries
         </a>
+
+        <a href="../assistant.php"><i class="bi bi-stars"></i>AI Assistant</a>
+        <a href="../notifications.php"><i class="bi bi-bell"></i>Notifications</a>
+        <a href="../support.php"><i class="bi bi-life-preserver"></i>Support</a>
 <div class="delivery-logout">
 
             <a href="../logout.php">
