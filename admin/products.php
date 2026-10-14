@@ -8,6 +8,19 @@ requireRole("admin");
 requireCompanyAccess();
 $companyId = currentCompanyId();
 
+$pageCsrf = csrfToken('admin_products');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'admin_products',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
+
 $uploadDir = __DIR__ . "/../assets/images/products/";
 $uploadUrl = "../assets/images/products/";
 
@@ -1604,6 +1617,11 @@ $totalStock = (float)$stat->fetchColumn();
                                             <li>
 
                                                 <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                                     <input
                                                         type="hidden"
@@ -1641,6 +1659,11 @@ $totalStock = (float)$stat->fetchColumn();
                                                 <form
                                                     method="POST"
                                                     onsubmit="return confirm('Delete this product and all its images?');">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                                     <input
                                                         type="hidden"
@@ -1686,6 +1709,11 @@ $totalStock = (float)$stat->fetchColumn();
                                         <form
                                             method="POST"
                                             enctype="multipart/form-data">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                             <div class="modal-header">
 
@@ -2056,6 +2084,11 @@ $totalStock = (float)$stat->fetchColumn();
                                                 <form
                                                     method="POST"
                                                     enctype="multipart/form-data">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                                     <input
                                                         type="hidden"
@@ -2178,6 +2211,11 @@ $totalStock = (float)$stat->fetchColumn();
                 <form
                     method="POST"
                     enctype="multipart/form-data">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                     <div class="modal-header">
 
