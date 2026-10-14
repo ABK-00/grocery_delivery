@@ -104,6 +104,11 @@ unset($_SESSION['checkout_error']);
 */
 $checkoutIdempotencyKey = bin2hex(random_bytes(32));
 
+if (empty($_SESSION['checkout_csrf'])) {
+    $_SESSION['checkout_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -253,6 +258,12 @@ $checkoutIdempotencyKey = bin2hex(random_bytes(32));
 
 
     <form method="POST" action="api/place_order.php">
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="<?= e($_SESSION['checkout_csrf']) ?>"
+        >
 
         <input
             type="hidden"
