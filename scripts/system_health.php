@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/paystack.php';
 require_once __DIR__ . '/../config/ai.php';
+require_once __DIR__ . '/../config/env.php';
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
