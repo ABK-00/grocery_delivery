@@ -272,6 +272,16 @@ try {
             BASE_URL . '/order_details.php?id=' . (int) $payment['order_id']
         );
 
+        notifyCompanyRoles(
+            $conn,
+            (int) $payment['company_id'],
+            ['admin', 'staff'],
+            'order',
+            'New paid order',
+            'Order #' . $payment['order_number'] . ' has been paid and is ready for processing.',
+            BASE_URL . '/admin/order_details.php?id=' . (int) $payment['order_id']
+        );
+
         writeAuditLog(
             $conn,
             (int) $userId,
