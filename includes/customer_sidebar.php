@@ -1,7 +1,7 @@
 <?php
 $currentPage = basename($_SERVER['PHP_SELF']);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
-$customerName = $_SESSION['user_name'] ?? 'Customer';
+$customerName = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'Customer';
 $inCustomerDir = basename(dirname($_SERVER['PHP_SELF'])) === 'customer';
 $rootPrefix = $inCustomerDir ? '../' : '';
 $customerPrefix = $inCustomerDir ? '' : 'customer/';
@@ -18,6 +18,11 @@ $customerPrefix = $inCustomerDir ? '' : 'customer/';
         <a href="<?= $customerPrefix ?>track_order.php" class="nav-link <?= $currentPage==='track_order.php'?'active':'' ?>"><i class="bi bi-geo-alt-fill"></i><span>Track Delivery</span></a>
         <div class="sidebar-section-title" style="margin-top:12px">Account</div>
         <a href="<?= $customerPrefix ?>profile.php" class="nav-link <?= $currentPage==='profile.php'?'active':'' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
+        <a href="<?= $customerPrefix ?>addresses.php" class="nav-link <?= $currentPage==='addresses.php'?'active':'' ?>"><i class="bi bi-geo-alt"></i><span>Saved Addresses</span></a>
+        <a href="<?= $customerPrefix ?>preferences.php" class="nav-link <?= $currentPage==='preferences.php'?'active':'' ?>"><i class="bi bi-sliders"></i><span>Shopping Preferences</span></a>
+        <a href="<?= $rootPrefix ?>assistant.php" class="nav-link <?= $currentPage==='assistant.php'?'active':'' ?>"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
+        <a href="<?= $rootPrefix ?>notifications.php" class="nav-link <?= $currentPage==='notifications.php'?'active':'' ?>"><i class="bi bi-bell"></i><span>Notifications</span></a>
+        <a href="<?= $rootPrefix ?>support.php" class="nav-link <?= in_array($currentPage,['support.php','support_ticket.php'])?'active':'' ?>"><i class="bi bi-life-preserver"></i><span>Support</span></a>
         <button type="button" class="nav-link theme-toggle" data-theme-toggle><i class="bi bi-moon-stars-fill theme-icon"></i><span class="theme-label">Dark Theme</span><small class="theme-state">Off</small></button>
     </div>
     <div class="sidebar-footer"><a href="<?= $rootPrefix ?>logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
