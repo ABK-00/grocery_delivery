@@ -150,7 +150,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_staff"])) {
                     phone = ?,
                     whatsapp = ?
                 WHERE id = ?
-                AND role = 'staff'
+                  AND company_id = ?
+                  AND role = 'staff'
             ");
 
             $stmt->execute([
@@ -158,7 +159,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_staff"])) {
                 $email,
                 $phone,
                 $whatsapp,
-                $staffId
+                $staffId,
+                $companyId
             ]);
 
             $message = "Staff information updated successfully.";
@@ -173,44 +175,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_staff"])) {
 |--------------------------------------------------------------------------
 */
 
-if (isset($_GET["toggle"])) {
-
-    $staffId = (int) $_GET["toggle"];
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST"
+    && isset($_POST["toggle_staff"])
+) {
+    $staffId = (int) ($_POST["staff_id"] ?? 0);
 
     $stmt = $conn->prepare("
         SELECT status
         FROM users
         WHERE id = ?
-        AND company_id = ?
-        AND role = 'staff'
+          AND company_id = ?
+          AND role = 'staff'
+        LIMIT 1
     ");
 
-    $stmt->execute([$staffId, $companyId]);
+    $stmt->execute([
+        $staffId,
+        $companyId
+    ]);
 
     $staff = $stmt->fetch();
 
     if ($staff) {
+        $newStatus =
+            $staff["status"] === "active"
+                ? "inactive"
+                : "active";
 
-        $newStatus = $staff["status"] === "active"
-            ? "inactive"
-            : "active";
-
-        $update = $conn->prepare("
+        $conn->prepare("
             UPDATE users
             SET status = ?
             WHERE id = ?
-            AND company_id = ?
-            AND role = 'staff'
-        ");
-
-        $update->execute([
+              AND company_id = ?
+              AND role = 'staff'
+        ")->execute([
             $newStatus,
-            $staffId
+            $staffId,
+            $companyId
         ]);
-    }
 
-    header("Location: staff.php");
-    exit;
+        $message = "Staff account status updated.";
+    }
 }
 
 
@@ -220,21 +226,32 @@ if (isset($_GET["toggle"])) {
 |--------------------------------------------------------------------------
 */
 
-if (isset($_GET["delete"])) {
-
-    $staffId = (int) $_GET["delete"];
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST"
+    && isset($_POST["delete_staff"])
+) {
+    $staffId = (int) ($_POST["staff_id"] ?? 0);
 
     $stmt = $conn->prepare("
         DELETE FROM users
         WHERE id = ?
-        AND company_id = ?
-        AND role = 'staff'
+          AND company_id = ?
+          AND role = 'staff'
     ");
 
-    $stmt->execute([$staffId, $companyId]);
+    $stmt->execute([
+        $staffId,
+        $companyId
+    ]);
 
-    header("Location: staff.php");
-    exit;
+    $message =
+        $stmt->rowCount() === 1
+            ? "Staff account deleted."
+            : "Staff account not found.";
+
+    if ($stmt->rowCount() !== 1) {
+        $messageType = "danger";
+    }
 }
 
 
@@ -531,27 +548,37 @@ $staffMembers = $stmt->fetchAll();
 
                                 <!-- STATUS -->
 
-                                <a
-                                    href="?toggle=<?= $staff["id"] ?>"
-                                    class="btn btn-sm btn-outline-success">
-
-                                    <i class="bi bi-power"></i>
-
-                                </a>
-
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
+                                    <input type="hidden" name="staff_id" value="<?= (int)$staff["id"] ?>">
+                                    <button
+                                        type="submit"
+                                        name="toggle_staff"
+                                        value="1"
+                                        class="btn btn-sm btn-outline-success"
+                                    >
+                                        <i class="bi bi-power"></i>
+                                    </button>
+                                </form>
 
                                 <!-- DELETE -->
 
-                                <a
-                                    href="?delete=<?= $staff["id"] ?>"
-                                    class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm(
-                                        'Are you sure you want to delete this staff account?'
-                                    );">
-
-                                    <i class="bi bi-trash"></i>
-
-                                </a>
+                                <form
+                                    method="POST"
+                                    class="d-inline"
+                                    onsubmit="return confirm('Are you sure you want to delete this staff account?');"
+                                >
+                                    <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
+                                    <input type="hidden" name="staff_id" value="<?= (int)$staff["id"] ?>">
+                                    <button
+                                        type="submit"
+                                        name="delete_staff"
+                                        value="1"
+                                        class="btn btn-sm btn-outline-danger"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
 
                             </td>
 
