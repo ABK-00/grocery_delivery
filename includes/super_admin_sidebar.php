@@ -16,6 +16,13 @@
         <a href="audit_logs.php" class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>"><i class="bi bi-journal-text"></i><span>Audit Logs</span></a>
         <a href="platform_settings.php" class="nav-link <?= $currentPage === 'platform_settings.php' ? 'active' : '' ?>"><i class="bi bi-gear"></i><span>Settings</span></a>
         <a href="<?= BASE_URL ?>/assistant.php" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
+        <a
+            href="<?= BASE_URL ?>/super_admin/ai_usage.php"
+            class="nav-link <?= $currentPage === 'ai_usage.php' ? 'active' : '' ?>"
+        >
+            <i class="bi bi-cpu"></i>
+            <span>AI Usage</span>
+        </a>
         <a href="<?= BASE_URL ?>/notifications.php" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
     </div>
