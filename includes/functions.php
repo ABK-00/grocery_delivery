@@ -312,3 +312,48 @@ function notifyCompanyRoles(
         );
     }
 }
+
+
+function csrfToken(string $key): string
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+
+    $sessionKey = 'csrf_' . preg_replace(
+        '/[^a-zA-Z0-9_-]/',
+        '_',
+        $key
+    );
+
+    if (empty($_SESSION[$sessionKey])) {
+        $_SESSION[$sessionKey] =
+            bin2hex(random_bytes(32));
+    }
+
+    return (string) $_SESSION[$sessionKey];
+}
+
+
+function validateCsrfToken(
+    string $key,
+    ?string $token
+): bool {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+
+    $sessionKey = 'csrf_' . preg_replace(
+        '/[^a-zA-Z0-9_-]/',
+        '_',
+        $key
+    );
+
+    return isset($_SESSION[$sessionKey])
+        && is_string($token)
+        && $token !== ''
+        && hash_equals(
+            (string) $_SESSION[$sessionKey],
+            $token
+        );
+}
