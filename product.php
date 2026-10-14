@@ -328,6 +328,11 @@ function productPageImage(array $product): string
 $productImage =
     singleProductImage($product);
 
+if (empty($_SESSION['cart_action_csrf'])) {
+    $_SESSION['cart_action_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -341,8 +346,17 @@ if (
 ) {
 
     $quantity = (float)($_POST['quantity'] ?? 1);
+    $csrf = (string) ($_POST['csrf_token'] ?? '');
 
-    if (!$storeOpen) {
+    if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['cart_action_csrf'],
+            $csrf
+        )
+    ) {
+        $error = 'Your session expired. Refresh and try again.';
+    } elseif (!$storeOpen) {
 
         $error = 'This store is currently closed.';
     } elseif ((float)$product['stock'] <= 0) {
@@ -912,6 +926,11 @@ $cartCount = (int)$stmt->fetchColumn();
                     <!-- ADD TO CART -->
 
                     <form method="POST">
+
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= e($_SESSION['cart_action_csrf']) ?>">
 
                         <input
                             type="hidden"
