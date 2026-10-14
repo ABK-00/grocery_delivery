@@ -14,6 +14,7 @@ $stmt = $conn->prepare("
         order_number,
         total_amount,
         status,
+        payment_status,
         created_at
     FROM orders
     WHERE user_id = ?
@@ -251,6 +252,18 @@ function statusBadge($status)
                         </small>
 
                         <?= statusBadge($order['status']) ?>
+
+                        <small class="text-muted d-block mt-2 mb-1">
+                            Payment
+                        </small>
+
+                        <?php if ($order['payment_status'] === 'paid'): ?>
+                            <span class="badge bg-success">Paid</span>
+                        <?php elseif ($order['payment_status'] === 'failed'): ?>
+                            <span class="badge bg-danger">Failed</span>
+                        <?php else: ?>
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        <?php endif; ?>
 
                     </div>
 
