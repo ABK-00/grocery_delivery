@@ -17,6 +17,21 @@ $deliveryAddress = trim($_POST['delivery_address'] ?? '');
 $deliveryPhone    = trim($_POST['delivery_phone'] ?? '');
 $notes            = trim($_POST['notes'] ?? '');
 $idempotencyKey    = strtolower(trim($_POST['idempotency_key'] ?? ''));
+$csrf               = (string) ($_POST['csrf_token'] ?? '');
+
+if (
+    empty($_SESSION['checkout_csrf'])
+    || $csrf === ''
+    || !hash_equals(
+        $_SESSION['checkout_csrf'],
+        $csrf
+    )
+) {
+    $_SESSION['checkout_error'] =
+        'Your checkout session expired. Refresh and try again.';
+    header("Location: ../checkout.php");
+    exit;
+}
 
 if (!preg_match('/^[a-f0-9]{64}$/', $idempotencyKey)) {
     $_SESSION['checkout_error'] =
