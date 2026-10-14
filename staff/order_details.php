@@ -17,6 +17,11 @@ if ($orderId <= 0) {
 $error = "";
 $success = "";
 
+if (empty($_SESSION['order_action_csrf'])) {
+    $_SESSION['order_action_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 /*
 |--------------------------------------------------------------------------
 | HANDLE ACTIONS
@@ -24,6 +29,18 @@ $success = "";
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $csrf = (string) ($_POST['csrf_token'] ?? '');
+
+    if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['order_action_csrf'],
+            $csrf
+        )
+    ) {
+        $error = "Your session expired. Refresh the page and try again.";
+    }
 
     $action = $_POST['action'] ?? '';
 
@@ -33,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-    if ($action === 'update_status') {
+    if ($error === '' && $action === 'update_status') {
 
         $newStatus = $_POST['status'] ?? '';
 
@@ -72,6 +89,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception("Order not found.");
                 }
 
+                validateOrderStatusTransition(
+                    $orderCheck['status'],
+                    $newStatus,
+                    $orderCheck['payment_status']
+                );
+
+                if (
+                    $newStatus === 'cancelled'
+                    && $orderCheck['payment_status'] !== 'paid'
+                ) {
+                    releaseOrderStock(
+                        $conn,
+                        $orderId
+                    );
+                }
+
                 /*
                 |--------------------------------------------------------------------------
                 | Sync delivery record when necessary
@@ -87,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         LIMIT 1
                     ");
 
-                    $stmt->execute([$orderId, $companyId]);
+                    $stmt->execute([$orderId]);
 
                     $delivery = $stmt->fetch();
 
@@ -188,11 +221,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE orders
                     SET status = ?
                     WHERE id = ?
+                      AND company_id = ?
                 ");
 
                 $stmt->execute([
                     $newStatus,
-                    $orderId
+                    $orderId,
+                    $companyId
                 ]);
 
                 $conn->commit();
@@ -217,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     |--------------------------------------------------------------------------
     */
 
-    if ($action === 'assign_delivery') {
+    if ($error === '' && $action === 'assign_delivery') {
 
         $partnerId = (int)($_POST['delivery_partner_id'] ?? 0);
 
@@ -1264,6 +1299,11 @@ $currentStatus = $order['status'];
                         <?php if (!empty($availablePartners)): ?>
 
                             <form method="POST">
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['order_action_csrf']) ?>"
+                                >
 
                                 <input
                                     type="hidden"
@@ -1455,6 +1495,11 @@ $currentStatus = $order['status'];
                 <div class="card-body">
 
                     <form method="POST">
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['order_action_csrf']) ?>"
+                                >
 
                         <input
                             type="hidden"
@@ -1583,6 +1628,11 @@ $currentStatus = $order['status'];
         <div class="modal-content">
 
             <form method="POST">
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['order_action_csrf']) ?>"
+                                >
 
                 <input
                     type="hidden"
