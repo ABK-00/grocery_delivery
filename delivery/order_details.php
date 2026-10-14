@@ -27,6 +27,11 @@ if (!$partner) {
 
 $partnerId = $partner['id'];
 
+if (empty($_SESSION['delivery_action_csrf'])) {
+    $_SESSION['delivery_action_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 $deliveryId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($deliveryId <= 0) {
@@ -40,6 +45,20 @@ if ($deliveryId <= 0) {
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $csrf = (string) ($_POST['csrf_token'] ?? '');
+
+    if (
+        $csrf === ''
+        || !hash_equals(
+            $_SESSION['delivery_action_csrf'],
+            $csrf
+        )
+    ) {
+        $_SESSION['delivery_error'] =
+            'Your session expired. Refresh the page and try again.';
+        redirect("order_details.php?id=" . $deliveryId);
+    }
 
     $newStatus = $_POST['status'] ?? '';
 
@@ -179,19 +198,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         */
 
         $stmt = $conn->prepare("
-            SELECT order_id
-            FROM deliveries
-            WHERE id = ?
+            SELECT
+                o.id AS order_id,
+                o.user_id,
+                o.order_number
+            FROM deliveries d
+            INNER JOIN orders o
+                ON o.id = d.order_id
+            WHERE d.id = ?
             LIMIT 1
         ");
 
         $stmt->execute([$deliveryId]);
 
-        $orderId = $stmt->fetchColumn();
+        $orderInfo = $stmt->fetch();
 
-        if (!$orderId) {
+        if (!$orderInfo) {
             throw new Exception("Associated order not found.");
         }
+
+        $orderId = (int) $orderInfo['order_id'];
 
         /*
         |--------------------------------------------------------------------------
@@ -267,6 +293,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt->execute([$partnerId]);
         }
+
+        createNotification(
+            $conn,
+            (int) $orderInfo['user_id'],
+            'delivery',
+            'Delivery update',
+            'Order #' . $orderInfo['order_number'] . ' is now ' . ucwords(str_replace('_', ' ', $newStatus)) . '.',
+            BASE_URL . '/customer/track_order.php?order_id=' . $orderId
+        );
+
+        writeAuditLog(
+            $conn,
+            currentUserId(),
+            $companyId,
+            'delivery.status_changed',
+            'delivery',
+            $deliveryId,
+            [
+                'order_id' => $orderId,
+                'from' => $currentStatus,
+                'to' => $newStatus
+            ]
+        );
 
         $conn->commit();
 
@@ -846,6 +895,11 @@ body {
                     <?php if ($delivery['status'] === 'assigned'): ?>
 
                         <form method="POST">
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= e($_SESSION['delivery_action_csrf']) ?>"
+                        >
 
                             <input
                                 type="hidden"
@@ -883,6 +937,11 @@ body {
 
 
                         <form method="POST">
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= e($_SESSION['delivery_action_csrf']) ?>"
+                        >
 
                             <input
                                 type="hidden"
@@ -939,6 +998,11 @@ body {
 
 
                         <form method="POST">
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= e($_SESSION['delivery_action_csrf']) ?>"
+                        >
 
                             <input
                                 type="hidden"
