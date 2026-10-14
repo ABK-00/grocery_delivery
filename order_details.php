@@ -31,6 +31,8 @@ $stmt = $conn->prepare("
         delivery_phone,
         notes,
         status,
+        payment_status,
+        stock_released_at,
         created_at
     FROM orders
     WHERE id = ?
@@ -306,6 +308,53 @@ if ($currentIndex === false) {
 
 <div class="container py-4">
 
+    <?php if ($order['payment_status'] === 'failed'): ?>
+
+        <div class="alert alert-danger d-flex align-items-start gap-3">
+            <i class="bi bi-x-circle-fill fs-4"></i>
+            <div class="flex-grow-1">
+                <div class="fw-bold">
+                    Payment unsuccessful
+                </div>
+                <div>
+                    This order is closed and any reserved stock has been released.
+                    Please place a new order when you're ready.
+                </div>
+                <a
+                    href="<?= BASE_URL ?>/marketplace.php"
+                    class="btn btn-danger btn-sm mt-3"
+                >
+                    <i class="bi bi-shop"></i>
+                    Return to Marketplace
+                </a>
+            </div>
+        </div>
+
+    <?php elseif ($order['payment_status'] === 'pending'): ?>
+
+        <div class="alert alert-warning d-flex align-items-start gap-3">
+            <i class="bi bi-hourglass-split fs-4"></i>
+            <div class="flex-grow-1">
+                <div class="fw-bold">
+                    Payment pending
+                </div>
+                <div>
+                    Complete payment before the payment session expires.
+                </div>
+                <?php if ($order['stock_released_at'] === null): ?>
+                    <a
+                        href="<?= BASE_URL ?>/api/start_payment.php?order_id=<?= (int)$order['id'] ?>"
+                        class="btn btn-warning btn-sm mt-3"
+                    >
+                        <i class="bi bi-credit-card"></i>
+                        Continue Payment
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+
+    <?php endif; ?>
+
     <div class="row">
 
         <div class="col-lg-8">
@@ -577,6 +626,20 @@ if ($currentIndex === false) {
                 <h6 class="fw-bold">
                     Order Information
                 </h6>
+
+                <div class="mb-3">
+                    <small class="text-muted d-block">
+                        Payment Status
+                    </small>
+
+                    <?php if ($order['payment_status'] === 'paid'): ?>
+                        <span class="badge bg-success">Paid</span>
+                    <?php elseif ($order['payment_status'] === 'failed'): ?>
+                        <span class="badge bg-danger">Failed</span>
+                    <?php else: ?>
+                        <span class="badge bg-warning text-dark">Pending</span>
+                    <?php endif; ?>
+                </div>
 
                 <div class="text-muted small">
 
