@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/ai_service.php';
 
 requireLogin();
@@ -61,7 +62,15 @@ if (mb_strlen($message) > 4000) {
     exit;
 }
 
-$scope = aiScopeForRole($role);
+$requestedScope =
+    trim((string) ($_POST['assistant_scope'] ?? ''));
+
+$scope = aiScopeForRole(
+    $role,
+    $requestedScope === 'customer_personalization'
+        ? 'customer_personalization'
+        : null
+);
 
 $dailyLimit = max(
     1,
@@ -246,6 +255,23 @@ try {
         $conversationId,
         $userId
     ]);
+
+    writeAuditLog(
+        $conn,
+        (int) $userId,
+        $companyId !== null
+            ? (int) $companyId
+            : null,
+        'ai.response_generated',
+        'ai_conversation',
+        (string) $conversationId,
+        [
+            'scope' => $scope,
+            'model' => $result['model'],
+            'response_id' => $result['response_id'],
+            'usage' => $result['usage']
+        ]
+    );
 
     $conn->commit();
 
