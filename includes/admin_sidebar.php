@@ -234,6 +234,10 @@ if ($sidebarInitials === '') {
             <span>Reports</span>
         </a>
 
+        <a href="<?= BASE_URL ?>/assistant.php" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
+        <a href="<?= BASE_URL ?>/notifications.php" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
+        <a href="<?= BASE_URL ?>/support.php" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
+
     </div>
 
 
