@@ -3,13 +3,14 @@
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/config/ai.php';
+require_once __DIR__ . '/includes/ai_service.php';
 
 requireLogin();
 
 $userId = currentUserId();
 $role = (string) ($_SESSION['role'] ?? '');
 $companyId = currentCompanyId();
+$assistantScope = aiScopeForRole($role);
 
 if (empty($_SESSION['ai_chat_csrf'])) {
     $_SESSION['ai_chat_csrf'] =
@@ -31,12 +32,14 @@ if ($conversationId) {
         FROM ai_conversations
         WHERE id = ?
           AND user_id = ?
+          AND scope = ?
         LIMIT 1
     ");
 
     $stmt->execute([
         $conversationId,
-        $userId
+        $userId,
+        $assistantScope
     ]);
 
     $conversation = $stmt->fetch();
@@ -63,12 +66,14 @@ $stmt = $conn->prepare("
     SELECT id, title, scope, updated_at
     FROM ai_conversations
     WHERE user_id = ?
+      AND scope = ?
     ORDER BY updated_at DESC
     LIMIT 20
 ");
 
 $stmt->execute([
-    $userId
+    $userId,
+    $assistantScope
 ]);
 
 $conversations = $stmt->fetchAll();
