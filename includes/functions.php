@@ -165,10 +165,10 @@ function validateOrderStatusTransition(
 function createNotification(
     PDO $conn,
     int $userId,
+    string $type,
     string $title,
     string $message,
-    ?string $link = null,
-    string $type = 'general'
+    ?string $link = null
 ): void {
     $stmt = $conn->prepare("
         INSERT INTO notifications (
