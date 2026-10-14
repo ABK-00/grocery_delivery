@@ -8,6 +8,11 @@ requireRole('customer');
 
 $userId = (int) $_SESSION['user_id'];
 
+if (empty($_SESSION['cart_action_csrf'])) {
+    $_SESSION['cart_action_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 $stmt = $conn->prepare("
     SELECT
         c.id AS cart_id,
@@ -384,6 +389,11 @@ async function cartPost(url, productId, quantity) {
     formData.append(
         'product_id',
         productId
+    );
+
+    formData.append(
+        'csrf_token',
+        '<?= e($_SESSION['cart_action_csrf']) ?>'
     );
 
     if (quantity !== undefined) {
