@@ -2,10 +2,24 @@
 
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
 requireCompanyAccess();
 $companyId = currentCompanyId();
+
+$pageCsrf = csrfToken('admin_staff');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'admin_staff',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
 
 $message = "";
 $messageType = "success";
@@ -555,6 +569,11 @@ $staffMembers = $stmt->fetchAll();
                                 <div class="modal-content border-0 shadow">
 
                                     <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                         <div class="modal-header">
 
@@ -711,6 +730,11 @@ $staffMembers = $stmt->fetchAll();
         <div class="modal-content border-0 shadow">
 
             <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                 <div class="modal-header">
 
