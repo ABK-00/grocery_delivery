@@ -1,0 +1,51 @@
+name: PHP and frontend checks
+
+on:
+  push:
+    branches:
+      - feature/storefront-management
+      - main
+  pull_request:
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, curl, mbstring, json
+          coverage: none
+
+      - name: Lint PHP
+        shell: bash
+        run: |
+          set -e
+          find . -type f -name '*.php' \
+            -not -path './node_modules/*' \
+            -print0 | xargs -0 -n1 php -l
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tailwind
+        run: npm run tw:build
+
+      - name: Build TypeScript
+        run: npm run ts:build
