@@ -230,6 +230,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <span>Orders</span>
         </a>
 
+        <a href="profile.php" class="staff-nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
         <a href="../assistant.php" class="staff-nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a href="../notifications.php" class="staff-nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="../support.php" class="staff-nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
