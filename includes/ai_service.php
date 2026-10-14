@@ -209,20 +209,11 @@ function callOpenAiResponses(
     $input = [];
 
     foreach ($messages as $message) {
-        $role = ($message['role'] ?? '') === 'assistant'
-            ? 'assistant'
-            : 'user';
-
         $input[] = [
-            'role' => $role,
-            'content' => [
-                [
-                    'type' => $role === 'assistant'
-                        ? 'output_text'
-                        : 'input_text',
-                    'text' => (string) ($message['content'] ?? ''),
-                ],
-            ],
+            'role' => ($message['role'] ?? '') === 'assistant'
+                ? 'assistant'
+                : 'user',
+            'content' => (string) ($message['content'] ?? ''),
         ];
     }
 
