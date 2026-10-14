@@ -104,3 +104,51 @@ CREATE TABLE IF NOT EXISTS support_messages (
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS customer_addresses (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    label VARCHAR(60) NOT NULL DEFAULT 'Home',
+    recipient_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    address TEXT NOT NULL,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_customer_addresses_user (user_id, is_default),
+    CONSTRAINT fk_customer_addresses_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT DEFAULT NULL,
+    updated_by INT UNSIGNED DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_platform_settings_user
+        FOREIGN KEY (updated_by) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED DEFAULT NULL,
+    company_id INT UNSIGNED DEFAULT NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(80) DEFAULT NULL,
+    entity_id VARCHAR(80) DEFAULT NULL,
+    details JSON DEFAULT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_user (user_id, created_at),
+    INDEX idx_audit_company (company_id, created_at),
+    INDEX idx_audit_action (action, created_at),
+    CONSTRAINT fk_audit_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_audit_company
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
