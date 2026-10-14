@@ -377,6 +377,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
                 }
             }
 
+            $customerId = orderCustomerId($conn, $orderId);
+
+            if ($customerId) {
+                createNotification(
+                    $conn,
+                    $customerId,
+                    'order',
+                    'Order status updated',
+                    'Order #' . $order['order_number'] . ' is now ' . ucwords(str_replace('_', ' ', $newStatus)) . '.',
+                    BASE_URL . '/order_details.php?id=' . $orderId
+                );
+            }
+
+            writeAuditLog(
+                $conn,
+                currentUserId(),
+                $companyId,
+                'order.status_changed.admin',
+                'order',
+                $orderId,
+                [
+                    'from' => $order['status'],
+                    'to' => $newStatus
+                ]
+            );
+
             $conn->commit();
 
             $message = "Order status updated successfully.";
@@ -563,6 +589,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_delivery'])) {
             ");
 
             $partnerBusy->execute([$partnerId]);
+
+            $customerId = orderCustomerId($conn, $orderId);
+
+            if ($customerId) {
+                createNotification(
+                    $conn,
+                    $customerId,
+                    'delivery',
+                    'Delivery partner assigned',
+                    'A delivery partner has been assigned to order #' . $order['order_number'] . '.',
+                    BASE_URL . '/customer/track_order.php?order_id=' . $orderId
+                );
+            }
+
+            writeAuditLog(
+                $conn,
+                currentUserId(),
+                $companyId,
+                'delivery.assigned.admin',
+                'order',
+                $orderId,
+                [
+                    'delivery_partner_id' => $partnerId
+                ]
+            );
 
             $conn->commit();
 
