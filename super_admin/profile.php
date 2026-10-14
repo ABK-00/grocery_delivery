@@ -5,6 +5,19 @@ require_once '../includes/auth.php';
 
 requireRole('super_admin');
 
+$pageCsrf = csrfToken('super_profile');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'super_profile',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
+
 $userId = currentUserId();
 
 $msg = '';
@@ -947,6 +960,7 @@ if ($initials === '') {
 
 
                     <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
 
                         <input
@@ -1225,6 +1239,7 @@ if ($initials === '') {
 
 
                     <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
 
                         <input
