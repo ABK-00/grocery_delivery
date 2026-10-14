@@ -93,6 +93,7 @@ try {
             p.status AS payment_record_status,
             p.created_at AS payment_created_at,
             o.order_number,
+            o.company_id,
             o.total_amount,
             o.payment_status,
             o.stock_released_at
@@ -262,6 +263,29 @@ try {
                 $userId
             ]);
 
+        createNotification(
+            $conn,
+            (int) $userId,
+            'payment',
+            'Payment confirmed',
+            'Payment for order #' . $payment['order_number'] . ' was confirmed successfully.',
+            BASE_URL . '/order_details.php?id=' . (int) $payment['order_id']
+        );
+
+        writeAuditLog(
+            $conn,
+            (int) $userId,
+            (int) $payment['company_id'],
+            'payment.confirmed',
+            'order',
+            (int) $payment['order_id'],
+            [
+                'reference' => $reference,
+                'amount' => (float) $payment['amount'],
+                'gateway' => 'paystack'
+            ]
+        );
+
         $conn->commit();
 
         header(
@@ -332,6 +356,28 @@ try {
             $payment['order_id'],
             $userId
         ]);
+
+        createNotification(
+            $conn,
+            (int) $userId,
+            'payment',
+            'Payment unsuccessful',
+            'Payment for order #' . $payment['order_number'] . ' was not completed. Reserved stock has been released.',
+            BASE_URL . '/order_details.php?id=' . (int) $payment['order_id']
+        );
+
+        writeAuditLog(
+            $conn,
+            (int) $userId,
+            (int) $payment['company_id'],
+            'payment.failed',
+            'order',
+            (int) $payment['order_id'],
+            [
+                'reference' => $reference,
+                'gateway_status' => $gatewayStatus
+            ]
+        );
     }
 
     $conn->commit();
