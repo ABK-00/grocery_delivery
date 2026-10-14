@@ -498,6 +498,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                 }
 
+                createNotification(
+                    $conn,
+                    (int) $partner['user_id'],
+                    'delivery',
+                    'New delivery assignment',
+                    'A new delivery has been assigned to you.',
+                    BASE_URL . '/delivery/orders.php'
+                );
+
                 writeAuditLog(
                     $conn,
                     currentUserId(),
