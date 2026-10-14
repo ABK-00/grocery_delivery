@@ -252,3 +252,63 @@ function platformSetting(
         ? $default
         : $value;
 }
+
+
+/**
+ * Notify active users in selected company roles.
+ */
+function notifyCompanyRoles(
+    PDO $conn,
+    int $companyId,
+    array $roles,
+    string $type,
+    string $title,
+    string $message,
+    ?string $link = null
+): void {
+    $allowed = [
+        'admin',
+        'staff',
+        'delivery_partner'
+    ];
+
+    $roles = array_values(
+        array_intersect(
+            array_unique($roles),
+            $allowed
+        )
+    );
+
+    if (!$roles) {
+        return;
+    }
+
+    $placeholders =
+        implode(',', array_fill(0, count($roles), '?'));
+
+    $stmt = $conn->prepare("
+        SELECT id
+        FROM users
+        WHERE company_id = ?
+          AND status = 'active'
+          AND role IN ({$placeholders})
+    ");
+
+    $stmt->execute(
+        array_merge(
+            [$companyId],
+            $roles
+        )
+    );
+
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $targetUserId) {
+        createNotification(
+            $conn,
+            (int) $targetUserId,
+            $type,
+            $title,
+            $message,
+            $link
+        );
+    }
+}
