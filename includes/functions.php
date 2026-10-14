@@ -160,3 +160,71 @@ function validateOrderStatusTransition(
         );
     }
 }
+
+
+function createNotification(
+    PDO $conn,
+    int $userId,
+    string $title,
+    string $message,
+    ?string $link = null,
+    string $type = 'general'
+): void {
+    $stmt = $conn->prepare("
+        INSERT INTO notifications (
+            user_id,
+            type,
+            title,
+            message,
+            link
+        )
+        VALUES (?, ?, ?, ?, ?)
+    ");
+
+    $stmt->execute([
+        $userId,
+        $type,
+        $title,
+        $message,
+        $link
+    ]);
+}
+
+function writeAuditLog(
+    PDO $conn,
+    ?int $userId,
+    ?int $companyId,
+    string $action,
+    ?string $entityType = null,
+    ?string $entityId = null,
+    array $details = []
+): void {
+    $stmt = $conn->prepare("
+        INSERT INTO audit_logs (
+            user_id,
+            company_id,
+            action,
+            entity_type,
+            entity_id,
+            details,
+            ip_address
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ");
+
+    $stmt->execute([
+        $userId,
+        $companyId,
+        $action,
+        $entityType,
+        $entityId,
+        $details
+            ? json_encode(
+                $details,
+                JSON_UNESCAPED_SLASHES
+                | JSON_UNESCAPED_UNICODE
+            )
+            : null,
+        $_SERVER['REMOTE_ADDR'] ?? null
+    ]);
+}
