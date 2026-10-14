@@ -18,6 +18,18 @@ if ($orderId <= 0) {
 $message = "";
 $messageType = "success";
 
+if (!empty($_SESSION['order_action_success'])) {
+    $message = (string) $_SESSION['order_action_success'];
+    $messageType = "success";
+    unset($_SESSION['order_action_success']);
+}
+
+if (!empty($_SESSION['order_action_error'])) {
+    $message = (string) $_SESSION['order_action_error'];
+    $messageType = "danger";
+    unset($_SESSION['order_action_error']);
+}
+
 if (empty($_SESSION['order_action_csrf'])) {
     $_SESSION['order_action_csrf'] =
         bin2hex(random_bytes(32));
@@ -682,6 +694,16 @@ $paymentStmt = $conn->prepare("
 
 $paymentStmt->execute([$orderId]);
 $payment = $paymentStmt->fetch();
+
+$refundStmt = $conn->prepare("
+    SELECT *
+    FROM refunds
+    WHERE order_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+");
+$refundStmt->execute([$orderId]);
+$refund = $refundStmt->fetch();
 
 /*
 |--------------------------------------------------------------------------
@@ -1621,6 +1643,67 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         </div>
 
                     </div>
+
+                    <?php if ($refund): ?>
+                        <hr>
+                        <div class="info-label">
+                            Refund Status
+                        </div>
+                        <span class="status-badge <?= statusBadgeClass(
+                            $refund['status'] === 'processed'
+                                ? 'refunded'
+                                : (
+                                    $refund['status'] === 'failed'
+                                        ? 'failed'
+                                        : 'pending'
+                                )
+                        ) ?>">
+                            <?= e(ucwords(str_replace('_', ' ', $refund['status']))) ?>
+                        </span>
+                    <?php elseif (
+                        $payment['status'] === 'paid'
+                        && in_array(
+                            $order['status'],
+                            ['pending', 'confirmed', 'preparing', 'ready'],
+                            true
+                        )
+                    ): ?>
+                        <hr>
+                        <form
+                            method="POST"
+                            action="<?= BASE_URL ?>/admin/refund_order.php"
+                            onsubmit="return confirm('Initiate a full refund and cancel this order?');"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= e($_SESSION['order_action_csrf']) ?>"
+                            >
+                            <input
+                                type="hidden"
+                                name="order_id"
+                                value="<?= (int) $orderId ?>"
+                            >
+                            <label class="form-label small fw-semibold">
+                                Refund reason
+                            </label>
+                            <input
+                                type="text"
+                                name="reason"
+                                class="form-control form-control-sm mb-2"
+                                maxlength="255"
+                                value="Order cancelled by vendor"
+                                required
+                            >
+                            <button
+                                type="submit"
+                                class="btn btn-outline-danger w-100"
+                            >
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                Initiate Full Refund
+                            </button>
+                        </form>
+                    <?php endif; ?>
 
                 <?php else: ?>
 
