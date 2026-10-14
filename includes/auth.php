@@ -147,9 +147,13 @@ function currentCompanyId(): ?int
 |--------------------------------------------------------------------------
 */
 
-function requireCompanyAccess(): void
+function requireCompanyAccess(
+    bool $allowExpiredAdmin = false
+): void
 {
     requireLogin();
+
+    global $conn;
 
     $companyRoles = [
         'admin',
@@ -173,7 +177,9 @@ function requireCompanyAccess(): void
     }
 
 
-    if (!currentCompanyId()) {
+    $companyId = currentCompanyId();
+
+    if (!$companyId) {
 
         session_unset();
         session_destroy();
@@ -186,6 +192,92 @@ function requireCompanyAccess(): void
         );
 
         exit;
+    }
+
+    if (
+        isset($conn)
+        && $conn instanceof PDO
+    ) {
+        $stmt = $conn->prepare("
+            SELECT
+                status,
+                subscription_plan,
+                trial_ends_at,
+                subscription_ends_at
+            FROM companies
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$companyId]);
+        $company = $stmt->fetch();
+
+        if (
+            !$company
+            || $company['status'] !== 'active'
+        ) {
+            session_unset();
+            session_destroy();
+
+            header(
+                'Location: '
+                    . roleLoginUrl($role)
+                    . (str_contains(roleLoginUrl($role), '?') ? '&' : '?')
+                    . 'error=company'
+            );
+            exit;
+        }
+
+        $subscriptionValid = false;
+
+        if ($company['subscription_plan'] === 'trial') {
+            $subscriptionValid =
+                !empty($company['trial_ends_at'])
+                && strtotime(
+                    (string) $company['trial_ends_at']
+                ) >= time();
+        } elseif (
+            in_array(
+                $company['subscription_plan'],
+                ['monthly', 'quarterly', 'yearly'],
+                true
+            )
+        ) {
+            $subscriptionValid =
+                !empty($company['subscription_ends_at'])
+                && strtotime(
+                    (string) $company['subscription_ends_at']
+                ) >= time();
+        }
+
+        if (!$subscriptionValid) {
+            if (
+                $role === 'admin'
+                && $allowExpiredAdmin
+            ) {
+                return;
+            }
+
+            if ($role === 'admin') {
+                header(
+                    'Location: '
+                        . BASE_URL
+                        . '/admin/subscription.php?expired=1'
+                );
+                exit;
+            }
+
+            session_unset();
+            session_destroy();
+
+            header(
+                'Location: '
+                    . roleLoginUrl($role)
+                    . (str_contains(roleLoginUrl($role), '?') ? '&' : '?')
+                    . 'error=subscription'
+            );
+            exit;
+        }
     }
 }
 
