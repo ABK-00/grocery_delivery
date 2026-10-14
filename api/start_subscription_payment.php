@@ -58,11 +58,6 @@ if ($price <= 0) {
 }
 
 $amount = (int) round($price * 100);
-$reference =
-    'SUB-'
-    . date('YmdHis')
-    . '-'
-    . strtoupper(bin2hex(random_bytes(4)));
 
 $https =
     !empty($_SERVER['HTTPS'])
@@ -80,27 +75,104 @@ $callbackUrl =
 try {
     $conn->beginTransaction();
 
-    $insert = $conn->prepare("
-        INSERT INTO subscription_payments (
-            company_id,
-            user_id,
-            plan,
+    $pendingStmt = $conn->prepare("
+        SELECT
+            id,
             reference,
-            amount,
-            currency,
-            status
-        )
-        VALUES (?, ?, ?, ?, ?, 'GHS', 'pending')
+            authorization_url,
+            created_at
+        FROM subscription_payments
+        WHERE company_id = ?
+          AND user_id = ?
+          AND plan = ?
+          AND status = 'pending'
+        ORDER BY id DESC
+        LIMIT 1
+        FOR UPDATE
     ");
-    $insert->execute([
+
+    $pendingStmt->execute([
         $companyId,
         $userId,
-        $plan,
-        $reference,
-        $price
+        $plan
     ]);
 
-    $paymentId = (int)$conn->lastInsertId();
+    $pending = $pendingStmt->fetch();
+
+    if ($pending) {
+        $createdAt = strtotime((string) $pending['created_at']);
+        $expired =
+            $createdAt !== false
+            && (time() - $createdAt) >= PAYMENT_SESSION_TIMEOUT_SECONDS;
+
+        if ($expired) {
+            $conn->prepare("
+                UPDATE subscription_payments
+                SET status = 'failed'
+                WHERE id = ?
+                  AND status = 'pending'
+            ")->execute([
+                $pending['id']
+            ]);
+
+            $pending = null;
+        }
+    }
+
+    if (
+        $pending
+        && !empty($pending['authorization_url'])
+    ) {
+        $authorizationUrl =
+            (string) $pending['authorization_url'];
+
+        $conn->commit();
+
+        header('Location: ' . $authorizationUrl);
+        exit;
+    }
+
+    if ($pending) {
+        $paymentId = (int) $pending['id'];
+        $reference = (string) $pending['reference'];
+
+        $conn->prepare("
+            UPDATE subscription_payments
+            SET amount = ?
+            WHERE id = ?
+        ")->execute([
+            $price,
+            $paymentId
+        ]);
+    } else {
+        $reference =
+            'SUB-'
+            . date('YmdHis')
+            . '-'
+            . strtoupper(bin2hex(random_bytes(4)));
+
+        $insert = $conn->prepare("
+            INSERT INTO subscription_payments (
+                company_id,
+                user_id,
+                plan,
+                reference,
+                amount,
+                currency,
+                status
+            )
+            VALUES (?, ?, ?, ?, ?, 'GHS', 'pending')
+        ");
+        $insert->execute([
+            $companyId,
+            $userId,
+            $plan,
+            $reference,
+            $price
+        ]);
+
+        $paymentId = (int) $conn->lastInsertId();
+    }
 
     $payload = [
         'email' => $account['email'],
