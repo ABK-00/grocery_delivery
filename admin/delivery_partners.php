@@ -2,10 +2,24 @@
 
 require_once __DIR__ . "/../config/db.php";
 require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 requireRole("admin");
 requireCompanyAccess();
 $companyId = currentCompanyId();
+
+$pageCsrf = csrfToken('admin_delivery_partners');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'admin_delivery_partners',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
 
 $message = "";
 $error = "";
@@ -966,6 +980,11 @@ $partners = $stmt->fetchAll();
                                         <li>
 
                                             <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                                 <input
                                                     type="hidden"
@@ -995,6 +1014,11 @@ $partners = $stmt->fetchAll();
                                         <li>
 
                                             <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                                 <input
                                                     type="hidden"
@@ -1034,6 +1058,11 @@ $partners = $stmt->fetchAll();
                                                 method="POST"
                                                 onsubmit="return confirm('Are you sure you want to delete this delivery partner?');"
                                             >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                                 <input
                                                     type="hidden"
@@ -1088,6 +1117,11 @@ $partners = $stmt->fetchAll();
 
 
                                     <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
 
                                         <div class="modal-header">
@@ -1344,6 +1378,11 @@ $partners = $stmt->fetchAll();
 
 
             <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
 
                 <div class="modal-header">
