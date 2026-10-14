@@ -2,12 +2,26 @@
 
 require_once '../config/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/functions.php';
 require_once '../includes/storefront.php';
 
 requireRole('super_admin');
 
 $msg = '';
 $err = '';
+
+$pageCsrf = csrfToken('super_companies');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'super_companies',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
 
 
 /*
@@ -897,6 +911,11 @@ $companies = $stmt->fetchAll();
             <form
                 method="POST"
                 class="modal-content">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                 <input
                     type="hidden"
@@ -1109,6 +1128,11 @@ $companies = $stmt->fetchAll();
                 method="POST"
                 action="companies.php"
                 class="modal-content">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                 <input
                     type="hidden"
