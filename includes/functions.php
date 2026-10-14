@@ -228,3 +228,27 @@ function writeAuditLog(
         $_SERVER['REMOTE_ADDR'] ?? null
     ]);
 }
+
+
+/**
+ * Read a platform setting with a fallback.
+ */
+function platformSetting(
+    PDO $conn,
+    string $key,
+    mixed $default = null
+): mixed {
+    $stmt = $conn->prepare("
+        SELECT setting_value
+        FROM platform_settings
+        WHERE setting_key = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$key]);
+
+    $value = $stmt->fetchColumn();
+
+    return $value === false || $value === null || $value === ''
+        ? $default
+        : $value;
+}
