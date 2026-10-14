@@ -404,3 +404,594 @@ function callOpenAiResponses(
         'usage' => $result['usage'] ?? null,
     ];
 }
+
+
+/**
+ * Read-only application tools available to the role-scoped AI.
+ * These tools never mutate application data.
+ */
+function aiReadToolsForRole(string $role): array
+{
+    $orderTool = [
+        'type' => 'function',
+        'name' => 'lookup_order',
+        'description' =>
+            'Look up an order by its order number using the current user authorization scope.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'order_number' => [
+                    'type' => 'string',
+                    'description' => 'Order number shown to the user.'
+                ]
+            ],
+            'required' => ['order_number'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $productTool = [
+        'type' => 'function',
+        'name' => 'search_products',
+        'description' =>
+            'Search currently available marketplace products by a short product or category phrase.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'query' => [
+                    'type' => 'string',
+                    'description' => 'Product or category search phrase.'
+                ]
+            ],
+            'required' => ['query'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $inventoryTool = [
+        'type' => 'function',
+        'name' => 'search_inventory',
+        'description' =>
+            'Search products and stock in the current vendor company.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'query' => [
+                    'type' => 'string',
+                    'description' => 'Product name search phrase.'
+                ]
+            ],
+            'required' => ['query'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $companyTool = [
+        'type' => 'function',
+        'name' => 'lookup_company',
+        'description' =>
+            'Look up a vendor company by name or company code for platform administration.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'query' => [
+                    'type' => 'string',
+                    'description' => 'Company name or company code.'
+                ]
+            ],
+            'required' => ['query'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    return match ($role) {
+        'customer' => [
+            $orderTool,
+            $productTool
+        ],
+        'admin', 'staff' => [
+            $orderTool,
+            $inventoryTool
+        ],
+        'delivery_partner' => [
+            $orderTool
+        ],
+        'super_admin' => [
+            $orderTool,
+            $companyTool
+        ],
+        default => []
+    };
+}
+
+
+function executeAiReadTool(
+    PDO $conn,
+    string $name,
+    array $arguments,
+    int $userId,
+    string $role,
+    ?int $companyId
+): array {
+    if ($name === 'lookup_order') {
+        $orderNumber = trim(
+            (string) ($arguments['order_number'] ?? '')
+        );
+
+        if ($orderNumber === '') {
+            return ['error' => 'Order number is required.'];
+        }
+
+        $sql = "
+            SELECT
+                o.id,
+                o.order_number,
+                o.status,
+                o.payment_status,
+                o.total_amount,
+                o.delivery_address,
+                o.created_at,
+                COALESCE(cs.display_name, c.company_name)
+                    AS store_name
+            FROM orders o
+            INNER JOIN companies c
+                ON c.id = o.company_id
+            LEFT JOIN company_storefronts cs
+                ON cs.company_id = c.id
+            WHERE o.order_number = ?
+        ";
+
+        $params = [$orderNumber];
+
+        if ($role === 'customer') {
+            $sql .= " AND o.user_id = ? ";
+            $params[] = $userId;
+        } elseif (
+            in_array($role, ['admin', 'staff'], true)
+        ) {
+            $sql .= " AND o.company_id = ? ";
+            $params[] = $companyId;
+        } elseif ($role === 'delivery_partner') {
+            $sql .= "
+                AND EXISTS (
+                    SELECT 1
+                    FROM deliveries d
+                    INNER JOIN delivery_partners dp
+                        ON dp.id = d.delivery_partner_id
+                    WHERE d.order_id = o.id
+                      AND dp.user_id = ?
+                )
+            ";
+            $params[] = $userId;
+        } elseif ($role !== 'super_admin') {
+            return ['error' => 'Order lookup is unavailable.'];
+        }
+
+        $sql .= " LIMIT 1 ";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $order = $stmt->fetch();
+
+        if (!$order) {
+            return ['found' => false];
+        }
+
+        $itemStmt = $conn->prepare("
+            SELECT
+                product_name,
+                quantity,
+                unit_price,
+                subtotal
+            FROM order_items
+            WHERE order_id = ?
+            ORDER BY id ASC
+            LIMIT 30
+        ");
+        $itemStmt->execute([
+            $order['id']
+        ]);
+
+        $order['items'] =
+            $itemStmt->fetchAll();
+
+        unset($order['id']);
+
+        return [
+            'found' => true,
+            'order' => $order
+        ];
+    }
+
+    if ($name === 'search_products') {
+        if ($role !== 'customer') {
+            return ['error' => 'Marketplace search is unavailable.'];
+        }
+
+        $query = trim(
+            (string) ($arguments['query'] ?? '')
+        );
+
+        if ($query === '') {
+            return ['products' => []];
+        }
+
+        $like = '%' . $query . '%';
+
+        $stmt = $conn->prepare("
+            SELECT
+                p.id,
+                p.name,
+                p.price,
+                p.stock,
+                p.unit,
+                cat.name AS category,
+                c.storefront_slug,
+                COALESCE(cs.display_name, c.company_name)
+                    AS store_name
+            FROM products p
+            INNER JOIN companies c
+                ON c.id = p.company_id
+            LEFT JOIN company_storefronts cs
+                ON cs.company_id = c.id
+            LEFT JOIN categories cat
+                ON cat.id = p.category_id
+            WHERE p.status = 'active'
+              AND p.stock > 0
+              AND c.status = 'active'
+              AND COALESCE(cs.store_status, 'open') = 'open'
+              AND (
+                    p.name LIKE ?
+                    OR p.description LIKE ?
+                    OR cat.name LIKE ?
+              )
+              AND (
+                    (
+                        c.subscription_plan = 'trial'
+                        AND c.trial_ends_at >= NOW()
+                    )
+                    OR
+                    (
+                        c.subscription_plan IN (
+                            'monthly',
+                            'quarterly',
+                            'yearly'
+                        )
+                        AND c.subscription_ends_at >= NOW()
+                    )
+              )
+            ORDER BY p.name ASC
+            LIMIT 15
+        ");
+
+        $stmt->execute([
+            $like,
+            $like,
+            $like
+        ]);
+
+        return [
+            'products' => $stmt->fetchAll()
+        ];
+    }
+
+    if ($name === 'search_inventory') {
+        if (
+            !in_array($role, ['admin', 'staff'], true)
+            || !$companyId
+        ) {
+            return ['error' => 'Inventory search is unavailable.'];
+        }
+
+        $query = trim(
+            (string) ($arguments['query'] ?? '')
+        );
+
+        $like = '%' . $query . '%';
+
+        $stmt = $conn->prepare("
+            SELECT
+                p.id,
+                p.name,
+                p.price,
+                p.stock,
+                p.unit,
+                p.status,
+                cat.name AS category
+            FROM products p
+            LEFT JOIN categories cat
+                ON cat.id = p.category_id
+            WHERE p.company_id = ?
+              AND p.name LIKE ?
+            ORDER BY p.stock ASC, p.name ASC
+            LIMIT 20
+        ");
+
+        $stmt->execute([
+            $companyId,
+            $like
+        ]);
+
+        return [
+            'products' => $stmt->fetchAll()
+        ];
+    }
+
+    if ($name === 'lookup_company') {
+        if ($role !== 'super_admin') {
+            return ['error' => 'Company lookup is unavailable.'];
+        }
+
+        $query = trim(
+            (string) ($arguments['query'] ?? '')
+        );
+
+        $like = '%' . $query . '%';
+
+        $stmt = $conn->prepare("
+            SELECT
+                id,
+                company_code,
+                company_name,
+                status,
+                subscription_plan,
+                trial_ends_at,
+                subscription_ends_at,
+                created_at
+            FROM companies
+            WHERE company_name LIKE ?
+               OR company_code LIKE ?
+            ORDER BY company_name ASC
+            LIMIT 10
+        ");
+
+        $stmt->execute([
+            $like,
+            $like
+        ]);
+
+        $companies = [];
+
+        foreach ($stmt->fetchAll() as $company) {
+            $metrics = $conn->prepare("
+                SELECT
+                    COUNT(*) AS total_orders,
+                    SUM(payment_status = 'paid')
+                        AS paid_orders,
+                    COALESCE(
+                        SUM(
+                            CASE
+                                WHEN payment_status = 'paid'
+                                THEN total_amount
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    ) AS paid_volume
+                FROM orders
+                WHERE company_id = ?
+            ");
+
+            $metrics->execute([
+                $company['id']
+            ]);
+
+            $company['metrics'] =
+                $metrics->fetch();
+
+            unset($company['id']);
+
+            $companies[] = $company;
+        }
+
+        return [
+            'companies' => $companies
+        ];
+    }
+
+    return ['error' => 'Unknown tool.'];
+}
+
+
+function extractAiResponseText(array $result): string
+{
+    $text = '';
+
+    foreach (($result['output'] ?? []) as $output) {
+        if (($output['type'] ?? '') !== 'message') {
+            continue;
+        }
+
+        foreach (($output['content'] ?? []) as $part) {
+            if (($part['type'] ?? '') === 'output_text') {
+                $text .= (string) ($part['text'] ?? '');
+            }
+        }
+    }
+
+    return trim($text);
+}
+
+
+function sendOpenAiResponsePayload(array $payload): array
+{
+    $ch = curl_init(OPENAI_RESPONSES_URL);
+
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . OPENAI_API_KEY,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_TIMEOUT => 45,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+
+    $response = curl_exec($ch);
+
+    if ($response === false) {
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        throw new RuntimeException(
+            'AI connection failed: ' . $error
+        );
+    }
+
+    $httpCode = curl_getinfo(
+        $ch,
+        CURLINFO_HTTP_CODE
+    );
+
+    curl_close($ch);
+
+    $result = json_decode(
+        $response,
+        true
+    );
+
+    if (
+        $httpCode < 200
+        || $httpCode >= 300
+        || !is_array($result)
+    ) {
+        throw new RuntimeException(
+            is_array($result)
+                ? ($result['error']['message']
+                    ?? 'AI request failed.')
+                : 'AI request failed.'
+        );
+    }
+
+    return $result;
+}
+
+
+/**
+ * Responses API orchestration with role-scoped read-only tools.
+ */
+function callOpenAiResponsesWithTools(
+    PDO $conn,
+    array $messages,
+    string $instructions,
+    int $userId,
+    string $role,
+    ?int $companyId
+): array {
+    if (!OPENAI_AI_ENABLED) {
+        throw new RuntimeException(
+            'AI is not configured. Add OPENAI_API_KEY or config/ai.local.php.'
+        );
+    }
+
+    $input = [];
+
+    foreach ($messages as $message) {
+        $input[] = [
+            'role' => ($message['role'] ?? '') === 'assistant'
+                ? 'assistant'
+                : 'user',
+            'content' =>
+                (string) ($message['content'] ?? ''),
+        ];
+    }
+
+    $tools = aiReadToolsForRole($role);
+
+    $payload = [
+        'model' => OPENAI_MODEL,
+        'instructions' => $instructions,
+        'input' => $input,
+        'max_output_tokens' => 900,
+        'tools' => $tools,
+        'parallel_tool_calls' => false,
+    ];
+
+    $result =
+        sendOpenAiResponsePayload($payload);
+
+    for ($round = 0; $round < 3; $round++) {
+        $calls = [];
+
+        foreach (($result['output'] ?? []) as $output) {
+            if (
+                ($output['type'] ?? '')
+                === 'function_call'
+            ) {
+                $calls[] = $output;
+            }
+        }
+
+        if (!$calls) {
+            break;
+        }
+
+        $toolOutputs = [];
+
+        foreach ($calls as $call) {
+            $arguments = json_decode(
+                (string) ($call['arguments'] ?? '{}'),
+                true
+            );
+
+            if (!is_array($arguments)) {
+                $arguments = [];
+            }
+
+            $toolResult = executeAiReadTool(
+                $conn,
+                (string) ($call['name'] ?? ''),
+                $arguments,
+                $userId,
+                $role,
+                $companyId
+            );
+
+            $toolOutputs[] = [
+                'type' => 'function_call_output',
+                'call_id' =>
+                    (string) ($call['call_id'] ?? ''),
+                'output' => json_encode(
+                    $toolResult,
+                    JSON_UNESCAPED_SLASHES
+                    | JSON_UNESCAPED_UNICODE
+                )
+            ];
+        }
+
+        $result = sendOpenAiResponsePayload([
+            'model' => OPENAI_MODEL,
+            'instructions' => $instructions,
+            'previous_response_id' =>
+                $result['id'] ?? null,
+            'input' => $toolOutputs,
+            'max_output_tokens' => 900,
+            'tools' => $tools,
+            'parallel_tool_calls' => false,
+        ]);
+    }
+
+    $text = extractAiResponseText($result);
+
+    if ($text === '') {
+        throw new RuntimeException(
+            'The AI returned an empty response.'
+        );
+    }
+
+    return [
+        'text' => $text,
+        'response_id' =>
+            $result['id'] ?? null,
+        'model' =>
+            $result['model'] ?? OPENAI_MODEL,
+        'usage' =>
+            $result['usage'] ?? null,
+    ];
+}
