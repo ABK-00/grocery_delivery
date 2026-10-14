@@ -169,9 +169,15 @@ try {
             | JSON_UNESCAPED_UNICODE
         );
 
-    $result = callOpenAiResponses(
+    $result = callOpenAiResponsesWithTools(
+        $conn,
         $history,
-        $instructions
+        $instructions,
+        (int) $userId,
+        $role,
+        $companyId !== null
+            ? (int) $companyId
+            : null
     );
 
     $conn->beginTransaction();
