@@ -162,6 +162,8 @@ if (!isset($_SESSION['user_name'])) {
             My Deliveries
         </a>
 
+        <a href="history.php" class="<?= $currentPage === 'history.php' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i>Delivery History</a>
+        <a href="profile.php" class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i>My Profile</a>
         <a href="../assistant.php"><i class="bi bi-stars"></i>AI Assistant</a>
         <a href="../notifications.php"><i class="bi bi-bell"></i>Notifications</a>
         <a href="../support.php"><i class="bi bi-life-preserver"></i>Support</a>
