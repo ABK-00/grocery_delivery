@@ -11,6 +11,11 @@ $companyId = currentCompanyId();
 $message = "";
 $messageType = "success";
 
+if (empty($_SESSION['orders_csrf'])) {
+    $_SESSION['orders_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 $allowedStatuses = [
     "pending",
     "confirmed",
@@ -73,6 +78,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($action === "update_status") {
 
+        $csrf = (string) ($_POST["csrf_token"] ?? '');
+
+        if (
+            $csrf === ''
+            || !hash_equals($_SESSION['orders_csrf'], $csrf)
+        ) {
+            header(
+                "Location: orders.php?error="
+                . urlencode("Your session expired. Refresh and try again.")
+            );
+            exit;
+        }
+
         $orderId = (int) ($_POST["order_id"] ?? 0);
         $newStatus = $_POST["status"] ?? "";
 
@@ -89,16 +107,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $conn->beginTransaction();
 
             $stmt = $conn->prepare("
-                SELECT id
+                SELECT
+                    id,
+                    user_id,
+                    order_number,
+                    status,
+                    payment_status
                 FROM orders
-                WHERE id = ? AND company_id = ?
+                WHERE id = ?
+                  AND company_id = ?
                 FOR UPDATE
             ");
 
             $stmt->execute([$orderId, $companyId]);
 
-            if (!$stmt->fetch()) {
+            $lockedOrder = $stmt->fetch();
+
+            if (!$lockedOrder) {
                 throw new Exception("Order not found.");
+            }
+
+            validateOrderStatusTransition(
+                $lockedOrder["status"],
+                $newStatus,
+                $lockedOrder["payment_status"]
+            );
+
+            if (
+                $newStatus === "cancelled"
+                && $lockedOrder["payment_status"] !== "paid"
+            ) {
+                releaseOrderStock(
+                    $conn,
+                    $orderId
+                );
             }
 
             $stmt = $conn->prepare("
@@ -171,6 +213,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
                 }
             }
+
+            createNotification(
+                $conn,
+                (int) $lockedOrder["user_id"],
+                "order",
+                "Order status updated",
+                "Order #" . $lockedOrder["order_number"]
+                    . " is now "
+                    . ucwords(str_replace("_", " ", $newStatus))
+                    . ".",
+                BASE_URL . "/order_details.php?id=" . $orderId
+            );
+
+            writeAuditLog(
+                $conn,
+                currentUserId(),
+                $companyId,
+                "order.status_changed.admin_quick",
+                "order",
+                (string) $orderId,
+                [
+                    "from" => $lockedOrder["status"],
+                    "to" => $newStatus
+                ]
+            );
 
             $conn->commit();
 
@@ -840,6 +907,11 @@ $totalRevenue = (float)$stat->fetchColumn();
                                 <form
                                     method="POST"
                                     class="status-form d-flex gap-1">
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="<?= e($_SESSION['orders_csrf']) ?>">
 
                                     <input
                                         type="hidden"
