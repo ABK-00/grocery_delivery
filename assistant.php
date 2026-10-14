@@ -120,6 +120,44 @@ $dashboardUrl = match ($role) {
     'delivery_partner' => BASE_URL . '/delivery/dashboard.php',
     default => BASE_URL . '/customer/dashboard.php',
 };
+
+$quickPrompts = match ($role) {
+    'super_admin' => [
+        'Give me a platform health brief.',
+        'Which companies have subscription risk?',
+        'Summarize the urgent support queue.',
+        'What should I prioritize today?'
+    ],
+    'admin' => [
+        'Give me a 30-day business performance brief.',
+        'Which products need stock attention?',
+        'Summarize my open support issues.',
+        'What should my team prioritize today?'
+    ],
+    'staff' => [
+        'What orders need attention right now?',
+        'Help me check an order status.',
+        'Which products are low in stock?'
+    ],
+    'delivery_partner' => [
+        'Summarize my active deliveries.',
+        'Help me with my current delivery workflow.',
+        'What should I do before marking an order delivered?'
+    ],
+    default => $assistantScope === 'customer_personalization'
+        ? [
+            'Recommend groceries that fit my preferences.',
+            'Help me build a balanced shopping basket.',
+            'Show me good options within my usual budget.',
+            'What should I reorder based on my shopping patterns?'
+        ]
+        : [
+            'Where is my latest order?',
+            'Help me understand a payment issue.',
+            'How does delivery tracking work?',
+            'Help me find a product.'
+        ],
+};
 ?>
 <!doctype html>
 <html lang="en">
@@ -428,6 +466,21 @@ $dashboardUrl = match ($role) {
 
             </div>
 
+            <div
+                class="quick-prompts px-3 pt-3 d-flex flex-wrap gap-2"
+                id="quickPrompts"
+            >
+                <?php foreach ($quickPrompts as $prompt): ?>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary quick-prompt"
+                        data-prompt="<?= e($prompt) ?>"
+                    >
+                        <?= e($prompt) ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+
             <form class="chat-form" id="chatForm">
                 <input
                     type="hidden"
@@ -566,6 +619,15 @@ input.addEventListener('keydown', function (event) {
         form.requestSubmit();
     }
 });
+
+document
+    .querySelectorAll('.quick-prompt')
+    .forEach(button => {
+        button.addEventListener('click', function () {
+            input.value = button.dataset.prompt || '';
+            input.focus();
+        });
+    });
 
 messages.scrollTop = messages.scrollHeight;
 </script>
