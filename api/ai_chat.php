@@ -72,6 +72,23 @@ $scope = aiScopeForRole(
         : null
 );
 
+$aiEnabled =
+    (string) platformSetting(
+        $conn,
+        'ai_enabled',
+        '1'
+    ) !== '0';
+
+if (!$aiEnabled) {
+    http_response_code(503);
+    echo json_encode([
+        'success' => false,
+        'message' =>
+            'The AI assistant is temporarily disabled by the platform administrator.'
+    ]);
+    exit;
+}
+
 $dailyLimit = max(
     1,
     (int) platformSetting(
