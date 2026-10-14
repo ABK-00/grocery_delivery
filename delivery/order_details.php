@@ -201,7 +201,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT
                 o.id AS order_id,
                 o.user_id,
-                o.order_number
+                o.company_id,
+                o.order_number,
+                o.status AS order_status,
+                o.payment_status
             FROM deliveries d
             INNER JOIN orders o
                 ON o.id = d.order_id
@@ -218,6 +221,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $orderId = (int) $orderInfo['order_id'];
+
+        if ((int) $orderInfo['company_id'] !== (int) $companyId) {
+            throw new Exception(
+                "This delivery does not belong to your company."
+            );
+        }
+
+        if ($orderInfo['payment_status'] !== 'paid') {
+            throw new Exception(
+                "An unpaid order cannot be collected or delivered."
+            );
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -242,7 +257,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
 
             case 'cancelled':
-                $orderStatus = 'cancelled';
+                // Cancelling an assignment does not cancel a paid order.
+                // Return it to READY so the vendor can reassign delivery.
+                $orderStatus = 'ready';
                 break;
         }
 
@@ -294,14 +311,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$partnerId]);
         }
 
+        $customerMessage =
+            $newStatus === 'cancelled'
+                ? 'The delivery assignment for order #'
+                    . $orderInfo['order_number']
+                    . ' was cancelled. The store will assign another delivery partner.'
+                : 'Order #'
+                    . $orderInfo['order_number']
+                    . ' is now '
+                    . ucwords(str_replace('_', ' ', $newStatus))
+                    . '.';
+
         createNotification(
             $conn,
             (int) $orderInfo['user_id'],
             'delivery',
             'Delivery update',
-            'Order #' . $orderInfo['order_number'] . ' is now ' . ucwords(str_replace('_', ' ', $newStatus)) . '.',
+            $customerMessage,
             BASE_URL . '/customer/track_order.php?order_id=' . $orderId
         );
+
+        if ($newStatus === 'cancelled') {
+            notifyCompanyRoles(
+                $conn,
+                (int) $companyId,
+                ['admin', 'staff'],
+                'delivery',
+                'Delivery needs reassignment',
+                'Order #'
+                    . $orderInfo['order_number']
+                    . ' was returned to Ready after its delivery assignment was cancelled.',
+                BASE_URL . '/admin/order_details.php?id=' . $orderId
+            );
+        }
 
         writeAuditLog(
             $conn,
