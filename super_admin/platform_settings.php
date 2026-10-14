@@ -21,7 +21,8 @@ $keys = [
     'subscription_quarterly_price',
     'subscription_yearly_price',
     'default_delivery_fee',
-    'ai_daily_request_limit'
+    'ai_daily_request_limit',
+    'ai_enabled'
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -53,6 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($value !== '' && (!is_numeric($value) || (float)$value < 0)) {
                         throw new RuntimeException('Prices and fees must be valid non-negative numbers.');
                     }
+                }
+
+                if ($key === 'ai_enabled') {
+                    $value =
+                        isset($_POST['ai_enabled'])
+                            ? '1'
+                            : '0';
                 }
 
                 if ($key === 'ai_daily_request_limit') {
@@ -173,6 +181,26 @@ foreach ($stmt->fetchAll() as $row) {
                         name="ai_daily_request_limit"
                         value="<?= e($settings['ai_daily_request_limit'] ?? '100') ?>"
                     >
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label d-block">AI Assistant</label>
+                    <div class="form-check form-switch mt-2">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="aiEnabled"
+                            name="ai_enabled"
+                            value="1"
+                            <?= ($settings['ai_enabled'] ?? '1') !== '0' ? 'checked' : '' ?>
+                        >
+                        <label
+                            class="form-check-label"
+                            for="aiEnabled"
+                        >
+                            Enable AI across the platform
+                        </label>
+                    </div>
                 </div>
             </div>
 
