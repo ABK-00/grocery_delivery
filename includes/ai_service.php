@@ -74,6 +74,56 @@ function buildAiBusinessContext(
         $stmt->execute([$userId]);
         $context['preferences'] = $stmt->fetch() ?: null;
 
+        $stmt = $conn->prepare("
+            SELECT
+                oi.product_name,
+                SUM(oi.quantity) AS quantity_bought,
+                MAX(o.created_at) AS last_ordered_at
+            FROM order_items oi
+            INNER JOIN orders o ON o.id = oi.order_id
+            WHERE o.user_id = ?
+              AND o.payment_status = 'paid'
+            GROUP BY oi.product_id, oi.product_name
+            ORDER BY quantity_bought DESC, last_ordered_at DESC
+            LIMIT 12
+        ");
+        $stmt->execute([$userId]);
+        $context['purchase_patterns'] = $stmt->fetchAll();
+
+        $context['product_candidates'] = $conn->query("
+            SELECT
+                p.id,
+                p.name,
+                p.price,
+                p.stock,
+                p.unit,
+                cat.name AS category,
+                COALESCE(cs.display_name, c.company_name) AS store_name
+            FROM products p
+            INNER JOIN companies c ON c.id = p.company_id
+            LEFT JOIN company_storefronts cs ON cs.company_id = c.id
+            LEFT JOIN categories cat ON cat.id = p.category_id
+            WHERE p.status = 'active'
+              AND p.stock > 0
+              AND c.status = 'active'
+              AND COALESCE(cs.store_status, 'open') = 'open'
+              AND (
+                    (
+                        c.subscription_plan = 'trial'
+                        AND c.trial_ends_at IS NOT NULL
+                        AND c.trial_ends_at >= NOW()
+                    )
+                    OR
+                    (
+                        c.subscription_plan IN ('monthly','quarterly','yearly')
+                        AND c.subscription_ends_at IS NOT NULL
+                        AND c.subscription_ends_at >= NOW()
+                    )
+              )
+            ORDER BY p.updated_at DESC
+            LIMIT 30
+        ")->fetchAll();
+
         return $context;
     }
 
@@ -97,6 +147,19 @@ function buildAiBusinessContext(
             ORDER BY updated_at DESC
             LIMIT 12
         ")->fetchAll();
+
+        $context['support_load'] = [
+            'open' => (int) $conn->query("SELECT COUNT(*) FROM support_tickets WHERE status='open'")->fetchColumn(),
+            'in_progress' => (int) $conn->query("SELECT COUNT(*) FROM support_tickets WHERE status='in_progress'")->fetchColumn(),
+            'urgent' => (int) $conn->query("SELECT COUNT(*) FROM support_tickets WHERE priority='urgent' AND status IN ('open','in_progress')")->fetchColumn(),
+        ];
+
+        $context['payment_health'] = [
+            'paid_order_payments' => (int) $conn->query("SELECT COUNT(*) FROM payments WHERE status='paid'")->fetchColumn(),
+            'failed_order_payments' => (int) $conn->query("SELECT COUNT(*) FROM payments WHERE status='failed'")->fetchColumn(),
+            'paid_subscriptions' => (int) $conn->query("SELECT COUNT(*) FROM subscription_payments WHERE status='paid'")->fetchColumn(),
+            'failed_subscriptions' => (int) $conn->query("SELECT COUNT(*) FROM subscription_payments WHERE status='failed'")->fetchColumn(),
+        ];
 
         return $context;
     }
@@ -142,6 +205,45 @@ function buildAiBusinessContext(
         ");
         $stmt->execute([$companyId]);
         $context['inventory_watch'] = $stmt->fetchAll();
+
+        $stmt = $conn->prepare("
+            SELECT
+                o.order_number,
+                o.status,
+                o.payment_status,
+                o.total_amount,
+                o.created_at,
+                u.name AS customer_name
+            FROM orders o
+            INNER JOIN users u ON u.id = o.user_id
+            WHERE o.company_id = ?
+            ORDER BY o.created_at DESC
+            LIMIT 12
+        ");
+        $stmt->execute([$companyId]);
+        $context['recent_company_orders'] = $stmt->fetchAll();
+
+        $stmt = $conn->prepare("
+            SELECT
+                COUNT(*) AS active_staff,
+                SUM(role='delivery_partner' AND status='active') AS active_delivery_accounts
+            FROM users
+            WHERE company_id = ?
+              AND status = 'active'
+        ");
+        $stmt->execute([$companyId]);
+        $context['team_summary'] = $stmt->fetch();
+
+        $stmt = $conn->prepare("
+            SELECT
+                COUNT(*) AS open_tickets,
+                SUM(priority='urgent') AS urgent_tickets
+            FROM support_tickets
+            WHERE company_id = ?
+              AND status IN ('open','in_progress')
+        ");
+        $stmt->execute([$companyId]);
+        $context['support_summary'] = $stmt->fetch();
     }
 
     if ($role === 'delivery_partner') {
