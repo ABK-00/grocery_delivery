@@ -5,7 +5,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
 requireRole('admin');
-requireCompanyAccess();
+requireCompanyAccess(true);
 
 $userId = currentUserId();
 $companyId = currentCompanyId();
