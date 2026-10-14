@@ -23,6 +23,15 @@ USE grocery_delivery;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS ai_messages;
+DROP TABLE IF EXISTS ai_conversations;
+DROP TABLE IF EXISTS support_messages;
+DROP TABLE IF EXISTS support_tickets;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS customer_preferences;
+DROP TABLE IF EXISTS customer_addresses;
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS platform_settings;
 DROP TABLE IF EXISTS delivery_locations;
 DROP TABLE IF EXISTS deliveries;
 DROP TABLE IF EXISTS payments;
@@ -431,6 +440,7 @@ CREATE TABLE orders (
 
     company_id INT UNSIGNED NOT NULL,
     user_id INT UNSIGNED NOT NULL,
+    idempotency_key VARCHAR(64) DEFAULT NULL,
 
     order_number VARCHAR(40) NOT NULL,
 
@@ -465,6 +475,7 @@ CREATE TABLE orders (
     ) NOT NULL DEFAULT 'pending',
 
     payment_reference VARCHAR(100) DEFAULT NULL,
+    stock_released_at DATETIME DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
@@ -472,6 +483,7 @@ CREATE TABLE orders (
         ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE KEY uq_orders_order_number (order_number),
+    UNIQUE KEY uq_orders_idempotency_key (idempotency_key),
 
     INDEX idx_orders_company (company_id),
     INDEX idx_orders_user (user_id),
@@ -570,6 +582,7 @@ CREATE TABLE payments (
         NOT NULL DEFAULT 'paystack',
 
     gateway_response LONGTEXT DEFAULT NULL,
+    authorization_url TEXT DEFAULT NULL,
     paid_at DATETIME DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -681,6 +694,191 @@ CREATE TABLE delivery_locations (
         ON UPDATE CASCADE
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- CUSTOMER PREFERENCES / ADDRESSES
+-- ============================================================
+
+CREATE TABLE customer_preferences (
+    user_id INT UNSIGNED PRIMARY KEY,
+    preferred_categories TEXT DEFAULT NULL,
+    disliked_items TEXT DEFAULT NULL,
+    budget_preference ENUM('budget','balanced','premium')
+        NOT NULL DEFAULT 'balanced',
+    dietary_notes TEXT DEFAULT NULL,
+    personalization_enabled TINYINT(1)
+        NOT NULL DEFAULT 1,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_customer_preferences_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE customer_addresses (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    label VARCHAR(60) NOT NULL DEFAULT 'Home',
+    recipient_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    address TEXT NOT NULL,
+    is_default TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_customer_addresses_user (user_id, is_default),
+    CONSTRAINT fk_customer_addresses_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- AI ASSISTANT
+-- ============================================================
+
+CREATE TABLE ai_conversations (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    company_id INT UNSIGNED DEFAULT NULL,
+    scope ENUM(
+        'customer_support',
+        'customer_personalization',
+        'admin_assistant',
+        'super_admin_assistant',
+        'staff_assistant',
+        'delivery_assistant'
+    ) NOT NULL,
+    title VARCHAR(180) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ai_conversations_user (user_id, updated_at),
+    INDEX idx_ai_conversations_company (company_id, updated_at),
+    CONSTRAINT fk_ai_conversations_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_ai_conversations_company
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE ai_messages (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    conversation_id BIGINT UNSIGNED NOT NULL,
+    role ENUM('user','assistant') NOT NULL,
+    content LONGTEXT NOT NULL,
+    metadata JSON DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ai_messages_conversation (conversation_id, id),
+    CONSTRAINT fk_ai_messages_conversation
+        FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- NOTIFICATIONS / SUPPORT
+-- ============================================================
+
+CREATE TABLE notifications (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'general',
+    title VARCHAR(180) NOT NULL,
+    message TEXT NOT NULL,
+    link VARCHAR(255) DEFAULT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notifications_user (user_id, is_read, created_at),
+    CONSTRAINT fk_notifications_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE support_tickets (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ticket_number VARCHAR(40) NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    company_id INT UNSIGNED DEFAULT NULL,
+    category VARCHAR(60) NOT NULL,
+    subject VARCHAR(180) NOT NULL,
+    status ENUM('open','in_progress','resolved','closed')
+        NOT NULL DEFAULT 'open',
+    priority ENUM('low','normal','high','urgent')
+        NOT NULL DEFAULT 'normal',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_support_ticket_number (ticket_number),
+    INDEX idx_support_user (user_id, status),
+    INDEX idx_support_company (company_id, status),
+    CONSTRAINT fk_support_ticket_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_support_ticket_company
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE support_messages (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ticket_id BIGINT UNSIGNED NOT NULL,
+    user_id INT UNSIGNED NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_support_messages_ticket (ticket_id, id),
+    CONSTRAINT fk_support_message_ticket
+        FOREIGN KEY (ticket_id) REFERENCES support_tickets(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_support_message_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- PLATFORM SETTINGS / AUDIT
+-- ============================================================
+
+CREATE TABLE platform_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT DEFAULT NULL,
+    updated_by INT UNSIGNED DEFAULT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_platform_settings_user
+        FOREIGN KEY (updated_by) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE audit_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED DEFAULT NULL,
+    company_id INT UNSIGNED DEFAULT NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(80) DEFAULT NULL,
+    entity_id VARCHAR(80) DEFAULT NULL,
+    details JSON DEFAULT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_user (user_id, created_at),
+    INDEX idx_audit_company (company_id, created_at),
+    INDEX idx_audit_action (action, created_at),
+    CONSTRAINT fk_audit_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_audit_company
+        FOREIGN KEY (company_id) REFERENCES companies(id)
+        ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
 
