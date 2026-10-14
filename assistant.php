@@ -10,7 +10,18 @@ requireLogin();
 $userId = currentUserId();
 $role = (string) ($_SESSION['role'] ?? '');
 $companyId = currentCompanyId();
-$assistantScope = aiScopeForRole($role);
+
+$requestedMode =
+    $role === 'customer'
+        ? (string) ($_GET['mode'] ?? 'support')
+        : null;
+
+$assistantScope = aiScopeForRole(
+    $role,
+    $requestedMode === 'personalization'
+        ? 'customer_personalization'
+        : null
+);
 
 if (empty($_SESSION['ai_chat_csrf'])) {
     $_SESSION['ai_chat_csrf'] =
@@ -83,20 +94,23 @@ $roleTitle = match ($role) {
     'admin' => 'Business AI Assistant',
     'staff' => 'Operations AI Assistant',
     'delivery_partner' => 'Delivery AI Assistant',
-    default => 'Shopping & Support Assistant',
+    default => $assistantScope === 'customer_personalization'
+        ? 'Personal Shopping Assistant'
+        : 'Customer Support Assistant',
 };
 
 $roleIntro = match ($role) {
     'super_admin' =>
-        'Ask about platform performance, subscriptions, companies, risks, and operational priorities.',
+        'Ask about platform performance, subscriptions, companies, support load, risks, and operational priorities.',
     'admin' =>
-        'Ask about your store, orders, inventory, customers, staff, deliveries, and business priorities.',
+        'Ask about your store, orders, inventory, customers, support queue, deliveries, and business priorities.',
     'staff' =>
         'Get help processing orders and handling day-to-day store operations.',
     'delivery_partner' =>
         'Get help with your assigned deliveries and delivery workflow.',
-    default =>
-        'Get order help, shopping support, and recommendations based on your preferences.',
+    default => $assistantScope === 'customer_personalization'
+        ? 'Discover products and get recommendations using your enabled shopping preferences and purchase patterns.'
+        : 'Get help with orders, payments, deliveries, product discovery, and support.',
 };
 
 $dashboardUrl = match ($role) {
@@ -304,12 +318,38 @@ $dashboardUrl = match ($role) {
         </div>
     <?php endif; ?>
 
+    <?php if ($role === 'customer'): ?>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a
+                href="<?= BASE_URL ?>/assistant.php?mode=support"
+                class="btn <?= $assistantScope === 'customer_support' ? 'btn-dark' : 'btn-outline-dark' ?>"
+            >
+                <i class="bi bi-headset"></i>
+                Support
+            </a>
+            <a
+                href="<?= BASE_URL ?>/assistant.php?mode=personalization"
+                class="btn <?= $assistantScope === 'customer_personalization' ? 'btn-success' : 'btn-outline-success' ?>"
+            >
+                <i class="bi bi-stars"></i>
+                Personal Shopping
+            </a>
+            <a
+                href="<?= BASE_URL ?>/customer/preferences.php"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-sliders"></i>
+                Preferences
+            </a>
+        </div>
+    <?php endif; ?>
+
     <div class="ai-layout">
 
         <aside class="panel history">
 
             <a
-                href="<?= BASE_URL ?>/assistant.php"
+                href="<?= BASE_URL ?>/assistant.php<?= $role === 'customer' ? '?mode=' . ($assistantScope === 'customer_personalization' ? 'personalization' : 'support') : '' ?>"
                 class="btn btn-success w-100 mb-3"
             >
                 <i class="bi bi-plus-lg"></i>
@@ -328,7 +368,7 @@ $dashboardUrl = match ($role) {
 
             <?php foreach ($conversations as $item): ?>
                 <a
-                    href="<?= BASE_URL ?>/assistant.php?conversation_id=<?= (int) $item['id'] ?>"
+                    href="<?= BASE_URL ?>/assistant.php?<?= $role === 'customer' ? 'mode=' . ($assistantScope === 'customer_personalization' ? 'personalization' : 'support') . '&' : '' ?>conversation_id=<?= (int) $item['id'] ?>"
                     class="conversation-link <?= (int) $conversationId === (int) $item['id'] ? 'active' : '' ?>"
                 >
                     <div class="fw-semibold text-truncate">
@@ -393,6 +433,11 @@ $dashboardUrl = match ($role) {
                     type="hidden"
                     name="csrf_token"
                     value="<?= e($_SESSION['ai_chat_csrf']) ?>"
+                >
+                <input
+                    type="hidden"
+                    name="assistant_scope"
+                    value="<?= e($assistantScope) ?>"
                 >
                 <input
                     type="hidden"
