@@ -591,30 +591,79 @@ function aiReadToolsForRole(string $role): array
         'strict' => true
     ];
 
+
+    $supportTicketTool = [
+        'type' => 'function',
+        'name' => 'lookup_support_ticket',
+        'description' =>
+            'Look up a support ticket by ticket number within the current authorization scope.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'ticket_number' => [
+                    'type' => 'string',
+                    'description' => 'Support ticket number.'
+                ]
+            ],
+            'required' => ['ticket_number'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $deliveryStatusTool = [
+        'type' => 'function',
+        'name' => 'lookup_delivery_status',
+        'description' =>
+            'Look up delivery status and the latest recorded location metadata for an authorized order.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'order_number' => [
+                    'type' => 'string',
+                    'description' => 'Order number.'
+                ]
+            ],
+            'required' => ['order_number'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
     return match ($role) {
         'customer' => [
             $orderTool,
             $productTool,
-            $recommendationTool
+            $recommendationTool,
+            $supportTicketTool,
+            $deliveryStatusTool
         ],
         'admin' => [
             $orderTool,
             $inventoryTool,
             $businessMetricsTool,
-            $supportQueueTool
+            $supportQueueTool,
+            $supportTicketTool,
+            $deliveryStatusTool
         ],
         'staff' => [
             $orderTool,
-            $inventoryTool
+            $inventoryTool,
+            $supportTicketTool,
+            $deliveryStatusTool
         ],
         'delivery_partner' => [
-            $orderTool
+            $orderTool,
+            $supportTicketTool,
+            $deliveryStatusTool
         ],
         'super_admin' => [
             $orderTool,
             $companyTool,
             $supportQueueTool,
-            $subscriptionRiskTool
+            $subscriptionRiskTool,
+            $supportTicketTool,
+            $deliveryStatusTool
         ],
         default => []
     };
@@ -1209,6 +1258,172 @@ function executeAiReadTool(
                 'budget_preference' => 'balanced'
             ],
             'products' => $stmt->fetchAll()
+        ];
+    }
+
+
+    if ($name === 'lookup_support_ticket') {
+        $ticketNumber = trim(
+            (string) ($arguments['ticket_number'] ?? '')
+        );
+
+        if ($ticketNumber === '') {
+            return ['error' => 'Ticket number is required.'];
+        }
+
+        $sql = "
+            SELECT
+                st.id,
+                st.ticket_number,
+                st.category,
+                st.subject,
+                st.status,
+                st.priority,
+                st.created_at,
+                st.updated_at,
+                u.name AS requester_name,
+                c.company_name
+            FROM support_tickets st
+            INNER JOIN users u ON u.id = st.user_id
+            LEFT JOIN companies c ON c.id = st.company_id
+            WHERE st.ticket_number = ?
+        ";
+        $params = [$ticketNumber];
+
+        if ($role !== 'super_admin') {
+            $sql .= " AND st.user_id = ? ";
+            $params[] = $userId;
+        }
+
+        $sql .= " LIMIT 1 ";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $ticket = $stmt->fetch();
+
+        if (!$ticket) {
+            return ['found' => false];
+        }
+
+        $messageStmt = $conn->prepare("
+            SELECT
+                sm.message,
+                sm.created_at,
+                u.name,
+                u.role
+            FROM support_messages sm
+            INNER JOIN users u ON u.id = sm.user_id
+            WHERE sm.ticket_id = ?
+            ORDER BY sm.id DESC
+            LIMIT 5
+        ");
+        $messageStmt->execute([
+            $ticket['id']
+        ]);
+
+        $ticket['recent_messages'] = array_reverse(
+            $messageStmt->fetchAll()
+        );
+        unset($ticket['id']);
+
+        return [
+            'found' => true,
+            'ticket' => $ticket
+        ];
+    }
+
+    if ($name === 'lookup_delivery_status') {
+        $orderNumber = trim(
+            (string) ($arguments['order_number'] ?? '')
+        );
+
+        if ($orderNumber === '') {
+            return ['error' => 'Order number is required.'];
+        }
+
+        $sql = "
+            SELECT
+                o.id,
+                o.order_number,
+                o.status AS order_status,
+                o.payment_status,
+                o.delivery_address,
+                d.id AS delivery_id,
+                d.status AS delivery_status,
+                d.assigned_at,
+                d.picked_up_at,
+                d.delivered_at,
+                du.name AS delivery_partner_name,
+                du.phone AS delivery_partner_phone
+            FROM orders o
+            LEFT JOIN deliveries d
+                ON d.order_id = o.id
+            LEFT JOIN delivery_partners dp
+                ON dp.id = d.delivery_partner_id
+            LEFT JOIN users du
+                ON du.id = dp.user_id
+            WHERE o.order_number = ?
+        ";
+        $params = [$orderNumber];
+
+        if ($role === 'customer') {
+            $sql .= " AND o.user_id = ? ";
+            $params[] = $userId;
+        } elseif (
+            in_array($role, ['admin','staff'], true)
+        ) {
+            $sql .= " AND o.company_id = ? ";
+            $params[] = $companyId;
+        } elseif ($role === 'delivery_partner') {
+            $sql .= "
+                AND dp.user_id = ?
+            ";
+            $params[] = $userId;
+        } elseif ($role !== 'super_admin') {
+            return ['error' => 'Delivery lookup is unavailable.'];
+        }
+
+        $sql .= " LIMIT 1 ";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $delivery = $stmt->fetch();
+
+        if (!$delivery) {
+            return ['found' => false];
+        }
+
+        if (!empty($delivery['delivery_id'])) {
+            $locationStmt = $conn->prepare("
+                SELECT
+                    latitude,
+                    longitude,
+                    accuracy,
+                    speed,
+                    heading,
+                    recorded_at
+                FROM delivery_locations
+                WHERE delivery_id = ?
+                ORDER BY recorded_at DESC, id DESC
+                LIMIT 1
+            ");
+            $locationStmt->execute([
+                $delivery['delivery_id']
+            ]);
+            $delivery['latest_location'] =
+                $locationStmt->fetch() ?: null;
+        } else {
+            $delivery['latest_location'] = null;
+        }
+
+        unset(
+            $delivery['id'],
+            $delivery['delivery_id']
+        );
+
+        return [
+            'found' => true,
+            'delivery' => $delivery
         ];
     }
 
