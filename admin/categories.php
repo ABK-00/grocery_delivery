@@ -8,6 +8,19 @@ requireRole("admin");
 requireCompanyAccess();
 $companyId = currentCompanyId();
 
+$pageCsrf = csrfToken('admin_categories');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'admin_categories',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
+
 $message = "";
 $messageType = "success";
 
@@ -834,6 +847,11 @@ try {
                                 <div class="modal-content">
 
                                     <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                                         <div class="modal-header">
 
@@ -954,6 +972,11 @@ try {
         <div class="modal-content">
 
             <form method="POST">
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e($pageCsrf) ?>"
+                >
 
                 <div class="modal-header">
 
