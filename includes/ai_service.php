@@ -186,6 +186,53 @@ function buildAiBusinessContext(
         return $context;
     }
 
+    if ($role === 'delivery_partner') {
+        /*
+         * Delivery partners intentionally receive only their assigned-delivery
+         * context. They must not receive company-wide sales, inventory,
+         * customer, staff, or support information.
+         */
+        if ($companyId) {
+            $stmt = $conn->prepare("
+                SELECT
+                    company_name
+                FROM companies
+                WHERE id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$companyId]);
+            $context['company'] = $stmt->fetch();
+        }
+
+        $stmt = $conn->prepare("
+            SELECT
+                o.order_number,
+                o.delivery_address,
+                o.delivery_phone,
+                d.status,
+                d.assigned_at,
+                d.picked_up_at,
+                d.delivered_at
+            FROM delivery_partners dp
+            INNER JOIN deliveries d
+                ON d.delivery_partner_id = dp.id
+            INNER JOIN orders o
+                ON o.id = d.order_id
+            WHERE dp.user_id = ?
+              AND d.status IN (
+                    'assigned',
+                    'picked_up',
+                    'out_for_delivery'
+              )
+            ORDER BY d.assigned_at DESC
+            LIMIT 5
+        ");
+        $stmt->execute([$userId]);
+        $context['active_deliveries'] = $stmt->fetchAll();
+
+        return $context;
+    }
+
     if ($companyId) {
         $stmt = $conn->prepare("
             SELECT
@@ -266,26 +313,6 @@ function buildAiBusinessContext(
         ");
         $stmt->execute([$companyId]);
         $context['support_summary'] = $stmt->fetch();
-    }
-
-    if ($role === 'delivery_partner') {
-        $stmt = $conn->prepare("
-            SELECT
-                o.order_number,
-                o.delivery_address,
-                o.delivery_phone,
-                d.status,
-                d.assigned_at
-            FROM delivery_partners dp
-            INNER JOIN deliveries d ON d.delivery_partner_id = dp.id
-            INNER JOIN orders o ON o.id = d.order_id
-            WHERE dp.user_id = ?
-              AND d.status IN ('assigned','picked_up','out_for_delivery')
-            ORDER BY d.assigned_at DESC
-            LIMIT 5
-        ");
-        $stmt->execute([$userId]);
-        $context['active_deliveries'] = $stmt->fetchAll();
     }
 
     return $context;
