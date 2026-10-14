@@ -11,6 +11,13 @@ $userId = currentUserId();
 $role = (string) ($_SESSION['role'] ?? '');
 $companyId = currentCompanyId();
 
+$platformAiEnabled =
+    (string) platformSetting(
+        $conn,
+        'ai_enabled',
+        '1'
+    ) !== '0';
+
 $requestedMode =
     $role === 'customer'
         ? (string) ($_GET['mode'] ?? 'support')
@@ -347,7 +354,12 @@ $quickPrompts = match ($role) {
         </a>
     </div>
 
-    <?php if (!OPENAI_AI_ENABLED): ?>
+    <?php if (!$platformAiEnabled): ?>
+        <div class="alert alert-secondary">
+            <strong>The AI assistant is currently disabled.</strong>
+            A platform administrator can re-enable it from Platform Settings.
+        </div>
+    <?php elseif (!OPENAI_AI_ENABLED): ?>
         <div class="alert alert-warning">
             <strong>AI is not configured yet.</strong>
             Add your API key in
