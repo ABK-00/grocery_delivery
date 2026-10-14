@@ -5,6 +5,19 @@ require_once "../includes/auth.php";
 require_once "../includes/functions.php";
 
 requireRole('admin');
+
+$pageCsrf = csrfToken('admin_profile');
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && !validateCsrfToken(
+        'admin_profile',
+        $_POST['csrf_token'] ?? null
+    )
+) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+}
 requireCompanyAccess();
 $companyId = currentCompanyId();
 
@@ -843,6 +856,7 @@ $joinedDate = !empty($admin['created_at'])
                 <div class="profile-card-body">
 
                     <form method="POST">
+            <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
                         <input
                             type="hidden"
@@ -1090,6 +1104,7 @@ $joinedDate = !empty($admin['created_at'])
                         method="POST"
                         id="passwordForm"
                     >
+            <input type="hidden" name="csrf_token" value="<?= e($pageCsrf) ?>">
 
                         <input
                             type="hidden"
