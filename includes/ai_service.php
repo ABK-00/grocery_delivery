@@ -2,8 +2,16 @@
 
 require_once __DIR__ . '/../config/ai.php';
 
-function aiScopeForRole(string $role): string
-{
+function aiScopeForRole(
+    string $role,
+    ?string $requestedScope = null
+): string {
+    if ($role === 'customer') {
+        return $requestedScope === 'customer_personalization'
+            ? 'customer_personalization'
+            : 'customer_support';
+    }
+
     return match ($role) {
         'super_admin' => 'super_admin_assistant',
         'admin' => 'admin_assistant',
@@ -283,7 +291,10 @@ function buildAiBusinessContext(
     return $context;
 }
 
-function aiInstructionsForRole(string $role): string
+function aiInstructionsForRole(
+    string $role,
+    ?string $scope = null
+): string
 {
     $base = "You are the built-in AI for a multi-vendor commerce and delivery platform. "
         . "Use only the supplied application context for account-specific facts. "
@@ -293,10 +304,16 @@ function aiInstructionsForRole(string $role): string
 
     return match ($role) {
         'customer' => $base
-            . " You are a customer-service assistant and shopping helper. "
-            . "Help with orders, payments, delivery, product discovery, and shopping recommendations. "
+            . (
+                $scope === 'customer_personalization'
+                    ? " You are the customer's personal shopping assistant. "
+                        . "Help discover products, compare available choices, plan baskets, stay within the customer's stated budget preference, and explain why recommendations fit. "
+                    : " You are a customer-service assistant. "
+                        . "Help with orders, payments, delivery, account guidance, returns/support routing, and product discovery. "
+            )
             . "Only personalize recommendations when personalization_enabled is true. "
             . "When personalization is disabled, do not infer tastes from purchase history or stored preferences. "
+            . "Treat dietary notes and disliked items as important constraints, but never present them as medical advice. "
             . "Do not recommend unavailable products and do not expose vendor-internal information.",
         'admin' => $base
             . " You are a company administrator's operations assistant. "
@@ -488,12 +505,105 @@ function aiReadToolsForRole(string $role): array
         'strict' => true
     ];
 
+
+    $businessMetricsTool = [
+        'type' => 'function',
+        'name' => 'get_business_metrics',
+        'description' =>
+            'Get current company operational metrics, revenue, order pipeline, and low-stock counts for the current vendor.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'days' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'maximum' => 90,
+                    'description' => 'Number of recent days to summarize.'
+                ]
+            ],
+            'required' => ['days'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $supportQueueTool = [
+        'type' => 'function',
+        'name' => 'get_support_queue',
+        'description' =>
+            'Summarize open support tickets visible to the current administrative role.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'limit' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'maximum' => 20
+                ]
+            ],
+            'required' => ['limit'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $subscriptionRiskTool = [
+        'type' => 'function',
+        'name' => 'get_subscription_risks',
+        'description' =>
+            'Find vendor trials or subscriptions that are expired or approaching expiry for platform administration.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'days' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'maximum' => 60
+                ]
+            ],
+            'required' => ['days'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
+    $recommendationTool = [
+        'type' => 'function',
+        'name' => 'get_personalized_recommendations',
+        'description' =>
+            'Return currently available products ranked using the customer preference profile and paid purchase history when personalization is enabled.',
+        'parameters' => [
+            'type' => 'object',
+            'properties' => [
+                'query' => [
+                    'type' => 'string',
+                    'description' => 'Optional product, category, meal, or shopping need.'
+                ],
+                'limit' => [
+                    'type' => 'integer',
+                    'minimum' => 1,
+                    'maximum' => 12
+                ]
+            ],
+            'required' => ['query', 'limit'],
+            'additionalProperties' => false
+        ],
+        'strict' => true
+    ];
+
     return match ($role) {
         'customer' => [
             $orderTool,
-            $productTool
+            $productTool,
+            $recommendationTool
         ],
-        'admin', 'staff' => [
+        'admin' => [
+            $orderTool,
+            $inventoryTool,
+            $businessMetricsTool,
+            $supportQueueTool
+        ],
+        'staff' => [
             $orderTool,
             $inventoryTool
         ],
@@ -502,7 +612,9 @@ function aiReadToolsForRole(string $role): array
         ],
         'super_admin' => [
             $orderTool,
-            $companyTool
+            $companyTool,
+            $supportQueueTool,
+            $subscriptionRiskTool
         ],
         default => []
     };
@@ -790,6 +902,313 @@ function executeAiReadTool(
 
         return [
             'companies' => $companies
+        ];
+    }
+
+
+    if ($name === 'get_business_metrics') {
+        if ($role !== 'admin' || !$companyId) {
+            return ['error' => 'Business metrics are unavailable.'];
+        }
+
+        $days = max(
+            1,
+            min(90, (int) ($arguments['days'] ?? 30))
+        );
+
+        $stmt = $conn->prepare("
+            SELECT
+                COUNT(*) AS orders,
+                SUM(payment_status='paid') AS paid_orders,
+                SUM(status='pending') AS pending_orders,
+                SUM(status='preparing') AS preparing_orders,
+                SUM(status='ready') AS ready_orders,
+                SUM(status='out_for_delivery') AS out_for_delivery,
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN payment_status='paid'
+                            THEN total_amount
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS paid_revenue
+            FROM orders
+            WHERE company_id = ?
+              AND created_at >= DATE_SUB(
+                    NOW(),
+                    INTERVAL ? DAY
+              )
+        ");
+        $stmt->execute([
+            $companyId,
+            $days
+        ]);
+
+        $lowStockStmt = $conn->prepare("
+            SELECT COUNT(*)
+            FROM products
+            WHERE company_id = ?
+              AND status = 'active'
+              AND stock <= 5
+        ");
+        $lowStockStmt->execute([$companyId]);
+
+        $metrics = $stmt->fetch();
+        $metrics['low_stock_products'] =
+            (int) $lowStockStmt->fetchColumn();
+        $metrics['period_days'] = $days;
+
+        return ['metrics' => $metrics];
+    }
+
+    if ($name === 'get_support_queue') {
+        if (!in_array($role, ['admin', 'super_admin'], true)) {
+            return ['error' => 'Support queue is unavailable.'];
+        }
+
+        $limit = max(
+            1,
+            min(20, (int) ($arguments['limit'] ?? 10))
+        );
+
+        if ($role === 'super_admin') {
+            $stmt = $conn->prepare("
+                SELECT
+                    st.ticket_number,
+                    st.category,
+                    st.subject,
+                    st.status,
+                    st.priority,
+                    st.updated_at,
+                    u.name AS requester_name,
+                    c.company_name
+                FROM support_tickets st
+                INNER JOIN users u ON u.id = st.user_id
+                LEFT JOIN companies c ON c.id = st.company_id
+                WHERE st.status IN ('open','in_progress')
+                ORDER BY
+                    FIELD(st.priority,'urgent','high','normal','low'),
+                    st.updated_at ASC
+                LIMIT ?
+            ");
+            $stmt->bindValue(1, $limit, PDO::PARAM_INT);
+            $stmt->execute();
+        } else {
+            if (!$companyId) {
+                return ['tickets' => []];
+            }
+
+            $stmt = $conn->prepare("
+                SELECT
+                    st.ticket_number,
+                    st.category,
+                    st.subject,
+                    st.status,
+                    st.priority,
+                    st.updated_at,
+                    u.name AS requester_name
+                FROM support_tickets st
+                INNER JOIN users u ON u.id = st.user_id
+                WHERE st.company_id = ?
+                  AND st.status IN ('open','in_progress')
+                ORDER BY
+                    FIELD(st.priority,'urgent','high','normal','low'),
+                    st.updated_at ASC
+                LIMIT ?
+            ");
+            $stmt->bindValue(1, $companyId, PDO::PARAM_INT);
+            $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+            $stmt->execute();
+        }
+
+        return ['tickets' => $stmt->fetchAll()];
+    }
+
+    if ($name === 'get_subscription_risks') {
+        if ($role !== 'super_admin') {
+            return ['error' => 'Subscription risk data is unavailable.'];
+        }
+
+        $days = max(
+            1,
+            min(60, (int) ($arguments['days'] ?? 14))
+        );
+
+        $stmt = $conn->prepare("
+            SELECT
+                company_code,
+                company_name,
+                status,
+                subscription_plan,
+                trial_ends_at,
+                subscription_ends_at,
+                CASE
+                    WHEN subscription_plan='trial'
+                    THEN trial_ends_at
+                    ELSE subscription_ends_at
+                END AS access_ends_at
+            FROM companies
+            WHERE
+                (
+                    subscription_plan='trial'
+                    AND trial_ends_at IS NOT NULL
+                    AND trial_ends_at <= DATE_ADD(
+                        NOW(),
+                        INTERVAL ? DAY
+                    )
+                )
+                OR
+                (
+                    subscription_plan IN (
+                        'monthly',
+                        'quarterly',
+                        'yearly'
+                    )
+                    AND subscription_ends_at IS NOT NULL
+                    AND subscription_ends_at <= DATE_ADD(
+                        NOW(),
+                        INTERVAL ? DAY
+                    )
+                )
+            ORDER BY access_ends_at ASC
+            LIMIT 30
+        ");
+        $stmt->execute([
+            $days,
+            $days
+        ]);
+
+        return [
+            'window_days' => $days,
+            'companies' => $stmt->fetchAll()
+        ];
+    }
+
+    if ($name === 'get_personalized_recommendations') {
+        if ($role !== 'customer') {
+            return ['error' => 'Recommendations are unavailable.'];
+        }
+
+        $limit = max(
+            1,
+            min(12, (int) ($arguments['limit'] ?? 8))
+        );
+        $query = trim(
+            (string) ($arguments['query'] ?? '')
+        );
+
+        $prefStmt = $conn->prepare("
+            SELECT
+                preferred_categories,
+                disliked_items,
+                budget_preference,
+                dietary_notes,
+                personalization_enabled
+            FROM customer_preferences
+            WHERE user_id = ?
+            LIMIT 1
+        ");
+        $prefStmt->execute([$userId]);
+        $prefs = $prefStmt->fetch();
+
+        if (
+            $prefs
+            && empty($prefs['personalization_enabled'])
+        ) {
+            return [
+                'personalization_enabled' => false,
+                'message' =>
+                    'The customer has disabled personalized recommendations.'
+            ];
+        }
+
+        $like = '%' . $query . '%';
+
+        $sql = "
+            SELECT
+                p.id,
+                p.name,
+                p.price,
+                p.stock,
+                p.unit,
+                p.description,
+                cat.name AS category,
+                c.storefront_slug,
+                COALESCE(cs.display_name, c.company_name)
+                    AS store_name,
+                COALESCE(
+                    (
+                        SELECT SUM(oi.quantity)
+                        FROM order_items oi
+                        INNER JOIN orders o
+                            ON o.id = oi.order_id
+                        WHERE oi.product_id = p.id
+                          AND o.user_id = ?
+                          AND o.payment_status = 'paid'
+                    ),
+                    0
+                ) AS previous_quantity
+            FROM products p
+            INNER JOIN companies c
+                ON c.id = p.company_id
+            LEFT JOIN company_storefronts cs
+                ON cs.company_id = c.id
+            LEFT JOIN categories cat
+                ON cat.id = p.category_id
+            WHERE p.status='active'
+              AND p.stock > 0
+              AND c.status='active'
+              AND COALESCE(cs.store_status,'open')='open'
+              AND (
+                    (
+                        c.subscription_plan='trial'
+                        AND c.trial_ends_at >= NOW()
+                    )
+                    OR
+                    (
+                        c.subscription_plan IN (
+                            'monthly','quarterly','yearly'
+                        )
+                        AND c.subscription_ends_at >= NOW()
+                    )
+              )
+        ";
+
+        $params = [$userId];
+
+        if ($query !== '') {
+            $sql .= "
+                AND (
+                    p.name LIKE ?
+                    OR p.description LIKE ?
+                    OR cat.name LIKE ?
+                )
+            ";
+            array_push(
+                $params,
+                $like,
+                $like,
+                $like
+            );
+        }
+
+        $sql .= "
+            ORDER BY
+                previous_quantity DESC,
+                p.updated_at DESC
+            LIMIT " . (int) $limit;
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+
+        return [
+            'personalization_enabled' => true,
+            'preferences' => $prefs ?: [
+                'budget_preference' => 'balanced'
+            ],
+            'products' => $stmt->fetchAll()
         ];
     }
 
