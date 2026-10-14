@@ -72,23 +72,37 @@ function buildAiBusinessContext(
             LIMIT 1
         ");
         $stmt->execute([$userId]);
-        $context['preferences'] = $stmt->fetch() ?: null;
+        $preferences = $stmt->fetch() ?: null;
 
-        $stmt = $conn->prepare("
-            SELECT
-                oi.product_name,
-                SUM(oi.quantity) AS quantity_bought,
-                MAX(o.created_at) AS last_ordered_at
-            FROM order_items oi
-            INNER JOIN orders o ON o.id = oi.order_id
-            WHERE o.user_id = ?
-              AND o.payment_status = 'paid'
-            GROUP BY oi.product_id, oi.product_name
-            ORDER BY quantity_bought DESC, last_ordered_at DESC
-            LIMIT 12
-        ");
-        $stmt->execute([$userId]);
-        $context['purchase_patterns'] = $stmt->fetchAll();
+        $personalizationEnabled =
+            $preferences === null
+            || !empty($preferences['personalization_enabled']);
+
+        $context['personalization_enabled'] =
+            $personalizationEnabled;
+
+        if ($personalizationEnabled) {
+            $context['preferences'] = $preferences;
+
+            $stmt = $conn->prepare("
+                SELECT
+                    oi.product_name,
+                    SUM(oi.quantity) AS quantity_bought,
+                    MAX(o.created_at) AS last_ordered_at
+                FROM order_items oi
+                INNER JOIN orders o ON o.id = oi.order_id
+                WHERE o.user_id = ?
+                  AND o.payment_status = 'paid'
+                GROUP BY oi.product_id, oi.product_name
+                ORDER BY quantity_bought DESC, last_ordered_at DESC
+                LIMIT 12
+            ");
+            $stmt->execute([$userId]);
+            $context['purchase_patterns'] = $stmt->fetchAll();
+        } else {
+            $context['preferences'] = null;
+            $context['purchase_patterns'] = [];
+        }
 
         $context['product_candidates'] = $conn->query("
             SELECT
@@ -280,7 +294,9 @@ function aiInstructionsForRole(string $role): string
     return match ($role) {
         'customer' => $base
             . " You are a customer-service assistant and shopping helper. "
-            . "Help with orders, payments, delivery, product discovery, and preference-based suggestions. "
+            . "Help with orders, payments, delivery, product discovery, and shopping recommendations. "
+            . "Only personalize recommendations when personalization_enabled is true. "
+            . "When personalization is disabled, do not infer tastes from purchase history or stored preferences. "
             . "Do not recommend unavailable products and do not expose vendor-internal information.",
         'admin' => $base
             . " You are a company administrator's operations assistant. "
