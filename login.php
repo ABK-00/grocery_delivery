@@ -1242,10 +1242,11 @@ if ($user['role'] !== 'customer') {
                                 </div>
 
 
-                                <span
-                                    class="small text-muted">
-                                    Password reset coming soon
-                                </span>
+                                <a
+                                    href="<?= BASE_URL ?>/forgot_password.php"
+                                    class="small text-success text-decoration-none">
+                                    Forgot password?
+                                </a>
 
                             </div>
 
