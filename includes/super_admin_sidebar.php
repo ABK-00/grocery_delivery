@@ -10,6 +10,9 @@
         <a href="dashboard.php" class="nav-link <?= $currentPage === 'dashboard.php' ? 'active' : '' ?>"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
         <a href="companies.php" class="nav-link <?= in_array($currentPage, ['companies.php', 'company_details.php']) ? 'active' : '' ?>"><i class="bi bi-buildings-fill"></i><span>Companies</span></a>
         <a href="subscriptions.php" class="nav-link <?= $currentPage === 'subscriptions.php' ? 'active' : '' ?>"><i class="bi bi-credit-card-2-front-fill"></i><span>Subscriptions</span></a>
+        <a href="<?= BASE_URL ?>/assistant.php" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
+        <a href="<?= BASE_URL ?>/notifications.php" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
+        <a href="<?= BASE_URL ?>/support.php" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
     </div>
     <div class="sidebar-footer"><button type="button" class="nav-link theme-toggle" data-theme-toggle><i class="bi bi-moon-stars-fill"></i><span data-theme-label>Dark Theme</span></button><a href="profile.php" class="nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a><a href="../logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
 </aside>
