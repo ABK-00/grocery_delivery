@@ -1755,6 +1755,55 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         ) ?>">
                             <?= e(ucwords(str_replace('_', ' ', $refund['status']))) ?>
                         </span>
+
+                        <?php if (
+                            $refund['status'] === 'pending'
+                            && $payment['status'] === 'paid'
+                            && in_array(
+                                $order['status'],
+                                ['pending', 'confirmed', 'preparing'],
+                                true
+                            )
+                        ): ?>
+                            <div class="alert alert-warning mt-3 mb-2">
+                                A refund has been requested and is waiting for vendor processing.
+                            </div>
+
+                            <form
+                                method="POST"
+                                action="<?= BASE_URL ?>/admin/refund_order.php"
+                                onsubmit="return confirm('Approve and send this refund request to Paystack?');"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="<?= e($_SESSION['order_action_csrf']) ?>"
+                                >
+                                <input
+                                    type="hidden"
+                                    name="order_id"
+                                    value="<?= (int) $orderId ?>"
+                                >
+                                <label class="form-label small fw-semibold">
+                                    Refund reason
+                                </label>
+                                <input
+                                    type="text"
+                                    name="reason"
+                                    class="form-control form-control-sm mb-2"
+                                    maxlength="255"
+                                    value="<?= e($refund['reason'] ?: 'Customer refund request approved') ?>"
+                                    required
+                                >
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger w-100"
+                                >
+                                    <i class="bi bi-check2-circle me-1"></i>
+                                    Approve & Process Refund
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     <?php elseif (
                         $payment['status'] === 'paid'
                         && in_array(
