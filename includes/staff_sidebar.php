@@ -231,7 +231,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         </a>
 
         <a href="<?= BASE_URL ?>/staff/profile.php" class="staff-nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
-        <a href="<?= BASE_URL ?>/communications.php?portal=staff" class="staff-nav-link <?= $currentPage === 'communications.php' ? 'active' : '' ?>"><i class="bi bi-chat-dots-fill"></i><span>Communications</span></a>
         <a href="<?= BASE_URL ?>/assistant.php?portal=staff" class="staff-nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a href="<?= BASE_URL ?>/notifications.php?portal=staff" class="staff-nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php?portal=staff" class="staff-nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
