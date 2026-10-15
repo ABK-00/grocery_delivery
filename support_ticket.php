@@ -8,6 +8,8 @@ requireLogin();
 
 $userId = currentUserId();
 $role = (string) ($_SESSION['role'] ?? '');
+$companyId = currentCompanyId();
+
 $ticketId = filter_input(
     INPUT_GET,
     'id',
@@ -32,7 +34,8 @@ function fetchSupportTicket(
     PDO $conn,
     int $ticketId,
     int $userId,
-    string $role
+    string $role,
+    ?int $companyId
 ): array|false {
     if ($role === 'super_admin') {
         $stmt = $conn->prepare("
@@ -52,6 +55,34 @@ function fetchSupportTicket(
 
         $stmt->execute([
             $ticketId
+        ]);
+
+        return $stmt->fetch();
+    }
+
+    if (
+        in_array($role, ['admin', 'staff'], true)
+        && $companyId
+    ) {
+        $stmt = $conn->prepare("
+            SELECT
+                st.*,
+                u.name AS requester_name,
+                u.email AS requester_email,
+                c.company_name
+            FROM support_tickets st
+            INNER JOIN users u
+                ON u.id = st.user_id
+            LEFT JOIN companies c
+                ON c.id = st.company_id
+            WHERE st.id = ?
+              AND st.company_id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([
+            $ticketId,
+            $companyId
         ]);
 
         return $stmt->fetch();
@@ -85,7 +116,8 @@ $ticket = fetchSupportTicket(
     $conn,
     $ticketId,
     $userId,
-    $role
+    $role,
+    $companyId
 );
 
 if (!$ticket) {
@@ -140,7 +172,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message
                 ]);
 
-                if ($role === 'super_admin') {
+                if (
+                    in_array(
+                        $role,
+                        ['super_admin', 'admin', 'staff'],
+                        true
+                    )
+                    && (int) $ticket['user_id'] !== (int) $userId
+                ) {
                     createNotification(
                         $conn,
                         (int) $ticket['user_id'],
@@ -209,7 +248,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (
             $action === 'status'
-            && $role === 'super_admin'
+            && in_array(
+                $role,
+                ['super_admin', 'admin'],
+                true
+            )
         ) {
             $status =
                 (string) ($_POST['status'] ?? '');
