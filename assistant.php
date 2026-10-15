@@ -5,11 +5,11 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/config/ai.php';
 
-requireLogin();
+$role = requirePortalContext();
 
 $userId = currentUserId();
-$role = (string) ($_SESSION['role'] ?? '');
 $companyId = currentCompanyId();
+$portal = portalKeyForRole($role);
 
 $platformAiEnabled =
     (string) platformSetting(
@@ -179,13 +179,7 @@ $roleIntro = match ($role) {
         : 'Get help with orders, payments, deliveries, product discovery, and support.',
 };
 
-$dashboardUrl = match ($role) {
-    'super_admin' => BASE_URL . '/super_admin/dashboard.php',
-    'admin' => BASE_URL . '/admin/dashboard.php',
-    'staff' => BASE_URL . '/staff/dashboard.php',
-    'delivery_partner' => BASE_URL . '/delivery/dashboard.php',
-    default => BASE_URL . '/customer/dashboard.php',
-};
+$dashboardUrl = roleDashboardUrl($role);
 
 $quickPrompts = match ($role) {
     'super_admin' => [
@@ -429,14 +423,14 @@ $quickPrompts = match ($role) {
     <?php if ($role === 'customer'): ?>
         <div class="d-flex flex-wrap gap-2 mb-3">
             <a
-                href="<?= BASE_URL ?>/assistant.php?mode=support"
+                href="<?= BASE_URL ?>/assistant.php?portal=<?= e($portal) ?>&mode=support"
                 class="btn <?= $assistantScope === 'customer_support' ? 'btn-dark' : 'btn-outline-dark' ?>"
             >
                 <i class="bi bi-headset"></i>
                 Support
             </a>
             <a
-                href="<?= BASE_URL ?>/assistant.php?mode=personalization"
+                href="<?= BASE_URL ?>/assistant.php?portal=<?= e($portal) ?>&mode=personalization"
                 class="btn <?= $assistantScope === 'customer_personalization' ? 'btn-success' : 'btn-outline-success' ?>"
             >
                 <i class="bi bi-stars"></i>
@@ -457,7 +451,7 @@ $quickPrompts = match ($role) {
         <aside class="panel history">
 
             <a
-                href="<?= BASE_URL ?>/assistant.php<?= $role === 'customer' ? '?mode=' . ($assistantScope === 'customer_personalization' ? 'personalization' : 'support') : '' ?>"
+                href="<?= BASE_URL ?>/assistant.php?portal=<?= e($portal) ?><?= $role === 'customer' ? '&mode=' . ($assistantScope === 'customer_personalization' ? 'personalization' : 'support') : '' ?>"
                 class="btn btn-success w-100 mb-3"
             >
                 <i class="bi bi-plus-lg"></i>
@@ -476,7 +470,7 @@ $quickPrompts = match ($role) {
 
             <?php foreach ($conversations as $item): ?>
                 <a
-                    href="<?= BASE_URL ?>/assistant.php?<?= $role === 'customer' ? 'mode=' . ($assistantScope === 'customer_personalization' ? 'personalization' : 'support') . '&' : '' ?>conversation_id=<?= (int) $item['id'] ?>"
+                    href="<?= BASE_URL ?>/assistant.php?portal=<?= e($portal) ?>&<?= $role === 'customer' ? 'mode=' . ($assistantScope === 'customer_personalization' ? 'personalization' : 'support') . '&' : '' ?>conversation_id=<?= (int) $item['id'] ?>"
                     class="conversation-link <?= (int) $conversationId === (int) $item['id'] ? 'active' : '' ?>"
                 >
                     <div class="fw-semibold text-truncate">
@@ -552,6 +546,11 @@ $quickPrompts = match ($role) {
             </div>
 
             <form class="chat-form" id="chatForm">
+                <input
+                    type="hidden"
+                    name="portal"
+                    value="<?= e($portal) ?>"
+                >
                 <input
                     type="hidden"
                     name="csrf_token"
