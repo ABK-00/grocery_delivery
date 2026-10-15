@@ -314,6 +314,51 @@ function notifyCompanyRoles(
 }
 
 
+
+/**
+ * Queue a realtime event in the durable outbox.
+ *
+ * A transport worker (SSE/WebSocket/polling) can publish these rows later.
+ * dedupe_key prevents the same business event from being queued twice.
+ */
+function emitRealtimeEvent(
+    PDO $conn,
+    string $channel,
+    string $eventType,
+    array $payload,
+    ?int $companyId = null,
+    ?int $userId = null,
+    ?string $dedupeKey = null
+): bool {
+    $stmt = $conn->prepare("
+        INSERT IGNORE INTO realtime_events (
+            channel,
+            event_type,
+            company_id,
+            user_id,
+            dedupe_key,
+            payload
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    ");
+
+    $stmt->execute([
+        $channel,
+        $eventType,
+        $companyId,
+        $userId,
+        $dedupeKey,
+        json_encode(
+            $payload,
+            JSON_UNESCAPED_SLASHES
+            | JSON_UNESCAPED_UNICODE
+            | JSON_THROW_ON_ERROR
+        )
+    ]);
+
+    return $stmt->rowCount() === 1;
+}
+
 function csrfToken(string $key): string
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
