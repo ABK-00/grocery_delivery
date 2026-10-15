@@ -5,6 +5,164 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/../config/app.php';
+
+
+/*
+|--------------------------------------------------------------------------
+| AUTHORITATIVE SESSION SYNC
+|--------------------------------------------------------------------------
+| Protected pages must not trust stale role/company information from the
+| session. When a database connection is available, refresh the authenticated
+| identity from users/companies before applying role checks.
+|--------------------------------------------------------------------------
+*/
+
+function clearAuthenticatedSession(): void
+{
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
+}
+
+
+function syncAuthenticatedSession(): bool
+{
+    if (empty($_SESSION['user_id'])) {
+        return false;
+    }
+
+    global $conn;
+
+    if (
+        !isset($conn)
+        || !($conn instanceof PDO)
+    ) {
+        return isset($_SESSION['role']);
+    }
+
+    $stmt = $conn->prepare("
+        SELECT
+            u.id,
+            u.company_id,
+            u.name,
+            u.email,
+            u.role,
+            u.status,
+            c.company_name,
+            c.status AS company_status
+        FROM users u
+        LEFT JOIN companies c
+            ON c.id = u.company_id
+        WHERE u.id = ?
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        (int) $_SESSION['user_id']
+    ]);
+
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (
+        !$user
+        || $user['status'] !== 'active'
+    ) {
+        clearAuthenticatedSession();
+        return false;
+    }
+
+    $role = (string) $user['role'];
+
+    $companyRoles = [
+        'admin',
+        'staff',
+        'delivery_partner'
+    ];
+
+    if (
+        in_array($role, $companyRoles, true)
+        && (
+            empty($user['company_id'])
+            || $user['company_status'] !== 'active'
+        )
+    ) {
+        clearAuthenticatedSession();
+        return false;
+    }
+
+    $_SESSION['user_id'] =
+        (int) $user['id'];
+
+    $_SESSION['name'] =
+        (string) $user['name'];
+
+    $_SESSION['user_name'] =
+        (string) $user['name'];
+
+    $_SESSION['email'] =
+        (string) $user['email'];
+
+    $_SESSION['role'] =
+        $role;
+
+    $_SESSION['company_id'] =
+        in_array($role, $companyRoles, true)
+            ? (int) $user['company_id']
+            : null;
+
+    if (
+        in_array($role, $companyRoles, true)
+        && !empty($user['company_name'])
+    ) {
+        $_SESSION['company_name'] =
+            (string) $user['company_name'];
+    } else {
+        unset($_SESSION['company_name']);
+    }
+
+    return true;
+}
+
+
+function roleDashboardUrl(string $role): string
+{
+    return match ($role) {
+        'super_admin' =>
+            BASE_URL . '/super_admin/dashboard.php',
+
+        'admin' =>
+            BASE_URL . '/admin/dashboard.php',
+
+        'staff' =>
+            BASE_URL . '/staff/dashboard.php',
+
+        'delivery_partner' =>
+            BASE_URL . '/delivery/dashboard.php',
+
+        'customer' =>
+            BASE_URL . '/customer/dashboard.php',
+
+        default =>
+            BASE_URL . '/access.php',
+    };
+}
+
 /*
 |--------------------------------------------------------------------------
 | LOGIN CHECK
@@ -28,8 +186,10 @@ function isLoggedIn(): bool
 
 function requireLogin(): void
 {
-    if (!isLoggedIn()) {
-
+    if (
+        !isLoggedIn()
+        || !syncAuthenticatedSession()
+    ) {
         header(
             'Location: '
                 . BASE_URL
@@ -73,7 +233,10 @@ function roleLoginUrl(string $role): string
 
 function requireRole(string $role): void
 {
-    if (!isLoggedIn()) {
+    if (
+        !isLoggedIn()
+        || !syncAuthenticatedSession()
+    ) {
         header(
             'Location: '
                 . roleLoginUrl($role)
@@ -290,97 +453,24 @@ function requireCompanyAccess(
 
 function redirectByRole(): void
 {
-    if (!isLoggedIn()) {
-
+    if (
+        !isLoggedIn()
+        || !syncAuthenticatedSession()
+    ) {
         header(
             'Location: '
                 . BASE_URL
-                . '/login.php'
+                . '/access.php'
         );
-
         exit;
     }
 
-
     $role =
-        $_SESSION['role']
-        ?? '';
+        (string) ($_SESSION['role'] ?? '');
 
-
-    switch ($role) {
-
-        case 'super_admin':
-
-            header(
-                'Location: '
-                    . BASE_URL
-                    . '/super_admin/dashboard.php'
-            );
-
-            exit;
-
-
-        case 'admin':
-
-            header(
-                'Location: '
-                    . BASE_URL
-                    . '/admin/dashboard.php'
-            );
-
-            exit;
-
-
-        case 'staff':
-
-            header(
-                'Location: '
-                    . BASE_URL
-                    . '/staff/dashboard.php'
-            );
-
-            exit;
-
-
-        case 'delivery_partner':
-
-            header(
-                'Location: '
-                    . BASE_URL
-                    . '/delivery/dashboard.php'
-            );
-
-            exit;
-
-
-        case 'customer':
-
-            /*
-             * IMPORTANT:
-             *
-             * Customers are marketplace users.
-             * They DO NOT need company_id.
-             */
-            header(
-                'Location: '
-                    . BASE_URL
-                    . '/marketplace.php'
-            );
-
-            exit;
-
-
-        default:
-
-            session_unset();
-            session_destroy();
-
-            header(
-                'Location: '
-                    . BASE_URL
-                    . '/access.php'
-            );
-
-            exit;
-    }
+    header(
+        'Location: '
+            . roleDashboardUrl($role)
+    );
+    exit;
 }
