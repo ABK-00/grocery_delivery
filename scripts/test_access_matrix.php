@@ -178,6 +178,7 @@ foreach ($customerRootPages as $path) {
 
 foreach ([
     'assistant.php',
+    'communications.php',
     'notifications.php',
     'support.php',
     'support_ticket.php'
@@ -218,6 +219,8 @@ $apiRules = [
         "requireRole('customer')",
     'api/update_delivery_location.php' =>
         "requireRole('delivery_partner')",
+    'api/communications.php' =>
+        'requirePortalContext()'
 ];
 
 foreach ($apiRules as $path => $guard) {
