@@ -41,6 +41,10 @@ function orderStatusBadge($status)
         'preparing' => ['Preparing', 'bg-info text-dark'],
         'ready' => ['Ready', 'bg-secondary'],
         'out_for_delivery' => ['Out for Delivery', 'bg-dark'],
+        'delivery_failed' => ['Delivery Failed', 'bg-danger'],
+        'returning_to_vendor' => ['Returning to Vendor', 'bg-warning text-dark'],
+        'return_pending_confirmation' => ['Return Awaiting Confirmation', 'bg-info text-dark'],
+        'returned' => ['Returned', 'bg-secondary'],
         'delivered' => ['Delivered', 'bg-success'],
         'cancelled' => ['Cancelled', 'bg-danger']
     ];
