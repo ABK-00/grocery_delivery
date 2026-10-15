@@ -79,7 +79,14 @@ $userStmt = $conn->prepare("
         ca.id AS default_address_id,
         ca.recipient_name AS default_recipient_name,
         ca.phone AS default_address_phone,
-        ca.address AS default_address
+        CONCAT_WS(
+            ', ',
+            NULLIF(ca.address_line1, ''),
+            NULLIF(ca.address_line2, ''),
+            NULLIF(ca.city, ''),
+            NULLIF(ca.region, ''),
+            NULLIF(ca.country, '')
+        ) AS default_address
     FROM users u
     LEFT JOIN customer_addresses ca
         ON ca.user_id = u.id
