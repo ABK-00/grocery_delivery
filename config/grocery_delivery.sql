@@ -566,6 +566,7 @@ CREATE TABLE order_items (
     product_id INT UNSIGNED NOT NULL,
 
     product_name VARCHAR(150) NOT NULL,
+    unit VARCHAR(30) NOT NULL DEFAULT 'piece',
 
     quantity DECIMAL(10,2) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
@@ -753,6 +754,7 @@ CREATE TABLE deliveries (
 
     assigned_at DATETIME DEFAULT NULL,
     picked_up_at DATETIME DEFAULT NULL,
+    out_for_delivery_at DATETIME DEFAULT NULL,
     delivered_at DATETIME DEFAULT NULL,
     failure_reason TEXT DEFAULT NULL,
     failed_at DATETIME DEFAULT NULL,
