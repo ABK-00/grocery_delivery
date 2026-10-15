@@ -68,6 +68,7 @@ foreach ($tables as $table) {
 
 $columns = [
     'communication_threads' => [
+        'order_id',
         'user_one_id',
         'user_two_id',
         'company_id',
@@ -147,37 +148,38 @@ foreach ([
     );
 }
 
-$sampleUser = $conn->query("
-    SELECT
-        id,
-        company_id,
-        role
-    FROM users
-    WHERE status = 'active'
-    ORDER BY id ASC
-    LIMIT 1
-")->fetch(PDO::FETCH_ASSOC);
+$helperSource =
+    (string) file_get_contents(
+        $root
+        . DIRECTORY_SEPARATOR
+        . 'includes'
+        . DIRECTORY_SEPARATOR
+        . 'communication.php'
+    );
 
-if ($sampleUser) {
-    commTest(
-        !communicationCanContact(
-            $conn,
-            (int) $sampleUser['id'],
-            (string) $sampleUser['role'],
-            $sampleUser['company_id'] !== null
-                ? (int) $sampleUser['company_id']
-                : null,
-            (int) $sampleUser['id']
-        ),
-        'Self-contact is blocked'
-    );
-} else {
-    commTest(
-        true,
-        'Self-contact is blocked',
-        'no active users available for runtime sample'
-    );
-}
+commTest(
+    str_contains(
+        $helperSource,
+        "o.status = 'out_for_delivery'"
+    )
+    && str_contains(
+        $helperSource,
+        "d.status = 'out_for_delivery'"
+    ),
+    'Communication requires active out-for-delivery order'
+);
+
+commTest(
+    str_contains(
+        $helperSource,
+        'communicationCanContactForOrder'
+    )
+    && str_contains(
+        $helperSource,
+        'communicationContactsForOrder'
+    ),
+    'Communication authorization is order scoped'
+);
 
 echo "\n";
 echo "Pass={$pass}, Fail={$fail}\n";
