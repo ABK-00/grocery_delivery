@@ -4,11 +4,11 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
-requireLogin();
+$role = requirePortalContext();
 
 $userId = currentUserId();
-$role = (string) ($_SESSION['role'] ?? '');
 $companyId = currentCompanyId();
+$portal = portalKeyForRole($role);
 
 if (empty($_SESSION['support_csrf'])) {
     $_SESSION['support_csrf'] =
@@ -208,13 +208,7 @@ if ($role === 'super_admin') {
 
 $tickets = $stmt->fetchAll();
 
-$dashboardUrl = match ($role) {
-    'super_admin' => BASE_URL . '/super_admin/dashboard.php',
-    'admin' => BASE_URL . '/admin/dashboard.php',
-    'staff' => BASE_URL . '/staff/dashboard.php',
-    'delivery_partner' => BASE_URL . '/delivery/dashboard.php',
-    default => BASE_URL . '/customer/dashboard.php',
-};
+$dashboardUrl = roleDashboardUrl($role);
 ?>
 <!doctype html>
 <html lang="en">
@@ -320,6 +314,11 @@ $dashboardUrl = match ($role) {
                 <form method="POST">
                     <input
                         type="hidden"
+                        name="portal"
+                        value="<?= e($portal) ?>"
+                    >
+                    <input
+                        type="hidden"
                         name="csrf_token"
                         value="<?= e($_SESSION['support_csrf']) ?>"
                     >
@@ -414,7 +413,7 @@ $dashboardUrl = match ($role) {
                 <?php foreach ($tickets as $ticket): ?>
                     <a
                         class="ticket-row"
-                        href="<?= BASE_URL ?>/support_ticket.php?id=<?= (int) $ticket['id'] ?>"
+                        href="<?= BASE_URL ?>/support_ticket.php?portal=<?= e($portal) ?>&id=<?= (int) $ticket['id'] ?>"
                     >
                         <div class="d-flex justify-content-between gap-3">
                             <div>
