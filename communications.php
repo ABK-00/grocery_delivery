@@ -12,9 +12,47 @@ $userId = (int) currentUserId();
 $companyId = currentCompanyId();
 $portal = portalKeyForRole($role);
 
-$contacts =
-    communicationContacts(
+$orderId =
+    filter_input(
+        INPUT_GET,
+        'order',
+        FILTER_VALIDATE_INT
+    ) ?: 0;
+
+$deliveryContext =
+    $orderId > 0
+        ? communicationDeliveryContext(
+            $conn,
+            $orderId
+        )
+        : false;
+
+if (
+    !$deliveryContext
+    || !communicationCanAccessOrder(
         $conn,
+        $orderId,
+        $userId,
+        $role,
+        $companyId
+    )
+) {
+    http_response_code(403);
+
+    $fallback =
+        roleDashboardUrl($role);
+
+    header(
+        'Location: '
+        . $fallback
+    );
+    exit;
+}
+
+$contacts =
+    communicationContactsForOrder(
+        $conn,
+        $orderId,
         $userId,
         $role,
         $companyId
@@ -53,6 +91,7 @@ if ($selectedTargetId > 0) {
         $thread =
             communicationThread(
                 $conn,
+                $orderId,
                 $userId,
                 $role,
                 $companyId,
@@ -76,18 +115,8 @@ $dashboardUrl =
         $role
     );
 
-$roleLabel = match ($role) {
-    'super_admin' =>
-        'Platform Communications',
-    'admin' =>
-        'Company Communications',
-    'staff' =>
-        'Staff Communications',
-    'delivery_partner' =>
-        'Delivery Communications',
-    default =>
-        'Customer Communications',
-};
+$roleLabel =
+    'Delivery Communication';
 
 function communicationRoleLabel(
     string $role
@@ -165,6 +194,7 @@ include $sidebar;
     data-base-url="<?= e(BASE_URL) ?>"
     data-portal="<?= e($portal) ?>"
     data-user-id="<?= $userId ?>"
+    data-order-id="<?= $orderId ?>"
     data-csrf="<?= e($csrf) ?>"
     data-thread-id="<?= $selectedThreadId ?>"
     data-target-id="<?= $selectedTargetId ?>"
@@ -183,7 +213,7 @@ include $sidebar;
             </h1>
 
             <p>
-                Secure messages and voice calls inside Somame.
+                Order <?= e($deliveryContext['order_number']) ?> · available only while this delivery is in progress.
             </p>
         </div>
 
@@ -207,7 +237,7 @@ include $sidebar;
                     <strong>Conversations</strong>
                     <small>
                         <?= count($contacts) ?>
-                        available contacts
+                        delivery contact<?= count($contacts) === 1 ? '' : 's' ?>
                     </small>
                 </div>
 
@@ -239,7 +269,7 @@ include $sidebar;
             ></div>
 
             <div class="contacts-divider">
-                People you can contact
+                Delivery contacts
             </div>
 
             <div
@@ -293,7 +323,7 @@ include $sidebar;
                             No contacts available
                         </strong>
                         <span>
-                            Contacts appear when your role and business relationship allow communication.
+                            No delivery contacts are available for this order.
                         </span>
                     </div>
                 <?php endif; ?>
@@ -313,7 +343,7 @@ include $sidebar;
                 </h3>
 
                 <p>
-                    Choose an authorized contact to send a message or start an audio call.
+                    Choose a delivery contact to send an update or start an audio call.
                 </p>
             </div>
 
