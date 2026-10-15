@@ -518,12 +518,25 @@ document.addEventListener(
         }
 
         if (window.innerWidth > 900) {
+            sidebar.classList.remove('show');
+
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+
             setCollapsed(initiallyCollapsed);
         } else {
             sidebar.classList.remove('is-collapsed');
+            sidebar.classList.remove('show');
+
             document.body.classList.remove(
                 'admin-sidebar-collapsed'
             );
+
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+
             syncMobileMenuState();
         }
 
@@ -603,6 +616,21 @@ document.addEventListener(
             }
         }
 
+        function closeMobileMenu() {
+
+            if (!sidebar) {
+                return;
+            }
+
+            sidebar.classList.remove('show');
+
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+
+            syncMobileMenuState();
+        }
+
         function toggleMobileMenu() {
 
             if (
@@ -638,8 +666,7 @@ document.addEventListener(
                         return;
                     }
 
-                    sidebar.classList.remove('show');
-                    syncMobileMenuState();
+                    closeMobileMenu();
                 }
             );
         }
@@ -658,12 +685,51 @@ document.addEventListener(
                             window.innerWidth <= 900
                             && sidebar
                         ) {
-                            sidebar.classList.remove('show');
-                            syncMobileMenuState();
+                            closeMobileMenu();
                         }
                     }
                 );
             });
+
+        window.addEventListener(
+            'pageshow',
+            function () {
+                if (window.innerWidth <= 900) {
+                    closeMobileMenu();
+                } else {
+                    sidebar.classList.remove('show');
+
+                    if (overlay) {
+                        overlay.classList.remove('show');
+                    }
+
+                    syncMobileMenuState();
+                }
+            }
+        );
+
+        document.addEventListener(
+            'click',
+            function (event) {
+                const link = event.target.closest(
+                    '.sidebar a[href], .main-content a[href]'
+                );
+
+                if (
+                    !link
+                    || link.target === '_blank'
+                    || link.hasAttribute('download')
+                    || link.hasAttribute('data-bs-toggle')
+                ) {
+                    return;
+                }
+
+                if (window.innerWidth <= 900) {
+                    closeMobileMenu();
+                }
+            },
+            true
+        );
 
         window.addEventListener(
             'resize',
