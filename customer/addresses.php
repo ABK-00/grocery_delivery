@@ -33,10 +33,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $label = trim((string) ($_POST['label'] ?? 'Home'));
                 $recipient = trim((string) ($_POST['recipient_name'] ?? ''));
                 $phone = trim((string) ($_POST['phone'] ?? ''));
-                $address = trim((string) ($_POST['address'] ?? ''));
+                $addressLine1 = trim((string) ($_POST['address_line1'] ?? ''));
+                $addressLine2 = trim((string) ($_POST['address_line2'] ?? ''));
+                $city = trim((string) ($_POST['city'] ?? ''));
+                $region = trim((string) ($_POST['region'] ?? ''));
+                $country = trim((string) ($_POST['country'] ?? 'Ghana'));
+                $deliveryInstructions = trim((string) ($_POST['delivery_instructions'] ?? ''));
                 $isDefault = isset($_POST['is_default']) ? 1 : 0;
 
-                if ($label === '' || $recipient === '' || $phone === '' || $address === '') {
+                if (
+                    $label === ''
+                    || $recipient === ''
+                    || $phone === ''
+                    || $addressLine1 === ''
+                    || $city === ''
+                    || $region === ''
+                    || $country === ''
+                ) {
                     throw new RuntimeException('Complete all required address fields.');
                 }
 
@@ -56,7 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             label = ?,
                             recipient_name = ?,
                             phone = ?,
-                            address = ?,
+                            address_line1 = ?,
+                            address_line2 = ?,
+                            city = ?,
+                            region = ?,
+                            country = ?,
+                            delivery_instructions = ?,
                             is_default = ?
                         WHERE id = ?
                           AND user_id = ?
@@ -65,7 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         mb_substr($label, 0, 60),
                         mb_substr($recipient, 0, 120),
                         mb_substr($phone, 0, 30),
-                        $address,
+                        mb_substr($addressLine1, 0, 255),
+                        $addressLine2 !== '' ? mb_substr($addressLine2, 0, 255) : null,
+                        mb_substr($city, 0, 120),
+                        mb_substr($region, 0, 120),
+                        mb_substr($country, 0, 120),
+                        $deliveryInstructions !== '' ? $deliveryInstructions : null,
                         $isDefault,
                         $addressId,
                         $userId
@@ -101,17 +124,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             label,
                             recipient_name,
                             phone,
-                            address,
+                            address_line1,
+                            address_line2,
+                            city,
+                            region,
+                            country,
+                            delivery_instructions,
                             is_default
                         )
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
                         $userId,
                         mb_substr($label, 0, 60),
                         mb_substr($recipient, 0, 120),
                         mb_substr($phone, 0, 30),
-                        $address,
+                        mb_substr($addressLine1, 0, 255),
+                        $addressLine2 !== '' ? mb_substr($addressLine2, 0, 255) : null,
+                        mb_substr($city, 0, 120),
+                        mb_substr($region, 0, 120),
+                        mb_substr($country, 0, 120),
+                        $deliveryInstructions !== '' ? $deliveryInstructions : null,
                         $isDefault
                     ]);
                 }
@@ -248,8 +281,30 @@ if ($editId) {
                         <input class="form-control" name="phone" maxlength="30" required value="<?= e($editAddress['phone'] ?? '') ?>">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Full Address</label>
-                        <textarea class="form-control" name="address" rows="4" required><?= e($editAddress['address'] ?? '') ?></textarea>
+                        <label class="form-label">Address Line 1</label>
+                        <input class="form-control" name="address_line1" maxlength="255" required value="<?= e($editAddress['address_line1'] ?? '') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Address Line 2</label>
+                        <input class="form-control" name="address_line2" maxlength="255" value="<?= e($editAddress['address_line2'] ?? '') ?>">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">City</label>
+                            <input class="form-control" name="city" maxlength="120" required value="<?= e($editAddress['city'] ?? '') ?>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Region</label>
+                            <input class="form-control" name="region" maxlength="120" required value="<?= e($editAddress['region'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Country</label>
+                        <input class="form-control" name="country" maxlength="120" required value="<?= e($editAddress['country'] ?? 'Ghana') ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Delivery Instructions</label>
+                        <textarea class="form-control" name="delivery_instructions" rows="3"><?= e($editAddress['delivery_instructions'] ?? '') ?></textarea>
                     </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" name="is_default" id="isDefault" <?= !empty($editAddress['is_default']) ? 'checked' : '' ?>>
@@ -283,7 +338,20 @@ if ($editId) {
                                     <span class="badge bg-success ms-2">Default</span>
                                 <?php endif; ?>
                             </div>
-                            <div class="mt-2"><?= nl2br(e($item['address'])) ?></div>
+                            <div class="mt-2">
+                                <?= e(implode(', ', array_filter([
+                                    $item['address_line1'] ?? null,
+                                    $item['address_line2'] ?? null,
+                                    $item['city'] ?? null,
+                                    $item['region'] ?? null,
+                                    $item['country'] ?? null
+                                ]))) ?>
+                            </div>
+                            <?php if (!empty($item['delivery_instructions'])): ?>
+                                <div class="text-muted small mt-1">
+                                    <?= e($item['delivery_instructions']) ?>
+                                </div>
+                            <?php endif; ?>
                             <div class="text-muted small mt-2">
                                 <?= e($item['recipient_name']) ?> · <?= e($item['phone']) ?>
                             </div>
