@@ -231,7 +231,7 @@ $dashboardUrl = roleDashboardUrl($role);
                 <div class="d-flex flex-column gap-2 align-items-end">
                     <?php if (!empty($item['link'])): ?>
                         <a
-                            href="<?= e($item['link']) ?>"
+                            href="<?= e(portalizeSharedUrl((string) $item['link'], $role)) ?>"
                             class="btn btn-sm btn-outline-success"
                         >
                             Open
