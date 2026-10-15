@@ -243,6 +243,7 @@ if ($sidebarInitials === '') {
             <span>Reports</span>
         </a>
 
+        <a href="<?= BASE_URL ?>/communications.php?portal=admin" class="nav-link <?= $currentPage === 'communications.php' ? 'active' : '' ?>"><i class="bi bi-chat-dots-fill"></i><span>Communications</span></a>
         <a href="<?= BASE_URL ?>/assistant.php?portal=admin" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a href="<?= BASE_URL ?>/notifications.php?portal=admin" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php?portal=admin" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
@@ -1006,3 +1007,5 @@ document.addEventListener(
     window.gdApplyAccent = applyAccent;
 })();
 </script>
+
+<?php include_once __DIR__ . '/communication_alert.php'; ?>
