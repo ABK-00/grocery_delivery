@@ -188,7 +188,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
     <div class="staff-brand">
 
-        <a href="dashboard.php">
+        <a href="<?= BASE_URL ?>/staff/dashboard.php">
 
             <div class="brand-icon">
                 <i class="bi bi-cart3"></i>
@@ -211,7 +211,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 
         <a
-            href="dashboard.php"
+            href="<?= BASE_URL ?>/staff/dashboard.php"
             class="staff-nav-link <?= $currentPage === 'dashboard.php' ? 'active' : '' ?>"
         >
 
@@ -223,24 +223,24 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 
         <a
-            href="orders.php"
+            href="<?= BASE_URL ?>/staff/orders.php"
             class="staff-nav-link <?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>"
         >
             <i class="bi bi-cart-check-fill"></i>
             <span>Orders</span>
         </a>
 
-        <a href="profile.php" class="staff-nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
-        <a href="../assistant.php" class="staff-nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
-        <a href="../notifications.php" class="staff-nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
-        <a href="../support.php" class="staff-nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
+        <a href="<?= BASE_URL ?>/staff/profile.php" class="staff-nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
+        <a href="<?= BASE_URL ?>/assistant.php" class="staff-nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
+        <a href="<?= BASE_URL ?>/notifications.php" class="staff-nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
+        <a href="<?= BASE_URL ?>/support.php" class="staff-nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
 </div>
 
 
     <div class="staff-footer">
 
         <a
-            href="../logout.php"
+            href="<?= BASE_URL ?>/logout.php"
             class="staff-nav-link staff-logout"
         >
 
@@ -287,4 +287,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 </script>
-<script src="../assets/js/theme.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/theme.js"></script>
