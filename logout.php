@@ -1,51 +1,46 @@
 <?php
 
-require_once __DIR__ . '/config/app.php';
+require_once __DIR__ . '/includes/auth.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+$expectedRole =
+    requestedPortalRole();
 
-$role = $_SESSION['role'] ?? '';
+$activeRole =
+    (string) ($_SESSION['role'] ?? '');
 
-$_SESSION = [];
-
-if (ini_get('session.use_cookies')) {
-
-    $params = session_get_cookie_params();
-
-    setcookie(
-        session_name(),
-        '',
-        time() - 42000,
-        $params['path'],
-        $params['domain'],
-        $params['secure'],
-        $params['httponly']
+if (
+    $expectedRole !== null
+    && $activeRole !== ''
+    && $activeRole !== $expectedRole
+) {
+    header(
+        'Location: '
+        . roleLoginUrl($expectedRole)
+        . (
+            str_contains(
+                roleLoginUrl($expectedRole),
+                '?'
+            )
+                ? '&'
+                : '?'
+        )
+        . 'error=role_mismatch'
     );
+    exit;
 }
 
-session_destroy();
+$role =
+    $expectedRole
+    ?? $activeRole;
 
-$target = match ($role) {
-    'super_admin' =>
-        BASE_URL . '/super_admin/login.php',
+clearAuthenticatedSession();
 
-    'admin' =>
-        BASE_URL . '/admin/login.php',
-
-    'staff' =>
-        BASE_URL . '/staff/login.php',
-
-    'delivery_partner' =>
-        BASE_URL . '/delivery/login.php',
-
-    'customer' =>
-        BASE_URL . '/login.php?customer=1',
-
-    default =>
-        BASE_URL . '/access.php',
-};
-
-header('Location: ' . $target);
+header(
+    'Location: '
+    . (
+        $role !== ''
+            ? roleLoginUrl($role)
+            : BASE_URL . '/access.php'
+    )
+);
 exit;
