@@ -62,6 +62,7 @@ $recent = $conn->query("SELECT * FROM companies ORDER BY created_at DESC LIMIT 8
             </div>
         </div>
     </main>
+<?php include __DIR__ . '/../includes/ai_assistant.php'; ?>
 </body>
 
 </html>
