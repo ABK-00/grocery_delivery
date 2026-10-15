@@ -219,6 +219,7 @@ foreach ($portalSidebars as $path => $portal) {
 
     foreach ([
         'assistant.php',
+        'communications.php',
         'notifications.php',
         'support.php',
         'logout.php'
@@ -240,6 +241,7 @@ foreach ($portalSidebars as $path => $portal) {
 
 foreach ([
     'assistant.php',
+    'communications.php',
     'notifications.php',
     'support.php',
     'support_ticket.php'
@@ -262,7 +264,8 @@ foreach ([
 
 foreach ([
     'api/ai/chat.php',
-    'api/ai_chat.php'
+    'api/ai_chat.php',
+    'api/communications.php'
 ] as $path) {
     $content =
         sourceText(
