@@ -240,7 +240,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="staff-footer">
 
         <a
-            href="<?= BASE_URL ?>/logout.php"
+            href="<?= BASE_URL ?>/logout.php?portal=staff"
             class="staff-nav-link staff-logout"
         >
 
