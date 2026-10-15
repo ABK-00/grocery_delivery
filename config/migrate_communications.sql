@@ -282,6 +282,31 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+SET @company_fk = (
+    SELECT COUNT(*)
+    FROM information_schema.referential_constraints
+    WHERE constraint_schema = DATABASE()
+      AND table_name = 'communication_threads'
+      AND constraint_name = 'fk_communication_company'
+);
+
+SET @sql = IF(
+    @company_fk > 0,
+    'ALTER TABLE communication_threads DROP FOREIGN KEY fk_communication_company',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 ALTER TABLE communication_threads
     MODIFY order_id INT UNSIGNED NOT NULL,
     MODIFY company_id INT UNSIGNED NOT NULL;
+
+ALTER TABLE communication_threads
+    ADD CONSTRAINT fk_communication_company
+        FOREIGN KEY (company_id)
+        REFERENCES companies(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE;
