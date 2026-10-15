@@ -161,6 +161,30 @@ if ($role === 'super_admin') {
             st.updated_at DESC
         LIMIT 100
     ");
+} elseif (
+    in_array($role, ['admin', 'staff'], true)
+    && $companyId
+) {
+    $stmt = $conn->prepare("
+        SELECT
+            st.*,
+            u.name AS requester_name,
+            c.company_name
+        FROM support_tickets st
+        INNER JOIN users u
+            ON u.id = st.user_id
+        LEFT JOIN companies c
+            ON c.id = st.company_id
+        WHERE st.company_id = ?
+        ORDER BY
+            FIELD(st.status, 'open', 'in_progress', 'resolved', 'closed'),
+            st.updated_at DESC
+        LIMIT 100
+    ");
+
+    $stmt->execute([
+        $companyId
+    ]);
 } else {
     $stmt = $conn->prepare("
         SELECT
