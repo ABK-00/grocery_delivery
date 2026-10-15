@@ -326,7 +326,8 @@ $ticket = fetchSupportTicket(
     $conn,
     $ticketId,
     $userId,
-    $role
+    $role,
+    $companyId
 );
 
 $stmt = $conn->prepare("
