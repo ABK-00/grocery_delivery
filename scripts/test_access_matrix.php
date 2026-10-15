@@ -161,10 +161,17 @@ $customerRootPages = [
 ];
 
 foreach ($customerRootPages as $path) {
-    expectContains(
-        $root,
-        $path,
-        ["requireRole('customer')"],
+    $content = fileText($root, $path);
+
+    resultLine(
+        str_contains(
+            $content,
+            "requireRole('customer')"
+        )
+        || str_contains(
+            $content,
+            'requireRole("customer")'
+        ),
         $path . ' customer-only access'
     );
 }
