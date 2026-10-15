@@ -10,7 +10,10 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../app/Services/AI/AIService.php';
 
-requireLogin();
+$role = requirePortalContext();
+
+$userId = (int) currentUserId();
+$companyId = currentCompanyId();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -56,10 +59,6 @@ try {
             'Message is too long.'
         );
     }
-
-    $userId = (int) currentUserId();
-    $role = (string) ($_SESSION['role'] ?? '');
-    $companyId = currentCompanyId();
 
     $dailyLimit = max(
         1,
