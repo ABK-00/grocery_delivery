@@ -645,6 +645,7 @@ $stmt = $conn->prepare("
         dp.vehicle_type,
         dp.vehicle_registration,
         dp.status AS partner_status,
+        u.id AS partner_user_id,
         u.name AS partner_name,
         u.phone AS partner_phone,
         u.whatsapp AS partner_whatsapp
@@ -1344,6 +1345,22 @@ $currentStatus = $order['status'];
 
                             </div>
 
+
+                            <?php if (
+                                $order['status'] === 'out_for_delivery'
+                                && $delivery['status'] === 'out_for_delivery'
+                                && !empty($delivery['partner_user_id'])
+                            ): ?>
+                                <hr>
+
+                                <a
+                                    href="<?= BASE_URL ?>/communications.php?portal=staff&order=<?= (int) $orderId ?>&with=<?= (int) $delivery['partner_user_id'] ?>"
+                                    class="btn btn-success"
+                                >
+                                    <i class="bi bi-chat-dots-fill me-1"></i>
+                                    Message / Call Rider
+                                </a>
+                            <?php endif; ?>
 
                             <?php if (
                                 in_array(
