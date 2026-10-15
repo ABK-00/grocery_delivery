@@ -164,7 +164,6 @@ if (!isset($_SESSION['user_name'])) {
 
         <a href="<?= BASE_URL ?>/delivery/history.php" class="<?= $currentPage === 'history.php' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i>Delivery History</a>
         <a href="<?= BASE_URL ?>/delivery/profile.php" class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i>My Profile</a>
-        <a href="<?= BASE_URL ?>/communications.php?portal=delivery" class="<?= $currentPage === 'communications.php' ? 'active' : '' ?>"><i class="bi bi-chat-dots-fill"></i>Communications</a>
         <a href="<?= BASE_URL ?>/assistant.php?portal=delivery"><i class="bi bi-stars"></i>AI Assistant</a>
         <a href="<?= BASE_URL ?>/notifications.php?portal=delivery"><i class="bi bi-bell"></i>Notifications</a>
         <a href="<?= BASE_URL ?>/support.php?portal=delivery"><i class="bi bi-life-preserver"></i>Support</a>
