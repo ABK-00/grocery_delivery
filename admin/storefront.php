@@ -492,6 +492,11 @@ $storeUrl =
         rel="stylesheet"
     >
 
+    <link
+        href="../assets/css/admin.css"
+        rel="stylesheet"
+    >
+
     <style>
 
         body {
