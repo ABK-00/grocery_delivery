@@ -20,7 +20,6 @@ $customerPrefix = $inCustomerDir ? '' : 'customer/';
         <a href="<?= BASE_URL ?>/customer/profile.php" class="nav-link <?= $currentPage==='profile.php'?'active':'' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
         <a href="<?= BASE_URL ?>/customer/addresses.php" class="nav-link <?= $currentPage==='addresses.php'?'active':'' ?>"><i class="bi bi-geo-alt"></i><span>Saved Addresses</span></a>
         <a href="<?= BASE_URL ?>/customer/preferences.php" class="nav-link <?= $currentPage==='preferences.php'?'active':'' ?>"><i class="bi bi-sliders"></i><span>Shopping Preferences</span></a>
-        <a href="<?= BASE_URL ?>/communications.php?portal=customer" class="nav-link <?= $currentPage==='communications.php'?'active':'' ?>"><i class="bi bi-chat-dots-fill"></i><span>Communications</span></a>
         <a href="<?= BASE_URL ?>/assistant.php?portal=customer" class="nav-link <?= $currentPage==='assistant.php'?'active':'' ?>"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a href="<?= BASE_URL ?>/notifications.php?portal=customer" class="nav-link <?= $currentPage==='notifications.php'?'active':'' ?>"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php?portal=customer" class="nav-link <?= in_array($currentPage,['support.php','support_ticket.php'])?'active':'' ?>"><i class="bi bi-life-preserver"></i><span>Support</span></a>
