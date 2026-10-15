@@ -14,8 +14,16 @@ if ($orderId <= 0) {
     redirect("orders.php");
 }
 
-$error = "";
-$success = "";
+$error =
+    (string) ($_SESSION['staff_order_error'] ?? '');
+
+$success =
+    (string) ($_SESSION['staff_order_success'] ?? '');
+
+unset(
+    $_SESSION['staff_order_error'],
+    $_SESSION['staff_order_success']
+);
 
 if (empty($_SESSION['order_action_csrf'])) {
     $_SESSION['order_action_csrf'] =
@@ -259,7 +267,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $conn->commit();
 
-                $success = "Order status updated successfully.";
+                $_SESSION['staff_order_success'] =
+                    "Order status updated successfully.";
+
+                header(
+                    'Location: '
+                    . BASE_URL
+                    . '/staff/order_details.php?id='
+                    . $orderId
+                );
+                exit;
 
             } catch (Exception $e) {
 
@@ -499,7 +516,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'delivery',
                         'Delivery partner assigned',
                         'A delivery partner has been assigned to your order.',
-                        BASE_URL . '/customer/track_order.php?order_id=' . $orderId
+                        BASE_URL . '/customer/track_order.php?order=' . $orderId
                     );
                 }
 
@@ -510,6 +527,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'New delivery assignment',
                     'A new delivery has been assigned to you.',
                     BASE_URL . '/delivery/orders.php'
+                );
+
+                createNotification(
+                    $conn,
+                    (int) currentUserId(),
+                    'delivery',
+                    'Delivery assignment confirmed',
+                    'You assigned '
+                        . $partner['name']
+                        . ' to order #'
+                        . $order['order_number']
+                        . '.',
+                    BASE_URL
+                        . '/staff/order_details.php?id='
+                        . $orderId
                 );
 
                 writeAuditLog(
@@ -526,7 +558,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $conn->commit();
 
-                $success = "Delivery partner assigned successfully.";
+                $_SESSION['staff_order_success'] =
+                    "Delivery partner assigned successfully.";
+
+                header(
+                    'Location: '
+                    . BASE_URL
+                    . '/staff/order_details.php?id='
+                    . $orderId
+                );
+                exit;
 
             } catch (Exception $e) {
 
