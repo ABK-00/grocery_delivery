@@ -67,8 +67,12 @@ class AIService
 
         $aiEnabled = platformSetting(
             $this->pdo,
-            'ai.enabled',
-            '0'
+            'ai_enabled',
+            platformSetting(
+                $this->pdo,
+                'ai.enabled',
+                '0'
+            )
         );
 
         if (!in_array(
