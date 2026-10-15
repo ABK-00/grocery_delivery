@@ -192,7 +192,7 @@ foreach ($stmt->fetchAll() as $row) {
                             id="aiEnabled"
                             name="ai_enabled"
                             value="1"
-                            <?= ($settings['ai_enabled'] ?? '1') !== '0' ? 'checked' : '' ?>
+                            <?= ($settings['ai_enabled'] ?? ($settings['ai.enabled'] ?? '0')) === '1' ? 'checked' : '' ?>
                         >
                         <label
                             class="form-check-label"
