@@ -66,6 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'assigned',
         'picked_up',
         'out_for_delivery',
+        'delivery_failed',
+        'returning_to_vendor',
+        'return_pending_confirmation',
         'delivered',
         'cancelled'
     ];
@@ -122,13 +125,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             'picked_up' => [
                 'out_for_delivery',
-                'cancelled'
+                'delivery_failed'
             ],
 
             'out_for_delivery' => [
                 'delivered',
-                'cancelled'
+                'delivery_failed'
             ],
+
+            'delivery_failed' => [
+                'returning_to_vendor'
+            ],
+
+            'returning_to_vendor' => [
+                'return_pending_confirmation'
+            ],
+
+            'return_pending_confirmation' => [],
+
+            'returned' => [],
 
             'delivered' => [],
 
@@ -161,6 +176,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pickedUpAt = $delivery['picked_up_at'];
         $deliveredAt = $delivery['delivered_at'];
 
+        $failureReason = trim(
+            (string) ($_POST['failure_reason'] ?? '')
+        );
+
+        if (
+            $newStatus === 'delivery_failed'
+            && $failureReason === ''
+        ) {
+            throw new Exception(
+                'Please provide the reason the delivery failed.'
+            );
+        }
+
         if ($newStatus === 'assigned' && !$assignedAt) {
             $assignedAt = date('Y-m-d H:i:s');
         }
@@ -190,6 +218,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deliveredAt,
             $deliveryId
         ]);
+
+        if ($newStatus === 'delivery_failed') {
+            $stmt = $conn->prepare("
+                UPDATE deliveries
+                SET
+                    failure_reason = ?,
+                    failed_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $failureReason,
+                $deliveryId
+            ]);
+        } elseif ($newStatus === 'returning_to_vendor') {
+            $stmt = $conn->prepare("
+                UPDATE deliveries
+                SET return_started_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([$deliveryId]);
+        } elseif ($newStatus === 'return_pending_confirmation') {
+            $stmt = $conn->prepare("
+                UPDATE deliveries
+                SET return_pending_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([$deliveryId]);
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -256,9 +312,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $orderStatus = 'delivered';
                 break;
 
+            case 'delivery_failed':
+                $orderStatus = 'delivery_failed';
+                break;
+
+            case 'returning_to_vendor':
+                $orderStatus = 'returning_to_vendor';
+                break;
+
+            case 'return_pending_confirmation':
+                $orderStatus = 'return_pending_confirmation';
+                break;
+
             case 'cancelled':
-                // Cancelling an assignment does not cancel a paid order.
-                // Return it to READY so the vendor can reassign delivery.
+                // Cancelling before pickup only cancels the rider assignment.
+                // Return the paid order to READY so the vendor can reassign it.
                 $orderStatus = 'ready';
                 break;
         }
@@ -299,7 +367,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (
             $newStatus === 'delivered' ||
-            $newStatus === 'cancelled'
+            $newStatus === 'cancelled' ||
+            $newStatus === 'return_pending_confirmation'
         ) {
 
             $stmt = $conn->prepare("
@@ -311,16 +380,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$partnerId]);
         }
 
-        $customerMessage =
-            $newStatus === 'cancelled'
-                ? 'The delivery assignment for order #'
-                    . $orderInfo['order_number']
-                    . ' was cancelled. The store will assign another delivery partner.'
-                : 'Order #'
-                    . $orderInfo['order_number']
-                    . ' is now '
-                    . ucwords(str_replace('_', ' ', $newStatus))
-                    . '.';
+        if ($newStatus === 'cancelled') {
+            $customerMessage =
+                'The delivery assignment for order #'
+                . $orderInfo['order_number']
+                . ' was cancelled before pickup. The store will assign another delivery partner.';
+        } elseif ($newStatus === 'delivery_failed') {
+            $customerMessage =
+                'Delivery of order #'
+                . $orderInfo['order_number']
+                . ' could not be completed. The rider is returning the goods to the store.';
+        } elseif ($newStatus === 'return_pending_confirmation') {
+            $customerMessage =
+                'The goods for order #'
+                . $orderInfo['order_number']
+                . ' have been returned to the store and are awaiting confirmation.';
+        } else {
+            $customerMessage =
+                'Order #'
+                . $orderInfo['order_number']
+                . ' is now '
+                . ucwords(str_replace('_', ' ', $newStatus))
+                . '.';
+        }
 
         createNotification(
             $conn,
@@ -1004,6 +1086,36 @@ body {
 
                         </form>
 
+                        <hr>
+
+                        <form method="POST">
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= e($_SESSION['delivery_action_csrf']) ?>"
+                            >
+                            <input
+                                type="hidden"
+                                name="status"
+                                value="delivery_failed"
+                            >
+                            <input
+                                type="text"
+                                name="failure_reason"
+                                class="form-control mb-2"
+                                maxlength="255"
+                                placeholder="Reason delivery cannot be completed"
+                                required
+                            >
+                            <button
+                                class="btn btn-outline-danger w-100 action-btn"
+                                type="submit"
+                            >
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Report Delivery Failure
+                            </button>
+                        </form>
+
 
                     <?php elseif ($delivery['status'] === 'out_for_delivery'): ?>
 
@@ -1064,6 +1176,86 @@ body {
                             </button>
 
                         </form>
+
+                        <hr>
+
+                        <form method="POST">
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= e($_SESSION['delivery_action_csrf']) ?>"
+                            >
+                            <input
+                                type="hidden"
+                                name="status"
+                                value="delivery_failed"
+                            >
+                            <input
+                                type="text"
+                                name="failure_reason"
+                                class="form-control mb-2"
+                                maxlength="255"
+                                placeholder="Reason delivery failed"
+                                required
+                            >
+                            <button
+                                class="btn btn-outline-danger w-100 action-btn"
+                                type="submit"
+                            >
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Report Delivery Failure
+                            </button>
+                        </form>
+
+
+                    <?php elseif ($delivery['status'] === 'delivery_failed'): ?>
+
+                        <div class="alert alert-danger">
+                            Delivery failed. Return the goods to the vendor.
+                            <?php if (!empty($delivery['failure_reason'])): ?>
+                                <hr>
+                                <small><?= e($delivery['failure_reason']) ?></small>
+                            <?php endif; ?>
+                        </div>
+
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['delivery_action_csrf']) ?>">
+                            <input type="hidden" name="status" value="returning_to_vendor">
+                            <button class="btn btn-warning w-100 action-btn" type="submit">
+                                <i class="bi bi-arrow-return-left me-2"></i>
+                                Start Return to Vendor
+                            </button>
+                        </form>
+
+
+                    <?php elseif ($delivery['status'] === 'returning_to_vendor'): ?>
+
+                        <div class="alert alert-warning">
+                            Return is in progress. Confirm when the goods have been handed back to the vendor.
+                        </div>
+
+                        <form method="POST">
+                            <input type="hidden" name="csrf_token" value="<?= e($_SESSION['delivery_action_csrf']) ?>">
+                            <input type="hidden" name="status" value="return_pending_confirmation">
+                            <button class="btn btn-dark w-100 action-btn" type="submit">
+                                <i class="bi bi-shop me-2"></i>
+                                Goods Handed to Vendor
+                            </button>
+                        </form>
+
+
+                    <?php elseif ($delivery['status'] === 'return_pending_confirmation'): ?>
+
+                        <div class="alert alert-info mb-0">
+                            Goods were handed to the vendor. Waiting for the vendor to inspect and confirm the returned stock.
+                        </div>
+
+
+                    <?php elseif ($delivery['status'] === 'returned'): ?>
+
+                        <div class="alert alert-secondary mb-0">
+                            Vendor confirmed the returned goods.
+                        </div>
 
 
                     <?php elseif ($delivery['status'] === 'delivered'): ?>
