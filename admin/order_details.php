@@ -1470,6 +1470,101 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     <?php endif; ?>
 
 
+                    <?php if (
+                        $delivery['status'] === 'return_pending_confirmation'
+                    ): ?>
+
+                        <div class="alert alert-warning mt-3">
+                            <strong>Returned goods awaiting confirmation.</strong>
+                            Inspect each item before restoring stock.
+                        </div>
+
+                        <form
+                            method="POST"
+                            action="confirm_return.php"
+                            class="mt-3"
+                        >
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= e($_SESSION['order_action_csrf']) ?>"
+                            >
+                            <input
+                                type="hidden"
+                                name="order_id"
+                                value="<?= (int) $orderId ?>"
+                            >
+
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th style="width:120px;">Received</th>
+                                            <th style="width:160px;">Condition</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($items as $returnItem): ?>
+                                            <tr>
+                                                <td>
+                                                    <?= e($returnItem['product_name']) ?>
+                                                    <small class="text-muted d-block">
+                                                        Ordered: <?= e($returnItem['quantity']) ?>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        max="<?= e($returnItem['quantity']) ?>"
+                                                        name="quantity_received[<?= (int) $returnItem['id'] ?>]"
+                                                        value="<?= e($returnItem['quantity']) ?>"
+                                                        class="form-control form-control-sm"
+                                                        required
+                                                    >
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        name="item_condition[<?= (int) $returnItem['id'] ?>]"
+                                                        class="form-select form-select-sm"
+                                                        required
+                                                    >
+                                                        <option value="sellable">Sellable</option>
+                                                        <option value="damaged">Damaged</option>
+                                                        <option value="opened">Opened</option>
+                                                        <option value="perishable">Perishable / unsafe</option>
+                                                        <option value="missing">Missing</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <textarea
+                                name="return_notes"
+                                class="form-control form-control-sm mb-2"
+                                rows="2"
+                                maxlength="1000"
+                                placeholder="Optional return inspection notes"
+                            ></textarea>
+
+                            <button
+                                type="submit"
+                                class="btn btn-warning w-100"
+                                onclick="return confirm('Confirm the returned goods and restock only sellable quantities?');"
+                            >
+                                <i class="bi bi-box-arrow-in-down me-1"></i>
+                                Confirm Return & Reconcile Stock
+                            </button>
+                        </form>
+
+                    <?php endif; ?>
+
+
                 <?php else: ?>
 
                     <div class="text-center py-4">
@@ -1664,7 +1759,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                         $payment['status'] === 'paid'
                         && in_array(
                             $order['status'],
-                            ['pending', 'confirmed', 'preparing', 'ready'],
+                            ['pending', 'confirmed', 'preparing'],
                             true
                         )
                     ): ?>
