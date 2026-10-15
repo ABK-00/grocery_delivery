@@ -3,6 +3,13 @@ if (!defined('BASE_URL')) {
     require_once __DIR__ . '/../config/app.php';
 }
 
+$aiEsc = static fn(mixed $value): string =>
+    htmlspecialchars(
+        (string) $value,
+        ENT_QUOTES,
+        'UTF-8'
+    );
+
 $aiRole = (string) ($_SESSION['role'] ?? 'customer');
 
 $aiTitle = match ($aiRole) {
@@ -24,21 +31,21 @@ $aiPlaceholder = match ($aiRole) {
 
 <link
     rel="stylesheet"
-    href="<?= e(BASE_URL) ?>/assets/css/ai-assistant.css"
+    href="<?= $aiEsc(BASE_URL) ?>/assets/css/ai-assistant.css"
 >
 
 <div
     class="somame-ai"
     id="somameAi"
-    data-endpoint="<?= e(BASE_URL) ?>/api/ai/chat.php"
-    data-role="<?= e($aiRole) ?>"
+    data-endpoint="<?= $aiEsc(BASE_URL) ?>/api/ai/chat.php"
+    data-role="<?= $aiEsc($aiRole) ?>"
 >
     <button
         type="button"
         class="somame-ai-launcher"
         id="somameAiLauncher"
-        aria-label="Open <?= e($aiTitle) ?>"
-        title="<?= e($aiTitle) ?>"
+        aria-label="Open <?= $aiEsc($aiTitle) ?>"
+        title="<?= $aiEsc($aiTitle) ?>"
     >
         <i class="bi bi-stars"></i>
         <span class="somame-ai-launcher-text">Ask Somame AI</span>
@@ -57,7 +64,7 @@ $aiPlaceholder = match ($aiRole) {
 
                 <div>
                     <div class="somame-ai-title">
-                        <?= e($aiTitle) ?>
+                        <?= $aiEsc($aiTitle) ?>
                     </div>
                     <div class="somame-ai-status">
                         <span class="somame-ai-status-dot"></span>
@@ -110,7 +117,7 @@ $aiPlaceholder = match ($aiRole) {
                 class="somame-ai-input"
                 rows="1"
                 maxlength="2000"
-                placeholder="<?= e($aiPlaceholder) ?>"
+                placeholder="<?= $aiEsc($aiPlaceholder) ?>"
                 required
             ></textarea>
 
@@ -131,6 +138,6 @@ $aiPlaceholder = match ($aiRole) {
 </div>
 
 <script
-    src="<?= e(BASE_URL) ?>/assets/js/ai-assistant.js"
+    src="<?= $aiEsc(BASE_URL) ?>/assets/js/ai-assistant.js"
     defer
 ></script>
