@@ -84,12 +84,12 @@ try {
     if (
         !in_array(
             $order['status'],
-            ['pending', 'confirmed', 'preparing', 'ready'],
+            ['pending', 'confirmed', 'preparing'],
             true
         )
     ) {
         throw new RuntimeException(
-            'This order can no longer be automatically refunded because delivery has already started or the order is complete.'
+            'This order can no longer be automatically refunded once it is marked ready for pickup, assigned to a rider, picked up, or otherwise enters delivery handling.'
         );
     }
 
@@ -291,8 +291,7 @@ try {
           AND status IN (
               'pending',
               'confirmed',
-              'preparing',
-              'ready'
+              'preparing'
           )
     ");
 
