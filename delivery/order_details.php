@@ -410,7 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'delivery',
             'Delivery update',
             $customerMessage,
-            BASE_URL . '/customer/track_order.php?order_id=' . $orderId
+            BASE_URL . '/customer/track_order.php?order=' . $orderId
         );
 
         if ($newStatus === 'cancelled') {
