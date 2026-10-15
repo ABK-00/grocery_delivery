@@ -486,9 +486,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stmt->execute([$partnerId]);
 
-                $customerId = orderCustomerId($conn, $orderId);
+                $customerId =
+                    (int) ($order['user_id'] ?? 0);
 
-                if ($customerId) {
+                if ($customerId > 0) {
                     createNotification(
                         $conn,
                         $customerId,
