@@ -4,9 +4,10 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
-requireLogin();
+$role = requirePortalContext();
 
 $userId = currentUserId();
+$portal = portalKeyForRole($role);
 
 if (empty($_SESSION['notification_csrf'])) {
     $_SESSION['notification_csrf'] =
@@ -56,7 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header(
         'Location: '
         . BASE_URL
-        . '/notifications.php'
+        . '/notifications.php?portal='
+        . urlencode($portal)
     );
     exit;
 }
@@ -102,9 +104,7 @@ unset(
     $_SESSION['notification_error']
 );
 
-$dashboardUrl = roleDashboardUrl(
-    (string) ($_SESSION['role'] ?? '')
-);
+$dashboardUrl = roleDashboardUrl($role);
 ?>
 <!doctype html>
 <html lang="en">
@@ -160,6 +160,11 @@ $dashboardUrl = roleDashboardUrl(
 
         <div class="d-flex gap-2">
             <form method="POST">
+                <input
+                    type="hidden"
+                    name="portal"
+                    value="<?= e($portal) ?>"
+                >
                 <input
                     type="hidden"
                     name="csrf_token"
@@ -235,6 +240,11 @@ $dashboardUrl = roleDashboardUrl(
 
                     <?php if (!$item['is_read']): ?>
                         <form method="POST">
+                <input
+                    type="hidden"
+                    name="portal"
+                    value="<?= e($portal) ?>"
+                >
                             <input
                                 type="hidden"
                                 name="csrf_token"
