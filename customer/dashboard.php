@@ -50,18 +50,6 @@ $stmt->execute([$userId]);
 $completedOrders = (int)$stmt->fetchColumn();
 
 
-$stmt = $conn->prepare("
-    SELECT COALESCE(SUM(total_amount), 0)
-    FROM orders
-    WHERE user_id = ?
-    AND payment_status = 'paid'
-");
-
-$stmt->execute([$userId]);
-
-$totalSpent = (float)$stmt->fetchColumn();
-
-
 /*
 |--------------------------------------------------------------------------
 | Cart count
@@ -657,15 +645,15 @@ function orderStatusLabel($status)
             <div class="stat-card">
 
                 <div class="stat-icon">
-                    <i class="bi bi-wallet2"></i>
+                    <i class="bi bi-cart3"></i>
                 </div>
 
                 <div class="stat-label">
-                    Total Spent
+                    Cart Items
                 </div>
 
                 <div class="stat-value">
-                    GHS <?= number_format($totalSpent, 2) ?>
+                    <?= number_format($cartItems) ?>
                 </div>
 
             </div>
