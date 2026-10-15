@@ -130,6 +130,7 @@ $requiredColumns = [
         'vendor_escalated_at'
     ],
     'deliveries' => [
+        'out_for_delivery_at',
         'failure_reason',
         'failed_at',
         'return_started_at',
@@ -137,6 +138,9 @@ $requiredColumns = [
         'returned_at',
         'return_confirmed_by',
         'return_notes'
+    ],
+    'order_items' => [
+        'unit'
     ],
     'payments' => [
         'reference',
