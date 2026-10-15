@@ -12,6 +12,16 @@ $aiEsc = static fn(mixed $value): string =>
 
 $aiRole = (string) ($_SESSION['role'] ?? 'customer');
 
+$aiPortal = function_exists('portalKeyForRole')
+    ? portalKeyForRole($aiRole)
+    : match ($aiRole) {
+        'super_admin' => 'super_admin',
+        'admin' => 'admin',
+        'staff' => 'staff',
+        'delivery_partner' => 'delivery',
+        default => 'customer',
+    };
+
 $aiTitle = match ($aiRole) {
     'super_admin' => 'Somame Platform Assistant',
     'admin' => 'Somame Admin Assistant',
@@ -37,7 +47,7 @@ $aiPlaceholder = match ($aiRole) {
 <div
     class="somame-ai"
     id="somameAi"
-    data-endpoint="<?= $aiEsc(BASE_URL) ?>/api/ai/chat.php"
+    data-endpoint="<?= $aiEsc(BASE_URL) ?>/api/ai/chat.php?portal=<?= $aiEsc($aiPortal) ?>"
     data-role="<?= $aiEsc($aiRole) ?>"
 >
     <button
