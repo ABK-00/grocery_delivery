@@ -15,7 +15,6 @@
         <a href="<?= BASE_URL ?>/super_admin/reports.php" class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
         <a href="<?= BASE_URL ?>/super_admin/audit_logs.php" class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>"><i class="bi bi-journal-text"></i><span>Audit Logs</span></a>
         <a href="<?= BASE_URL ?>/super_admin/platform_settings.php" class="nav-link <?= $currentPage === 'platform_settings.php' ? 'active' : '' ?>"><i class="bi bi-gear"></i><span>Settings</span></a>
-        <a href="<?= BASE_URL ?>/communications.php?portal=super_admin" class="nav-link <?= $currentPage === 'communications.php' ? 'active' : '' ?>"><i class="bi bi-chat-dots-fill"></i><span>Communications</span></a>
         <a href="<?= BASE_URL ?>/assistant.php?portal=super_admin" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a
             href="<?= BASE_URL ?>/super_admin/ai_usage.php"
@@ -64,4 +63,3 @@
         });
     });
 </script>
-<?php include_once __DIR__ . '/communication_alert.php'; ?>
