@@ -4,11 +4,11 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
-requireLogin();
+$role = requirePortalContext();
 
 $userId = currentUserId();
-$role = (string) ($_SESSION['role'] ?? '');
 $companyId = currentCompanyId();
+$portal = portalKeyForRole($role);
 
 $ticketId = filter_input(
     INPUT_GET,
@@ -20,7 +20,8 @@ if (!$ticketId) {
     header(
         'Location: '
         . BASE_URL
-        . '/support.php'
+        . '/support.php?portal='
+        . urlencode($portal)
     );
     exit;
 }
@@ -124,7 +125,8 @@ if (!$ticket) {
     header(
         'Location: '
         . BASE_URL
-        . '/support.php'
+        . '/support.php?portal='
+        . urlencode($portal)
     );
     exit;
 }
@@ -189,7 +191,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             . $ticket['ticket_number']
                             . '.',
                         BASE_URL
-                            . '/support_ticket.php?id='
+                            . '/support_ticket.php?portal='
+                            . urlencode($portal)
+                            . '&id='
                             . $ticketId
                     );
 
@@ -291,7 +295,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         . ucwords(str_replace('_', ' ', $status))
                         . '.',
                     BASE_URL
-                        . '/support_ticket.php?id='
+                        . '/support_ticket.php?portal='
+                        . urlencode($portal)
+                        . '&id='
                         . $ticketId
                 );
 
@@ -400,7 +406,7 @@ $messages = $stmt->fetchAll();
 
     <div class="mb-3">
         <a
-            href="<?= BASE_URL ?>/support.php"
+            href="<?= BASE_URL ?>/support.php?portal=<?= e($portal) ?>"
             class="btn btn-sm btn-outline-dark"
         >
             <i class="bi bi-arrow-left"></i>
@@ -450,9 +456,12 @@ $messages = $stmt->fetchAll();
 
         <?php if (in_array($role, ['super_admin', 'admin'], true)): ?>
             <form
-                method="POST"
-                class="d-flex gap-2 mt-4"
-            >
+                method="POST">
+                <input
+                    type="hidden"
+                    name="portal"
+                    value="<?= e($portal) ?>"
+                 class="d-flex gap-2 mt-4">
                 <input
                     type="hidden"
                     name="csrf_token"
@@ -532,6 +541,11 @@ $messages = $stmt->fetchAll();
     <?php if ($ticket['status'] !== 'closed'): ?>
         <div class="panel">
             <form method="POST">
+                <input
+                    type="hidden"
+                    name="portal"
+                    value="<?= e($portal) ?>"
+                >
                 <input
                     type="hidden"
                     name="csrf_token"
