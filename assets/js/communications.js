@@ -6,6 +6,7 @@
   const portal = app.dataset.portal || '';
   const me = Number(app.dataset.userId || 0);
   const csrf = app.dataset.csrf || '';
+  const orderId = Number(app.dataset.orderId || 0);
 
   let threadId = Number(app.dataset.threadId || 0);
   let targetId = Number(app.dataset.targetId || 0);
@@ -61,6 +62,9 @@
     const url = new URL(base + '/api/communications.php', location.origin);
     url.searchParams.set('portal', portal);
     url.searchParams.set('action', action);
+    if (orderId) {
+      url.searchParams.set('order_id', String(orderId));
+    }
     Object.entries(extra).forEach(([k, v]) => {
       if (v !== null && v !== undefined && v !== '') {
         url.searchParams.set(k, String(v));
@@ -163,12 +167,16 @@
   };
 
   const openContact = async (id, name, role) => {
-    const data = await post('thread', {target_id: Number(id)});
+    const data = await post('thread', {
+      order_id: orderId,
+      target_id: Number(id)
+    });
     threadId = Number(data.thread_id || 0);
     setHeader(id, name, role);
 
     const url = new URL(location.href);
     url.searchParams.set('portal', portal);
+    url.searchParams.set('order', String(orderId));
     url.searchParams.set('with', String(id));
     url.searchParams.delete('call');
     history.replaceState({}, '', url);
