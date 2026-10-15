@@ -15,7 +15,7 @@
         <a href="<?= BASE_URL ?>/super_admin/reports.php" class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>"><i class="bi bi-bar-chart"></i><span>Reports</span></a>
         <a href="<?= BASE_URL ?>/super_admin/audit_logs.php" class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>"><i class="bi bi-journal-text"></i><span>Audit Logs</span></a>
         <a href="<?= BASE_URL ?>/super_admin/platform_settings.php" class="nav-link <?= $currentPage === 'platform_settings.php' ? 'active' : '' ?>"><i class="bi bi-gear"></i><span>Settings</span></a>
-        <a href="<?= BASE_URL ?>/assistant.php" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
+        <a href="<?= BASE_URL ?>/assistant.php?portal=super_admin" class="nav-link"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a
             href="<?= BASE_URL ?>/super_admin/ai_usage.php"
             class="nav-link <?= $currentPage === 'ai_usage.php' ? 'active' : '' ?>"
@@ -23,8 +23,8 @@
             <i class="bi bi-cpu"></i>
             <span>AI Usage</span>
         </a>
-        <a href="<?= BASE_URL ?>/notifications.php" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
-        <a href="<?= BASE_URL ?>/support.php" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
+        <a href="<?= BASE_URL ?>/notifications.php?portal=super_admin" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
+        <a href="<?= BASE_URL ?>/support.php?portal=super_admin" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
     </div>
     <div class="sidebar-footer"><button type="button" class="nav-link theme-toggle" data-theme-toggle><i class="bi bi-moon-stars-fill"></i><span data-theme-label>Dark Theme</span></button><a href="<?= BASE_URL ?>/super_admin/profile.php" class="nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a><a href="<?= BASE_URL ?>/logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
 </aside>
