@@ -26,7 +26,7 @@
         <a href="<?= BASE_URL ?>/notifications.php?portal=super_admin" class="nav-link"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php?portal=super_admin" class="nav-link"><i class="bi bi-life-preserver"></i><span>Support</span></a>
     </div>
-    <div class="sidebar-footer"><button type="button" class="nav-link theme-toggle" data-theme-toggle><i class="bi bi-moon-stars-fill"></i><span data-theme-label>Dark Theme</span></button><a href="<?= BASE_URL ?>/super_admin/profile.php" class="nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a><a href="<?= BASE_URL ?>/logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
+    <div class="sidebar-footer"><button type="button" class="nav-link theme-toggle" data-theme-toggle><i class="bi bi-moon-stars-fill"></i><span data-theme-label>Dark Theme</span></button><a href="<?= BASE_URL ?>/super_admin/profile.php" class="nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a><a href="<?= BASE_URL ?>/logout.php?portal=super_admin" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
 </aside>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <script src="<?= BASE_URL ?>/assets/js/theme.js"></script>
