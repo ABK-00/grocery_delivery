@@ -107,45 +107,62 @@ try {
     $existing = $existingStmt->fetch();
 
     if ($existing) {
-        $conn->commit();
+        if ($existing['status'] !== 'pending') {
+            $conn->commit();
 
-        $_SESSION['order_action_error'] =
-            'A refund already exists for this payment with status: '
-            . $existing['status']
-            . '.';
+            $_SESSION['order_action_error'] =
+                'A refund already exists for this payment with status: '
+                . $existing['status']
+                . '.';
 
-        header(
-            'Location: '
-            . BASE_URL
-            . '/admin/order_details.php?id='
-            . (int) $orderId
-        );
-        exit;
+            header(
+                'Location: '
+                . BASE_URL
+                . '/admin/order_details.php?id='
+                . (int) $orderId
+            );
+            exit;
+        }
+
+        $refundId = (int) $existing['id'];
+
+        $conn->prepare("
+            UPDATE refunds
+            SET
+                reason = ?,
+                requested_by = COALESCE(requested_by, ?)
+            WHERE id = ?
+              AND status = 'pending'
+        ")->execute([
+            $reason,
+            $userId,
+            $refundId
+        ]);
+    } else {
+        $insert = $conn->prepare("
+            INSERT INTO refunds (
+                order_id,
+                payment_id,
+                requested_by,
+                amount,
+                currency,
+                status,
+                reason
+            )
+            VALUES (?, ?, ?, ?, ?, 'pending', ?)
+        ");
+
+        $insert->execute([
+            $orderId,
+            $order['payment_id'],
+            $userId,
+            $order['amount'],
+            $order['currency'],
+            $reason
+        ]);
+
+        $refundId = (int) $conn->lastInsertId();
     }
-
-    $insert = $conn->prepare("
-        INSERT INTO refunds (
-            order_id,
-            payment_id,
-            requested_by,
-            amount,
-            currency,
-            status,
-            reason
-        )
-        VALUES (?, ?, ?, ?, ?, 'pending', ?)
-    ");
-
-    $insert->execute([
-        $orderId,
-        $order['payment_id'],
-        $userId,
-        $order['amount'],
-        $order['currency'],
-        $reason
-    ]);
-
-    $refundId = (int) $conn->lastInsertId();
 
     writeAuditLog(
         $conn,
