@@ -1,9 +1,9 @@
 <?php
 
-require_once '../config/db.php';
-require_once '../includes/auth.php';
-require_once '../includes/functions.php';
-require_once '../includes/storefront.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/storefront.php';
 
 requireRole('admin');
 requireCompanyAccess();
@@ -550,15 +550,8 @@ $storeUrl =
 
 <?php
 
-include '../includes/loader.php';
-
-/*
- * If your project already has admin_sidebar.php,
- * this will use it.
- */
-if (file_exists('../includes/admin_sidebar.php')) {
-    include '../includes/admin_sidebar.php';
-}
+include __DIR__ . '/../includes/loader.php';
+require_once __DIR__ . '/../includes/admin_sidebar.php';
 
 ?>
 
@@ -582,17 +575,27 @@ if (file_exists('../includes/admin_sidebar.php')) {
         </div>
 
 
-        <a
-            href="<?= htmlspecialchars($storeUrl) ?>"
-            target="_blank"
-            class="btn btn-outline-success"
-        >
+        <div class="d-flex flex-wrap gap-2">
 
-            <i class="bi bi-box-arrow-up-right me-1"></i>
+            <a
+                href="<?= e(BASE_URL) ?>/admin/dashboard.php"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Dashboard
+            </a>
 
-            View Storefront
+            <a
+                href="<?= htmlspecialchars($storeUrl) ?>"
+                target="_blank"
+                rel="noopener"
+                class="btn btn-outline-success"
+            >
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+                View Storefront
+            </a>
 
-        </a>
+        </div>
 
     </div>
 
