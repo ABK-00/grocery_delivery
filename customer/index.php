@@ -1,1 +1,12 @@
-<?php require "../includes/functions.php"; require "../includes/auth.php"; require_role("customer"); $page_title="Customer Dashboard"; require "../includes/header.php"; ?><div class="card p-4"><h2>Customer Dashboard</h2><p>Browse groceries and manage your orders.</p><a class="btn btn-success" href="../products.php">Shop now</a></div><?php require "../includes/footer.php"; ?>
+<?php
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+
+requireRole('customer');
+
+header(
+    'Location: '
+    . BASE_URL
+    . '/customer/dashboard.php'
+);
+exit;
