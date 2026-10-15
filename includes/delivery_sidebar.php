@@ -146,7 +146,7 @@ if (!isset($_SESSION['user_name'])) {
     <div class="delivery-nav">
 
         <a
-            href="dashboard.php"
+            href="<?= BASE_URL ?>/delivery/dashboard.php"
             class="<?= $currentPage === 'dashboard.php' ? 'active' : '' ?>"
         >
             <i class="bi bi-grid"></i>
@@ -155,21 +155,21 @@ if (!isset($_SESSION['user_name'])) {
 
 
         <a
-            href="orders.php"
+            href="<?= BASE_URL ?>/delivery/orders.php"
             class="<?= in_array($currentPage, ['orders.php', 'order_details.php']) ? 'active' : '' ?>"
         >
             <i class="bi bi-box-seam"></i>
             My Deliveries
         </a>
 
-        <a href="history.php" class="<?= $currentPage === 'history.php' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i>Delivery History</a>
-        <a href="profile.php" class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i>My Profile</a>
-        <a href="../assistant.php"><i class="bi bi-stars"></i>AI Assistant</a>
-        <a href="../notifications.php"><i class="bi bi-bell"></i>Notifications</a>
-        <a href="../support.php"><i class="bi bi-life-preserver"></i>Support</a>
+        <a href="<?= BASE_URL ?>/delivery/history.php" class="<?= $currentPage === 'history.php' ? 'active' : '' ?>"><i class="bi bi-clock-history"></i>Delivery History</a>
+        <a href="<?= BASE_URL ?>/delivery/profile.php" class="<?= $currentPage === 'profile.php' ? 'active' : '' ?>"><i class="bi bi-person-circle"></i>My Profile</a>
+        <a href="<?= BASE_URL ?>/assistant.php"><i class="bi bi-stars"></i>AI Assistant</a>
+        <a href="<?= BASE_URL ?>/notifications.php"><i class="bi bi-bell"></i>Notifications</a>
+        <a href="<?= BASE_URL ?>/support.php"><i class="bi bi-life-preserver"></i>Support</a>
 <div class="delivery-logout">
 
-            <a href="../logout.php">
+            <a href="<?= BASE_URL ?>/logout.php">
 
                 <i class="bi bi-box-arrow-right"></i>
                 Logout
@@ -220,4 +220,4 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
-<script src="../assets/js/theme.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/theme.js"></script>
