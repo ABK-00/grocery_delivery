@@ -6,6 +6,7 @@ require_once __DIR__ . '/AIPermissions.php';
 require_once __DIR__ . '/AIPrompts.php';
 require_once __DIR__ . '/AITools.php';
 require_once __DIR__ . '/AIToolExecutor.php';
+require_once __DIR__ . '/../../../includes/functions.php';
 
 class AIService
 {
@@ -28,7 +29,7 @@ class AIService
         $this->model =
             $_ENV['OPENAI_MODEL']
             ?? getenv('OPENAI_MODEL')
-            ?: 'gpt-5.5';
+            ?: 'gpt-6-luna';
 
         $this->baseUrl = rtrim(
             $_ENV['OPENAI_BASE_URL']
@@ -61,6 +62,22 @@ class AIService
         if (!$this->isConfigured()) {
             throw new RuntimeException(
                 'AI service is currently unavailable because OPENAI_API_KEY is not configured.'
+            );
+        }
+
+        $aiEnabled = platformSetting(
+            $this->pdo,
+            'ai.enabled',
+            '0'
+        );
+
+        if (!in_array(
+            strtolower((string) $aiEnabled),
+            ['1', 'true', 'yes', 'on'],
+            true
+        )) {
+            throw new RuntimeException(
+                'AI service is currently disabled by platform settings.'
             );
         }
 
@@ -552,18 +569,18 @@ class AIService
         }
 
         /*
-         * Customers and ordinary users can only
-         * continue their own conversations.
+         * Every user, including super admins, can only
+         * continue conversations they own. Explicit
+         * support takeover should use a separate audited
+         * workflow rather than bypassing ownership here.
          */
-        if ($role !== 'super_admin') {
-            if (
-                (int)$conversation['user_id']
-                !== $userId
-            ) {
-                throw new RuntimeException(
-                    'You cannot access this conversation.'
-                );
-            }
+        if (
+            (int)$conversation['user_id']
+            !== $userId
+        ) {
+            throw new RuntimeException(
+                'You cannot access this conversation.'
+            );
         }
 
         /*
