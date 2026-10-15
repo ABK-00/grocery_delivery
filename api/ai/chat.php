@@ -57,22 +57,76 @@ try {
 
     $userId = (int) $_SESSION['user_id'];
 
+    $identityStmt = $conn->prepare("
+        SELECT
+            id,
+            company_id,
+            role,
+            status
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+    ");
+
+    $identityStmt->execute([$userId]);
+    $identity = $identityStmt->fetch(PDO::FETCH_ASSOC);
+
+    if (
+        !$identity
+        || $identity['status'] !== 'active'
+    ) {
+        http_response_code(403);
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Account access is unavailable.'
+        ]);
+
+        exit;
+    }
+
     $role = strtolower(
-        (string)(
-            $_SESSION['role']
-            ?? $_SESSION['user_role']
-            ?? 'customer'
-        )
+        (string) $identity['role']
     );
 
-    $companyId = !empty($_SESSION['company_id'])
-        ? (int) $_SESSION['company_id']
+    $companyId = $identity['company_id'] !== null
+        ? (int) $identity['company_id']
         : null;
 
     $conversationId =
         !empty($payload['conversation_id'])
             ? (int) $payload['conversation_id']
             : null;
+
+    $now = time();
+    $windowStart =
+        (int) ($_SESSION['ai_rate_window'] ?? 0);
+    $requestCount =
+        (int) ($_SESSION['ai_rate_count'] ?? 0);
+
+    if (
+        $windowStart === 0
+        || ($now - $windowStart) >= 60
+    ) {
+        $windowStart = $now;
+        $requestCount = 0;
+    }
+
+    if ($requestCount >= 20) {
+        http_response_code(429);
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Too many AI requests. Please try again shortly.'
+        ]);
+
+        exit;
+    }
+
+    $_SESSION['ai_rate_window'] =
+        $windowStart;
+    $_SESSION['ai_rate_count'] =
+        $requestCount + 1;
 
     $ai = new AIService($conn);
 
@@ -90,8 +144,14 @@ try {
 
     http_response_code(500);
 
+    error_log(
+        'AI chat error: '
+        . $e->getMessage()
+    );
+
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' =>
+            'The AI assistant is temporarily unavailable.'
     ]);
 }
