@@ -489,5 +489,6 @@ body {
 
 </div>
 
+<?php include __DIR__ . '/../includes/ai_assistant.php'; ?>
 </body>
 </html>
