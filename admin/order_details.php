@@ -1442,7 +1442,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
                     <?php if ($order['status'] === 'out_for_delivery'): ?>
 
-                        <a href="../delivery/track_delivery.php?id=<?= (int) $delivery['id'] ?>"
+                        <a href="<?= BASE_URL ?>/admin/delivery_details.php?id=<?= (int) $delivery['id'] ?>"
                            class="btn btn-outline-success">
 
                             <i class="bi bi-geo-alt me-1"></i>
