@@ -24,6 +24,14 @@ $stmt = $conn->prepare("
 $stmt->execute([$userId]);
 $orders = $stmt->fetchAll();
 
+$trackingNotice =
+    $_SESSION['tracking_notice']
+    ?? null;
+
+unset(
+    $_SESSION['tracking_notice']
+);
+
 function statusBadge($status)
 {
     $classes = [
@@ -174,6 +182,13 @@ function statusBadge($status)
 
 
 <div class="container py-4">
+
+    <?php if ($trackingNotice): ?>
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-1"></i>
+            <?= e($trackingNotice) ?>
+        </div>
+    <?php endif; ?>
 
     <?php if (!$orders): ?>
 
