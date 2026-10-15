@@ -13,27 +13,20 @@ $role = requirePortalContext();
 $userId = (int) currentUserId();
 $companyId = currentCompanyId();
 $portal = portalKeyForRole($role);
-$action = trim(
-    (string) ($_GET['action'] ?? '')
-);
+$action = trim((string) ($_GET['action'] ?? ''));
 
 $payload = [];
 
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST'
-) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $contentType =
-        (string) (
-            $_SERVER['CONTENT_TYPE']
-            ?? ''
+        strtolower(
+            (string) (
+                $_SERVER['CONTENT_TYPE']
+                ?? ''
+            )
         );
 
-    if (
-        str_contains(
-            strtolower($contentType),
-            'application/json'
-        )
-    ) {
+    if (str_contains($contentType, 'application/json')) {
         $decoded = json_decode(
             file_get_contents('php://input'),
             true
@@ -53,14 +46,8 @@ if (
             ?? ''
         );
 
-    if (
-        !validateCsrfToken(
-            'communications',
-            $csrf
-        )
-    ) {
+    if (!validateCsrfToken('communications', $csrf)) {
         http_response_code(419);
-
         echo json_encode([
             'success' => false,
             'message' =>
@@ -75,11 +62,13 @@ function communicationJson(
     int $status = 200
 ): never {
     http_response_code($status);
+
     echo json_encode(
         $data,
         JSON_UNESCAPED_SLASHES
         | JSON_UNESCAPED_UNICODE
     );
+
     exit;
 }
 
@@ -91,11 +80,14 @@ function communicationCallRow(
     $stmt = $conn->prepare("
         SELECT
             cc.*,
+            ct.order_id,
             caller.name AS caller_name,
             caller.role AS caller_role,
             callee.name AS callee_name,
             callee.role AS callee_role
         FROM communication_calls cc
+        INNER JOIN communication_threads ct
+            ON ct.id = cc.thread_id
         INNER JOIN users caller
             ON caller.id = cc.caller_id
         INNER JOIN users callee
@@ -114,8 +106,22 @@ function communicationCallRow(
         $userId
     ]);
 
-    return $stmt->fetch(
-        PDO::FETCH_ASSOC
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function communicationAssertCallAccess(
+    PDO $conn,
+    array $call,
+    int $userId,
+    string $role,
+    ?int $companyId
+): array {
+    return communicationAssertThreadAccess(
+        $conn,
+        (int) $call['thread_id'],
+        $userId,
+        $role,
+        $companyId
     );
 }
 
@@ -124,9 +130,13 @@ try {
         $_SERVER['REQUEST_METHOD'] === 'GET'
         && $action === 'contacts'
     ) {
+        $orderId =
+            (int) ($_GET['order_id'] ?? 0);
+
         $contacts =
-            communicationContacts(
+            communicationContactsForOrder(
                 $conn,
+                $orderId,
                 $userId,
                 $role,
                 $companyId
@@ -142,18 +152,41 @@ try {
         $_SERVER['REQUEST_METHOD'] === 'GET'
         && $action === 'threads'
     ) {
+        $orderId =
+            (int) ($_GET['order_id'] ?? 0);
+
+        if (
+            !communicationCanAccessOrder(
+                $conn,
+                $orderId,
+                $userId,
+                $role,
+                $companyId
+            )
+        ) {
+            communicationJson([
+                'success' => false,
+                'message' =>
+                    'Delivery communication is not available for this order.'
+            ], 403);
+        }
+
         $stmt = $conn->prepare("
             SELECT
                 ct.id,
+                ct.order_id,
                 ct.last_message_at,
                 ct.updated_at,
+
                 CASE
                     WHEN ct.user_one_id = ?
                     THEN ct.user_two_id
                     ELSE ct.user_one_id
                 END AS other_user_id,
+
                 u.name AS other_name,
                 u.role AS other_role,
+
                 (
                     SELECT cm.message
                     FROM communication_messages cm
@@ -161,6 +194,7 @@ try {
                     ORDER BY cm.id DESC
                     LIMIT 1
                 ) AS last_message,
+
                 (
                     SELECT COUNT(*)
                     FROM communication_messages cm
@@ -168,28 +202,35 @@ try {
                       AND cm.sender_id <> ?
                       AND cm.read_at IS NULL
                 ) AS unread_count
+
             FROM communication_threads ct
+
             INNER JOIN users u
                 ON u.id = CASE
                     WHEN ct.user_one_id = ?
                     THEN ct.user_two_id
                     ELSE ct.user_one_id
                 END
-            WHERE ct.user_one_id = ?
-               OR ct.user_two_id = ?
+
+            WHERE ct.order_id = ?
+              AND (
+                    ct.user_one_id = ?
+                    OR ct.user_two_id = ?
+              )
+
             ORDER BY
                 COALESCE(
                     ct.last_message_at,
                     ct.updated_at
                 ) DESC,
                 ct.id DESC
-            LIMIT 100
         ");
 
         $stmt->execute([
             $userId,
             $userId,
             $userId,
+            $orderId,
             $userId,
             $userId
         ]);
@@ -197,13 +238,13 @@ try {
         $threads = [];
 
         foreach (
-            $stmt->fetchAll(
-                PDO::FETCH_ASSOC
-            ) as $thread
+            $stmt->fetchAll(PDO::FETCH_ASSOC)
+            as $thread
         ) {
             if (
-                communicationCanContact(
+                communicationCanContactForOrder(
                     $conn,
+                    $orderId,
                     $userId,
                     $role,
                     $companyId,
@@ -224,15 +265,16 @@ try {
         $_SERVER['REQUEST_METHOD'] === 'POST'
         && $action === 'thread'
     ) {
+        $orderId =
+            (int) ($payload['order_id'] ?? 0);
+
         $targetId =
-            (int) (
-                $payload['target_id']
-                ?? 0
-            );
+            (int) ($payload['target_id'] ?? 0);
 
         $thread =
             communicationThread(
                 $conn,
+                $orderId,
                 $userId,
                 $role,
                 $companyId,
@@ -244,7 +286,7 @@ try {
             communicationJson([
                 'success' => false,
                 'message' =>
-                    'You are not allowed to contact this user.'
+                    'This delivery communication channel is not available.'
             ], 403);
         }
 
@@ -260,47 +302,20 @@ try {
         && $action === 'messages'
     ) {
         $threadId =
-            (int) (
-                $_GET['thread_id']
-                ?? 0
-            );
+            (int) ($_GET['thread_id'] ?? 0);
 
         $afterId = max(
             0,
-            (int) (
-                $_GET['after_id']
-                ?? 0
-            )
+            (int) ($_GET['after_id'] ?? 0)
         );
 
-        $thread =
-            communicationAssertThreadAccess(
-                $conn,
-                $threadId,
-                $userId
-            );
-
-        $otherUserId =
-            communicationOtherUserId(
-                $thread,
-                $userId
-            );
-
-        if (
-            !communicationCanContact(
-                $conn,
-                $userId,
-                $role,
-                $companyId,
-                $otherUserId
-            )
-        ) {
-            communicationJson([
-                'success' => false,
-                'message' =>
-                    'Conversation access is no longer available.'
-            ], 403);
-        }
+        communicationAssertThreadAccess(
+            $conn,
+            $threadId,
+            $userId,
+            $role,
+            $companyId
+        );
 
         $stmt = $conn->prepare("
             SELECT
@@ -325,11 +340,9 @@ try {
         ]);
 
         $messages =
-            $stmt->fetchAll(
-                PDO::FETCH_ASSOC
-            );
+            $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $read = $conn->prepare("
+        $conn->prepare("
             UPDATE communication_messages
             SET read_at = COALESCE(
                 read_at,
@@ -338,9 +351,7 @@ try {
             WHERE thread_id = ?
               AND sender_id <> ?
               AND read_at IS NULL
-        ");
-
-        $read->execute([
+        ")->execute([
             $threadId,
             $userId
         ]);
@@ -356,16 +367,10 @@ try {
         && $action === 'send'
     ) {
         $threadId =
-            (int) (
-                $payload['thread_id']
-                ?? 0
-            );
+            (int) ($payload['thread_id'] ?? 0);
 
         $message = trim(
-            (string) (
-                $payload['message']
-                ?? ''
-            )
+            (string) ($payload['message'] ?? '')
         );
 
         if (
@@ -383,7 +388,9 @@ try {
             communicationAssertThreadAccess(
                 $conn,
                 $threadId,
-                $userId
+                $userId,
+                $role,
+                $companyId
             );
 
         $otherUserId =
@@ -391,22 +398,6 @@ try {
                 $thread,
                 $userId
             );
-
-        if (
-            !communicationCanContact(
-                $conn,
-                $userId,
-                $role,
-                $companyId,
-                $otherUserId
-            )
-        ) {
-            communicationJson([
-                'success' => false,
-                'message' =>
-                    'You are not allowed to message this user.'
-            ], 403);
-        }
 
         $conn->beginTransaction();
 
@@ -428,15 +419,13 @@ try {
         $messageId =
             (int) $conn->lastInsertId();
 
-        $stmt = $conn->prepare("
+        $conn->prepare("
             UPDATE communication_threads
             SET
                 last_message_at = NOW(),
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        ");
-
-        $stmt->execute([
+        ")->execute([
             $threadId
         ]);
 
@@ -461,20 +450,17 @@ try {
             $conn,
             $otherUserId,
             'message',
-            'New message from '
+            'Delivery update from '
                 . $sender['name'],
             mb_strlen($message) > 120
-                ? mb_substr(
-                    $message,
-                    0,
-                    117
-                ) . '...'
+                ? mb_substr($message, 0, 117)
+                    . '...'
                 : $message,
             BASE_URL
                 . '/communications.php?portal='
-                . rawurlencode(
-                    $recipientPortal
-                )
+                . rawurlencode($recipientPortal)
+                . '&order='
+                . (int) $thread['order_id']
                 . '&with='
                 . $userId
         );
@@ -483,10 +469,12 @@ try {
             $conn,
             $userId,
             $companyId,
-            'communication.message_sent',
-            'communication_thread',
-            (string) $threadId,
+            'communication.delivery_message_sent',
+            'order',
+            (string) $thread['order_id'],
             [
+                'thread_id' =>
+                    $threadId,
                 'recipient_id' =>
                     $otherUserId,
                 'message_id' =>
@@ -507,16 +495,15 @@ try {
         && $action === 'start_call'
     ) {
         $threadId =
-            (int) (
-                $payload['thread_id']
-                ?? 0
-            );
+            (int) ($payload['thread_id'] ?? 0);
 
         $thread =
             communicationAssertThreadAccess(
                 $conn,
                 $threadId,
-                $userId
+                $userId,
+                $role,
+                $companyId
             );
 
         $calleeId =
@@ -524,22 +511,6 @@ try {
                 $thread,
                 $userId
             );
-
-        if (
-            !communicationCanContact(
-                $conn,
-                $userId,
-                $role,
-                $companyId,
-                $calleeId
-            )
-        ) {
-            communicationJson([
-                'success' => false,
-                'message' =>
-                    'You are not allowed to call this user.'
-            ], 403);
-        }
 
         $active = $conn->prepare("
             SELECT id
@@ -612,9 +583,9 @@ try {
             $conn,
             $calleeId,
             'call',
-            'Incoming call from '
+            'Delivery call from '
                 . $caller['name'],
-            'Open Communications to answer the call.',
+            'Open the active delivery communication channel to answer.',
             BASE_URL
                 . '/communications.php?portal='
                 . rawurlencode(
@@ -622,21 +593,12 @@ try {
                         (string) $callee['role']
                     )
                 )
+                . '&order='
+                . (int) $thread['order_id']
                 . '&with='
                 . $userId
-        );
-
-        writeAuditLog(
-            $conn,
-            $userId,
-            $companyId,
-            'communication.call_started',
-            'communication_call',
-            (string) $callId,
-            [
-                'callee_id' =>
-                    $calleeId
-            ]
+                . '&call='
+                . $callId
         );
 
         communicationJson([
@@ -651,17 +613,27 @@ try {
         && $action === 'incoming_call'
     ) {
         $conn->prepare("
-            UPDATE communication_calls
+            UPDATE communication_calls cc
+            INNER JOIN communication_threads ct
+                ON ct.id = cc.thread_id
+            LEFT JOIN orders o
+                ON o.id = ct.order_id
+            LEFT JOIN deliveries d
+                ON d.order_id = o.id
             SET
-                status = 'missed',
-                ended_at = NOW()
-            WHERE callee_id = ?
-              AND status = 'ringing'
-              AND started_at
-                    < DATE_SUB(
-                        NOW(),
-                        INTERVAL 60 SECOND
-                    )
+                cc.status = 'missed',
+                cc.ended_at = NOW()
+            WHERE cc.callee_id = ?
+              AND cc.status = 'ringing'
+              AND (
+                    cc.started_at
+                        < DATE_SUB(
+                            NOW(),
+                            INTERVAL 60 SECOND
+                        )
+                    OR o.status <> 'out_for_delivery'
+                    OR d.status <> 'out_for_delivery'
+              )
         ")->execute([
             $userId
         ]);
@@ -670,15 +642,24 @@ try {
             SELECT
                 cc.id,
                 cc.thread_id,
+                ct.order_id,
                 cc.caller_id,
                 cc.started_at,
                 u.name AS caller_name,
                 u.role AS caller_role
             FROM communication_calls cc
+            INNER JOIN communication_threads ct
+                ON ct.id = cc.thread_id
+            INNER JOIN orders o
+                ON o.id = ct.order_id
+            INNER JOIN deliveries d
+                ON d.order_id = o.id
             INNER JOIN users u
                 ON u.id = cc.caller_id
             WHERE cc.callee_id = ?
               AND cc.status = 'ringing'
+              AND o.status = 'out_for_delivery'
+              AND d.status = 'out_for_delivery'
             ORDER BY cc.id DESC
             LIMIT 1
         ");
@@ -687,12 +668,26 @@ try {
             $userId
         ]);
 
+        $call =
+            $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($call) {
+            try {
+                communicationAssertThreadAccess(
+                    $conn,
+                    (int) $call['thread_id'],
+                    $userId,
+                    $role,
+                    $companyId
+                );
+            } catch (Throwable $e) {
+                $call = false;
+            }
+        }
+
         communicationJson([
             'success' => true,
-            'call' =>
-                $stmt->fetch(
-                    PDO::FETCH_ASSOC
-                ) ?: null
+            'call' => $call ?: null
         ]);
     }
 
@@ -701,16 +696,10 @@ try {
         && $action === 'call_action'
     ) {
         $callId =
-            (int) (
-                $payload['call_id']
-                ?? 0
-            );
+            (int) ($payload['call_id'] ?? 0);
 
         $status = trim(
-            (string) (
-                $payload['status']
-                ?? ''
-            )
+            (string) ($payload['status'] ?? '')
         );
 
         $call =
@@ -728,6 +717,14 @@ try {
             ], 404);
         }
 
+        communicationAssertCallAccess(
+            $conn,
+            $call,
+            $userId,
+            $role,
+            $companyId
+        );
+
         $allowed = [
             'accepted',
             'rejected',
@@ -735,13 +732,7 @@ try {
             'cancelled'
         ];
 
-        if (
-            !in_array(
-                $status,
-                $allowed,
-                true
-            )
-        ) {
+        if (!in_array($status, $allowed, true)) {
             communicationJson([
                 'success' => false,
                 'message' =>
@@ -754,8 +745,7 @@ try {
             && (
                 (int) $call['callee_id']
                     !== $userId
-                || $call['status']
-                    !== 'ringing'
+                || $call['status'] !== 'ringing'
             )
         ) {
             communicationJson([
@@ -789,36 +779,22 @@ try {
             ], 403);
         }
 
-        $sql = match ($status) {
-            'accepted' => "
+        if ($status === 'accepted') {
+            $conn->prepare("
                 UPDATE communication_calls
                 SET
                     status = 'accepted',
                     answered_at = NOW()
                 WHERE id = ?
-            ",
-
-            'rejected',
-            'cancelled',
-            'ended' => "
+            ")->execute([$callId]);
+        } else {
+            $conn->prepare("
                 UPDATE communication_calls
                 SET
                     status = ?,
                     ended_at = NOW()
                 WHERE id = ?
-            ",
-
-            default => ''
-        };
-
-        $stmt = $conn->prepare($sql);
-
-        if ($status === 'accepted') {
-            $stmt->execute([
-                $callId
-            ]);
-        } else {
-            $stmt->execute([
+            ")->execute([
                 $status,
                 $callId
             ]);
@@ -841,7 +817,7 @@ try {
                         ? (int) $call['callee_id']
                         : (int) $call['caller_id'];
 
-            $signal = $conn->prepare("
+            $conn->prepare("
                 INSERT INTO communication_call_signals (
                     call_id,
                     sender_id,
@@ -856,9 +832,7 @@ try {
                     'hangup',
                     NULL
                 )
-            ");
-
-            $signal->execute([
+            ")->execute([
                 $callId,
                 $userId,
                 $otherId
@@ -876,21 +850,11 @@ try {
         && $action === 'signal'
     ) {
         $callId =
-            (int) (
-                $payload['call_id']
-                ?? 0
-            );
+            (int) ($payload['call_id'] ?? 0);
 
         $signalType = trim(
-            (string) (
-                $payload['signal_type']
-                ?? ''
-            )
+            (string) ($payload['signal_type'] ?? '')
         );
-
-        $signalPayload =
-            $payload['payload']
-            ?? null;
 
         $call =
             communicationCallRow(
@@ -906,6 +870,14 @@ try {
                     'Call not found.'
             ], 404);
         }
+
+        communicationAssertCallAccess(
+            $conn,
+            $call,
+            $userId,
+            $role,
+            $companyId
+        );
 
         if (
             !in_array(
@@ -924,11 +896,7 @@ try {
         if (
             !in_array(
                 $signalType,
-                [
-                    'offer',
-                    'answer',
-                    'ice'
-                ],
+                ['offer', 'answer', 'ice'],
                 true
             )
         ) {
@@ -940,12 +908,11 @@ try {
         }
 
         $recipientId =
-            (int) $call['caller_id']
-                === $userId
-                    ? (int) $call['callee_id']
-                    : (int) $call['caller_id'];
+            (int) $call['caller_id'] === $userId
+                ? (int) $call['callee_id']
+                : (int) $call['caller_id'];
 
-        $stmt = $conn->prepare("
+        $conn->prepare("
             INSERT INTO communication_call_signals (
                 call_id,
                 sender_id,
@@ -954,16 +921,14 @@ try {
                 payload
             )
             VALUES (?, ?, ?, ?, ?)
-        ");
-
-        $stmt->execute([
+        ")->execute([
             $callId,
             $userId,
             $recipientId,
             $signalType,
-            $signalPayload !== null
+            isset($payload['payload'])
                 ? json_encode(
-                    $signalPayload,
+                    $payload['payload'],
                     JSON_UNESCAPED_SLASHES
                     | JSON_UNESCAPED_UNICODE
                 )
@@ -980,17 +945,11 @@ try {
         && $action === 'signals'
     ) {
         $callId =
-            (int) (
-                $_GET['call_id']
-                ?? 0
-            );
+            (int) ($_GET['call_id'] ?? 0);
 
         $afterId = max(
             0,
-            (int) (
-                $_GET['after_id']
-                ?? 0
-            )
+            (int) ($_GET['after_id'] ?? 0)
         );
 
         $call =
@@ -1007,6 +966,14 @@ try {
                     'Call not found.'
             ], 404);
         }
+
+        communicationAssertCallAccess(
+            $conn,
+            $call,
+            $userId,
+            $role,
+            $companyId
+        );
 
         $stmt = $conn->prepare("
             SELECT
@@ -1030,13 +997,9 @@ try {
         ]);
 
         $signals =
-            $stmt->fetchAll(
-                PDO::FETCH_ASSOC
-            );
+            $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        foreach (
-            $signals as &$signal
-        ) {
+        foreach ($signals as &$signal) {
             $signal['payload'] =
                 $signal['payload'] !== null
                     ? json_decode(
@@ -1074,6 +1037,6 @@ try {
     communicationJson([
         'success' => false,
         'message' =>
-            'The communications service is temporarily unavailable.'
+            'The delivery communication channel is unavailable.'
     ], 500);
 }
