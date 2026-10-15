@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/app.php';
+require_once __DIR__ . '/env.php';
 
 $apiKey = trim((string) getenv('OPENAI_API_KEY'));
 $model = trim((string) getenv('OPENAI_MODEL'));
