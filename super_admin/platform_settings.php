@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/ai.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
@@ -61,6 +62,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         isset($_POST['ai_enabled'])
                             ? '1'
                             : '0';
+
+                    if (
+                        $value === '1'
+                        && !OPENAI_AI_ENABLED
+                    ) {
+                        throw new RuntimeException(
+                            'Configure OPENAI_API_KEY before enabling the AI assistant.'
+                        );
+                    }
                 }
 
                 if ($key === 'ai_daily_request_limit') {
@@ -184,6 +194,21 @@ foreach ($stmt->fetchAll() as $row) {
                 </div>
 
                 <div class="col-md-4">
+                    <label class="form-label">AI Model</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        value="<?= e(OPENAI_MODEL) ?>"
+                        readonly
+                    >
+                    <div class="form-text">
+                        <?= OPENAI_AI_ENABLED
+                            ? 'API key configured.'
+                            : 'API key not configured yet.' ?>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
                     <label class="form-label d-block">AI Assistant</label>
                     <div class="form-check form-switch mt-2">
                         <input
@@ -206,6 +231,7 @@ foreach ($stmt->fetchAll() as $row) {
 
             <div class="alert alert-info mt-4 mb-3">
                 Subscription checkout stays disabled until a price is configured for that plan.
+                AI remains unavailable until OPENAI_API_KEY is configured locally and the AI switch is enabled.
             </div>
 
             <button class="btn btn-dark" type="submit">
