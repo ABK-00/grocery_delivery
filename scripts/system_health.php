@@ -177,14 +177,23 @@ $requiredColumns = [
     'ai_conversations' => [
         'user_id',
         'company_id',
-        'scope',
-        'title'
+        'conversation_uuid',
+        'assistant_type',
+        'channel',
+        'status',
+        'started_at',
+        'last_message_at'
     ],
     'ai_messages' => [
         'conversation_id',
-        'role',
-        'content',
-        'metadata'
+        'sender_type',
+        'sender_id',
+        'message',
+        'message_type',
+        'model',
+        'metadata',
+        'tool_name',
+        'tool_payload'
     ]
 ];
 
