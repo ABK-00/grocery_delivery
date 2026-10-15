@@ -6,13 +6,51 @@ require_once "../includes/functions.php";
 
 requireRole("customer");
 
-$orderId = isset($_GET['order']) ? (int) $_GET['order'] : 0;
+$userId = (int) $_SESSION['user_id'];
+
+$orderId =
+    isset($_GET['order'])
+        ? (int) $_GET['order']
+        : 0;
 
 if ($orderId <= 0) {
-    die("Invalid order.");
-}
+    $latestStmt = $conn->prepare("
+        SELECT o.id
+        FROM orders o
+        INNER JOIN deliveries d
+            ON d.order_id = o.id
+        WHERE o.user_id = ?
+          AND d.status IN (
+              'assigned',
+              'picked_up',
+              'out_for_delivery',
+              'delivery_failed',
+              'returning_to_vendor',
+              'return_pending_confirmation'
+          )
+        ORDER BY d.updated_at DESC, d.id DESC
+        LIMIT 1
+    ");
 
-$userId = (int) $_SESSION['user_id'];
+    $latestStmt->execute([
+        $userId
+    ]);
+
+    $orderId =
+        (int) ($latestStmt->fetchColumn() ?: 0);
+
+    if ($orderId <= 0) {
+        $_SESSION['tracking_notice'] =
+            'You do not have an active delivery to track right now.';
+
+        header(
+            'Location: '
+            . BASE_URL
+            . '/orders.php'
+        );
+        exit;
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
