@@ -806,12 +806,15 @@ CREATE TABLE delivery_locations (
 CREATE TABLE customer_preferences (
     user_id INT UNSIGNED PRIMARY KEY,
     preferred_categories TEXT DEFAULT NULL,
-    disliked_items TEXT DEFAULT NULL,
-    budget_preference ENUM('budget','balanced','premium')
-        NOT NULL DEFAULT 'balanced',
-    dietary_notes TEXT DEFAULT NULL,
-    personalization_enabled TINYINT(1)
-        NOT NULL DEFAULT 1,
+    preferred_stores TEXT DEFAULT NULL,
+    dietary_preferences TEXT DEFAULT NULL,
+    disliked_products TEXT DEFAULT NULL,
+    preferred_payment_method VARCHAR(50) DEFAULT NULL,
+    allow_personalization TINYINT(1) NOT NULL DEFAULT 1,
+    allow_marketing TINYINT(1) NOT NULL DEFAULT 0,
+    allow_location_personalization TINYINT(1) NOT NULL DEFAULT 0,
+    preferred_language VARCHAR(60) NOT NULL DEFAULT 'English',
+    ai_profile_summary TEXT DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_customer_preferences_user
