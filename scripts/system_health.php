@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/paystack.php';
 require_once __DIR__ . '/../config/ai.php';
 require_once __DIR__ . '/../config/env.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -146,6 +147,40 @@ $requiredColumns = [
         'subscription_plan',
         'trial_ends_at',
         'subscription_ends_at'
+    ],
+    'customer_preferences' => [
+        'preferred_categories',
+        'preferred_stores',
+        'dietary_preferences',
+        'disliked_products',
+        'preferred_payment_method',
+        'allow_personalization',
+        'allow_marketing',
+        'allow_location_personalization',
+        'preferred_language',
+        'ai_profile_summary'
+    ],
+    'customer_addresses' => [
+        'address_line1',
+        'address_line2',
+        'city',
+        'region',
+        'country',
+        'delivery_instructions',
+        'is_default',
+        'is_active'
+    ],
+    'ai_conversations' => [
+        'user_id',
+        'company_id',
+        'scope',
+        'title'
+    ],
+    'ai_messages' => [
+        'conversation_id',
+        'role',
+        'content',
+        'metadata'
     ]
 ];
 
@@ -183,6 +218,30 @@ healthLine(
     OPENAI_AI_ENABLED
         ? 'model=' . OPENAI_MODEL
         : 'AI remains disabled until OPENAI_API_KEY is configured.',
+    true
+);
+
+$aiPlatformEnabled =
+    (string) platformSetting(
+        $conn,
+        'ai_enabled',
+        platformSetting(
+            $conn,
+            'ai.enabled',
+            '0'
+        )
+    ) === '1';
+
+healthLine(
+    'AI platform switch',
+    !$aiPlatformEnabled || OPENAI_AI_ENABLED,
+    $aiPlatformEnabled
+        ? (
+            OPENAI_AI_ENABLED
+                ? 'enabled'
+                : 'enabled but API key is missing'
+        )
+        : 'disabled',
     true
 );
 
