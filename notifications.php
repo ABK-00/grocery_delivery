@@ -61,13 +61,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+$linkColumnStmt = $conn->prepare("
+    SELECT COUNT(*)
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = 'notifications'
+      AND column_name = 'link'
+");
+
+$linkColumnStmt->execute();
+
+$notificationLinkExpression =
+    (int) $linkColumnStmt->fetchColumn() === 1
+        ? 'link'
+        : 'action_url AS link';
+
 $stmt = $conn->prepare("
     SELECT
         id,
         type,
         title,
         message,
-        link,
+        {$notificationLinkExpression},
         is_read,
         created_at
     FROM notifications
@@ -87,20 +102,9 @@ unset(
     $_SESSION['notification_error']
 );
 
-$dashboardUrl = match (
-    $_SESSION['role'] ?? ''
-) {
-    'super_admin' =>
-        BASE_URL . '/super_admin/dashboard.php',
-    'admin' =>
-        BASE_URL . '/admin/dashboard.php',
-    'staff' =>
-        BASE_URL . '/staff/dashboard.php',
-    'delivery_partner' =>
-        BASE_URL . '/delivery/dashboard.php',
-    default =>
-        BASE_URL . '/customer/dashboard.php',
-};
+$dashboardUrl = roleDashboardUrl(
+    (string) ($_SESSION['role'] ?? '')
+);
 ?>
 <!doctype html>
 <html lang="en">
