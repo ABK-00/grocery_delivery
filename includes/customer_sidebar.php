@@ -20,6 +20,7 @@ $customerPrefix = $inCustomerDir ? '' : 'customer/';
         <a href="<?= BASE_URL ?>/customer/profile.php" class="nav-link <?= $currentPage==='profile.php'?'active':'' ?>"><i class="bi bi-person-circle"></i><span>My Profile</span></a>
         <a href="<?= BASE_URL ?>/customer/addresses.php" class="nav-link <?= $currentPage==='addresses.php'?'active':'' ?>"><i class="bi bi-geo-alt"></i><span>Saved Addresses</span></a>
         <a href="<?= BASE_URL ?>/customer/preferences.php" class="nav-link <?= $currentPage==='preferences.php'?'active':'' ?>"><i class="bi bi-sliders"></i><span>Shopping Preferences</span></a>
+        <a href="<?= BASE_URL ?>/communications.php?portal=customer" class="nav-link <?= $currentPage==='communications.php'?'active':'' ?>"><i class="bi bi-chat-dots-fill"></i><span>Communications</span></a>
         <a href="<?= BASE_URL ?>/assistant.php?portal=customer" class="nav-link <?= $currentPage==='assistant.php'?'active':'' ?>"><i class="bi bi-stars"></i><span>AI Assistant</span></a>
         <a href="<?= BASE_URL ?>/notifications.php?portal=customer" class="nav-link <?= $currentPage==='notifications.php'?'active':'' ?>"><i class="bi bi-bell"></i><span>Notifications</span></a>
         <a href="<?= BASE_URL ?>/support.php?portal=customer" class="nav-link <?= in_array($currentPage,['support.php','support_ticket.php'])?'active':'' ?>"><i class="bi bi-life-preserver"></i><span>Support</span></a>
@@ -31,3 +32,5 @@ $customerPrefix = $inCustomerDir ? '' : 'customer/';
 <script>document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('customerSidebar'),o=document.getElementById('sidebarOverlay');['sidebarToggle','customerMenuBtn'].forEach(function(id){var b=document.getElementById(id);if(b&&s)b.addEventListener('click',function(){s.classList.toggle('show');if(o)o.classList.toggle('show')})});if(o&&s)o.addEventListener('click',function(){s.classList.remove('show');o.classList.remove('show')});if(s)s.querySelectorAll('.nav-link').forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=900&&!a.hasAttribute('data-theme-toggle')){s.classList.remove('show');if(o)o.classList.remove('show')}})})});</script>
 
 <script src="<?= BASE_URL ?>/assets/js/theme.js"></script>
+
+<?php include_once __DIR__ . '/communication_alert.php'; ?>
