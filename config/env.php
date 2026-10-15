@@ -24,7 +24,15 @@ function loadEnv(string $path): void
         return;
     }
 
-    foreach ($lines as $line) {
+    foreach ($lines as $index => $line) {
+        if ($index === 0) {
+            $line = preg_replace(
+                '/^\xEF\xBB\xBF/',
+                '',
+                $line
+            );
+        }
+
         $line = trim($line);
 
         // Ignore empty lines and comments.
@@ -43,6 +51,11 @@ function loadEnv(string $path): void
         [$name, $value] = explode('=', $line, 2);
 
         $name = trim($name);
+        $name = preg_replace(
+            '/^\xEF\xBB\xBF/',
+            '',
+            $name
+        );
         $value = trim($value);
 
         if ($name === '') {
