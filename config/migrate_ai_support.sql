@@ -23,24 +23,33 @@ CREATE TABLE IF NOT EXISTS customer_preferences (
 
 CREATE TABLE IF NOT EXISTS ai_conversations (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id INT UNSIGNED NOT NULL,
     company_id INT UNSIGNED DEFAULT NULL,
-    scope ENUM(
-        'customer_support',
-        'customer_personalization',
-        'admin_assistant',
-        'super_admin_assistant',
-        'staff_assistant',
-        'delivery_assistant'
-    ) NOT NULL,
-    title VARCHAR(180) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_ai_conversations_user (user_id, updated_at),
-    INDEX idx_ai_conversations_company (company_id, updated_at),
+    user_id INT UNSIGNED NOT NULL,
+    conversation_uuid CHAR(36) NOT NULL,
+    assistant_type VARCHAR(80) NOT NULL,
+    channel VARCHAR(30) NOT NULL DEFAULT 'web',
+    status VARCHAR(30) NOT NULL DEFAULT 'active',
+    started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_message_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_ai_conversation_uuid (conversation_uuid),
+    INDEX idx_ai_conversations_user (
+        user_id,
+        last_message_at
+    ),
+    INDEX idx_ai_conversations_company (
+        company_id,
+        last_message_at
+    ),
+    INDEX idx_ai_conversations_type (
+        assistant_type,
+        last_message_at
+    ),
+
     CONSTRAINT fk_ai_conversations_user
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE ON UPDATE CASCADE,
+
     CONSTRAINT fk_ai_conversations_company
         FOREIGN KEY (company_id) REFERENCES companies(id)
         ON DELETE CASCADE ON UPDATE CASCADE
@@ -49,14 +58,36 @@ CREATE TABLE IF NOT EXISTS ai_conversations (
 CREATE TABLE IF NOT EXISTS ai_messages (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     conversation_id BIGINT UNSIGNED NOT NULL,
-    role ENUM('user','assistant') NOT NULL,
-    content LONGTEXT NOT NULL,
+    sender_type VARCHAR(30) NOT NULL,
+    sender_id INT UNSIGNED DEFAULT NULL,
+    message LONGTEXT NOT NULL,
+    message_type VARCHAR(30) NOT NULL DEFAULT 'text',
+    model VARCHAR(100) DEFAULT NULL,
     metadata JSON DEFAULT NULL,
+    tool_name VARCHAR(120) DEFAULT NULL,
+    tool_payload JSON DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_ai_messages_conversation (conversation_id, id),
+
+    INDEX idx_ai_messages_conversation (
+        conversation_id,
+        id
+    ),
+    INDEX idx_ai_messages_sender (
+        sender_type,
+        created_at
+    ),
+
     CONSTRAINT fk_ai_messages_conversation
-        FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        FOREIGN KEY (conversation_id)
+        REFERENCES ai_conversations(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_ai_messages_sender
+        FOREIGN KEY (sender_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS notifications (
