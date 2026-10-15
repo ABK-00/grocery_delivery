@@ -447,7 +447,7 @@ $messages = $stmt->fetchAll();
             </span>
         </div>
 
-        <?php if ($role === 'super_admin'): ?>
+        <?php if (in_array($role, ['super_admin', 'admin'], true)): ?>
             <form
                 method="POST"
                 class="d-flex gap-2 mt-4"
