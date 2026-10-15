@@ -4,7 +4,7 @@ USE grocery_delivery;
 
 CREATE TABLE IF NOT EXISTS communication_threads (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    order_id BIGINT UNSIGNED NOT NULL,
+    order_id INT UNSIGNED NOT NULL,
     user_one_id INT UNSIGNED NOT NULL,
     user_two_id INT UNSIGNED NOT NULL,
     company_id INT UNSIGNED NOT NULL,
@@ -215,7 +215,7 @@ SET @has_order_id = (
 
 SET @sql = IF(
     @has_order_id = 0,
-    'ALTER TABLE communication_threads ADD COLUMN order_id BIGINT UNSIGNED NULL AFTER id',
+    'ALTER TABLE communication_threads ADD COLUMN order_id INT UNSIGNED NULL AFTER id',
     'SELECT 1'
 );
 
@@ -283,5 +283,5 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 ALTER TABLE communication_threads
-    MODIFY order_id BIGINT UNSIGNED NOT NULL,
+    MODIFY order_id INT UNSIGNED NOT NULL,
     MODIFY company_id INT UNSIGNED NOT NULL;
