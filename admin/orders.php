@@ -44,6 +44,16 @@ $statusLabels = [
     "cancelled"                   => "Cancelled"
 ];
 
+$manualStatusLabels = [
+    "pending"          => "Pending",
+    "confirmed"        => "Confirmed",
+    "preparing"        => "Preparing",
+    "ready"            => "Ready",
+    "out_for_delivery" => "Out for Delivery",
+    "delivered"        => "Delivered",
+    "cancelled"        => "Cancelled"
+];
+
 $statusBadgeClass = [
     "pending"           => "badge-pending",
     "confirmed"         => "badge-confirmed",
@@ -945,7 +955,7 @@ $totalRevenue = (float)$stat->fetchColumn();
                                         class="form-select form-select-sm"
                                         onchange="this.form.submit()">
 
-                                        <?php foreach ($statusLabels as $value => $label): ?>
+                                        <?php foreach ($manualStatusLabels as $value => $label): ?>
 
                                             <option
                                                 value="<?= e($value) ?>"
