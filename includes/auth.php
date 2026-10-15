@@ -163,6 +163,160 @@ function roleDashboardUrl(string $role): string
     };
 }
 
+
+
+function portalKeyForRole(string $role): string
+{
+    return match ($role) {
+        'super_admin' =>
+            'super_admin',
+
+        'admin' =>
+            'admin',
+
+        'staff' =>
+            'staff',
+
+        'delivery_partner' =>
+            'delivery',
+
+        'customer' =>
+            'customer',
+
+        default =>
+            '',
+    };
+}
+
+
+function roleForPortalKey(string $portal): ?string
+{
+    $portal = strtolower(
+        trim($portal)
+    );
+
+    return match ($portal) {
+        'super_admin' =>
+            'super_admin',
+
+        'admin' =>
+            'admin',
+
+        'staff' =>
+            'staff',
+
+        'delivery' =>
+            'delivery_partner',
+
+        'customer' =>
+            'customer',
+
+        default =>
+            null,
+    };
+}
+
+
+function requestedPortalRole(): ?string
+{
+    $portal =
+        (string) (
+            $_GET['portal']
+            ?? $_POST['portal']
+            ?? ''
+        );
+
+    if ($portal === '') {
+        return null;
+    }
+
+    return roleForPortalKey(
+        $portal
+    );
+}
+
+
+function requirePortalContext(
+    ?string $fallbackRole = null
+): string {
+    $expectedRole =
+        requestedPortalRole()
+        ?? $fallbackRole;
+
+    if ($expectedRole === null) {
+        $expectedRole =
+            (string) (
+                $_SESSION['role']
+                ?? ''
+            );
+    }
+
+    if (
+        $expectedRole === ''
+        || roleForPortalKey(
+            portalKeyForRole(
+                $expectedRole
+            )
+        ) === null
+    ) {
+        header(
+            'Location: '
+            . BASE_URL
+            . '/access.php'
+        );
+        exit;
+    }
+
+    if (
+        !isLoggedIn()
+        || !syncAuthenticatedSession()
+    ) {
+        header(
+            'Location: '
+            . roleLoginUrl(
+                $expectedRole
+            )
+            . (
+                str_contains(
+                    roleLoginUrl($expectedRole),
+                    '?'
+                )
+                    ? '&'
+                    : '?'
+            )
+            . 'error=portal'
+        );
+        exit;
+    }
+
+    $actualRole =
+        (string) (
+            $_SESSION['role']
+            ?? ''
+        );
+
+    if ($actualRole !== $expectedRole) {
+        header(
+            'Location: '
+            . roleLoginUrl(
+                $expectedRole
+            )
+            . (
+                str_contains(
+                    roleLoginUrl($expectedRole),
+                    '?'
+                )
+                    ? '&'
+                    : '?'
+            )
+            . 'error=role_mismatch'
+        );
+        exit;
+    }
+
+    return $expectedRole;
+}
+
 /*
 |--------------------------------------------------------------------------
 | LOGIN CHECK
