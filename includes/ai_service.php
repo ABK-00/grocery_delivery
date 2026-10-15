@@ -71,10 +71,15 @@ function buildAiBusinessContext(
         $stmt = $conn->prepare("
             SELECT
                 preferred_categories,
-                disliked_items,
-                budget_preference,
-                dietary_notes,
-                personalization_enabled
+                preferred_stores,
+                dietary_preferences,
+                disliked_products,
+                preferred_payment_method,
+                allow_personalization,
+                allow_marketing,
+                allow_location_personalization,
+                preferred_language,
+                ai_profile_summary
             FROM customer_preferences
             WHERE user_id = ?
             LIMIT 1
@@ -84,7 +89,7 @@ function buildAiBusinessContext(
 
         $personalizationEnabled =
             $preferences === null
-            || !empty($preferences['personalization_enabled']);
+            || !empty($preferences['allow_personalization']);
 
         $context['personalization_enabled'] =
             $personalizationEnabled;
@@ -338,9 +343,9 @@ function aiInstructionsForRole(
                     : " You are a customer-service assistant. "
                         . "Help with orders, payments, delivery, account guidance, returns/support routing, and product discovery. "
             )
-            . "Only personalize recommendations when personalization_enabled is true. "
+            . "Only personalize recommendations when allow_personalization is true. "
             . "When personalization is disabled, do not infer tastes from purchase history or stored preferences. "
-            . "Treat dietary notes and disliked items as important constraints, but never present them as medical advice. "
+            . "Treat dietary preferences and disliked products as important constraints, but never present them as medical advice. "
             . "Do not recommend unavailable products and do not expose vendor-internal information.",
         'admin' => $base
             . " You are a company administrator's operations assistant. "
@@ -1083,14 +1088,14 @@ function executeAiReadTool(
                     u.name AS requester_name
                 FROM support_tickets st
                 INNER JOIN users u ON u.id = st.user_id
-                WHERE st.user_id = ?
+                WHERE st.company_id = ?
                   AND st.status IN ('open','in_progress')
                 ORDER BY
                     FIELD(st.priority,'urgent','high','normal','low'),
                     st.updated_at ASC
                 LIMIT ?
             ");
-            $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+            $stmt->bindValue(1, (int) $companyId, PDO::PARAM_INT);
             $stmt->bindValue(2, $limit, PDO::PARAM_INT);
             $stmt->execute();
         }
@@ -1174,10 +1179,15 @@ function executeAiReadTool(
         $prefStmt = $conn->prepare("
             SELECT
                 preferred_categories,
-                disliked_items,
-                budget_preference,
-                dietary_notes,
-                personalization_enabled
+                preferred_stores,
+                dietary_preferences,
+                disliked_products,
+                preferred_payment_method,
+                allow_personalization,
+                allow_marketing,
+                allow_location_personalization,
+                preferred_language,
+                ai_profile_summary
             FROM customer_preferences
             WHERE user_id = ?
             LIMIT 1
@@ -1187,7 +1197,7 @@ function executeAiReadTool(
 
         if (
             $prefs
-            && empty($prefs['personalization_enabled'])
+            && empty($prefs['allow_personalization'])
         ) {
             return [
                 'personalization_enabled' => false,
@@ -1278,7 +1288,7 @@ function executeAiReadTool(
         return [
             'personalization_enabled' => true,
             'preferences' => $prefs ?: [
-                'budget_preference' => 'balanced'
+                'allow_personalization' => 1
             ],
             'products' => $stmt->fetchAll()
         ];
@@ -1313,7 +1323,13 @@ function executeAiReadTool(
         ";
         $params = [$ticketNumber];
 
-        if ($role !== 'super_admin') {
+        if (
+            in_array($role, ['admin', 'staff'], true)
+            && $companyId
+        ) {
+            $sql .= " AND st.company_id = ? ";
+            $params[] = $companyId;
+        } elseif ($role !== 'super_admin') {
             $sql .= " AND st.user_id = ? ";
             $params[] = $userId;
         }
