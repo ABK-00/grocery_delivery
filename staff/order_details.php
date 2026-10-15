@@ -230,9 +230,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $companyId
                 ]);
 
-                $customerId = orderCustomerId($conn, $orderId);
+                $customerId =
+                    (int) ($orderCheck['user_id'] ?? 0);
 
-                if ($customerId) {
+                if ($customerId > 0) {
                     createNotification(
                         $conn,
                         $customerId,
