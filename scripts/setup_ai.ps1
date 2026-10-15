@@ -63,7 +63,12 @@ $lines = Set-EnvValue $lines "OPENAI_API_KEY" $apiKey
 $lines = Set-EnvValue $lines "OPENAI_MODEL" "gpt-6-luna"
 $lines = Set-EnvValue $lines "OPENAI_BASE_URL" "https://api.openai.com/v1"
 
-Set-Content -Path $envPath -Value $lines -Encoding UTF8
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllLines(
+    $envPath,
+    [string[]] $lines,
+    $utf8NoBom
+)
 
 Write-Host ""
 Write-Host "[OK] .env updated locally."
