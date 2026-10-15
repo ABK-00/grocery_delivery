@@ -306,7 +306,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     FOR UPDATE
                 ");
 
-                $stmt->execute([$orderId]);
+                $stmt->execute([
+                    $orderId,
+                    $companyId
+                ]);
 
                 $order = $stmt->fetch();
 
