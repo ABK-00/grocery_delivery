@@ -169,7 +169,7 @@ if (!isset($_SESSION['user_name'])) {
         <a href="<?= BASE_URL ?>/support.php?portal=delivery"><i class="bi bi-life-preserver"></i>Support</a>
 <div class="delivery-logout">
 
-            <a href="<?= BASE_URL ?>/logout.php">
+            <a href="<?= BASE_URL ?>/logout.php?portal=delivery">
 
                 <i class="bi bi-box-arrow-right"></i>
                 Logout
