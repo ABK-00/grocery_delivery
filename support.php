@@ -128,7 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header(
                     'Location: '
                     . BASE_URL
-                    . '/support_ticket.php?id='
+                    . '/support_ticket.php?portal='
+                    . urlencode($portal)
+                    . '&id='
                     . $ticketId
                     . '&created=1'
                 );
