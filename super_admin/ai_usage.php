@@ -63,7 +63,7 @@ $summaryStmt = $conn->prepare("
     FROM ai_messages am
     INNER JOIN ai_conversations ac
         ON ac.id = am.conversation_id
-    WHERE am.role = 'assistant'
+    WHERE am.sender_type = 'assistant'
       AND am.created_at >= DATE_SUB(
             NOW(),
             INTERVAL ? DAY
@@ -96,7 +96,7 @@ $roleStmt = $conn->prepare("
         ON ac.id = am.conversation_id
     INNER JOIN users u
         ON u.id = ac.user_id
-    WHERE am.role = 'assistant'
+    WHERE am.sender_type = 'assistant'
       AND am.created_at >= DATE_SUB(
             NOW(),
             INTERVAL ? DAY
@@ -110,15 +110,7 @@ $byRole = $roleStmt->fetchAll();
 $modelStmt = $conn->prepare("
     SELECT
         COALESCE(
-            NULLIF(
-                JSON_UNQUOTE(
-                    JSON_EXTRACT(
-                        am.metadata,
-                        '$.model'
-                    )
-                ),
-                ''
-            ),
+            NULLIF(am.model, ''),
             'unknown'
         ) AS model,
         COUNT(*) AS responses,
@@ -136,7 +128,7 @@ $modelStmt = $conn->prepare("
             0
         ) AS total_tokens
     FROM ai_messages am
-    WHERE am.role = 'assistant'
+    WHERE am.sender_type = 'assistant'
       AND am.created_at >= DATE_SUB(
             NOW(),
             INTERVAL ? DAY
@@ -150,12 +142,22 @@ $byModel = $modelStmt->fetchAll();
 $recentStmt = $conn->prepare("
     SELECT
         ac.id,
-        ac.title,
-        ac.scope,
-        ac.updated_at,
+        ac.assistant_type AS scope,
+        ac.last_message_at AS updated_at,
         u.name,
         u.role,
         c.company_name,
+        COALESCE(
+            (
+                SELECT m.message
+                FROM ai_messages m
+                WHERE m.conversation_id = ac.id
+                  AND m.sender_type = 'user'
+                ORDER BY m.id ASC
+                LIMIT 1
+            ),
+            'Conversation'
+        ) AS title,
         (
             SELECT COUNT(*)
             FROM ai_messages m
@@ -166,11 +168,11 @@ $recentStmt = $conn->prepare("
         ON u.id = ac.user_id
     LEFT JOIN companies c
         ON c.id = ac.company_id
-    WHERE ac.updated_at >= DATE_SUB(
+    WHERE ac.last_message_at >= DATE_SUB(
         NOW(),
         INTERVAL ? DAY
     )
-    ORDER BY ac.updated_at DESC
+    ORDER BY ac.last_message_at DESC
     LIMIT 50
 ");
 $recentStmt->execute([$days]);
