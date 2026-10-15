@@ -170,15 +170,56 @@ function createNotification(
     string $message,
     ?string $link = null
 ): void {
+    static $hasLinkColumn = null;
+
+    if ($hasLinkColumn === null) {
+        $check = $conn->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'notifications'
+              AND column_name = 'link'
+        ");
+        $check->execute();
+        $hasLinkColumn =
+            (int) $check->fetchColumn() === 1;
+    }
+
+    if ($hasLinkColumn) {
+        $stmt = $conn->prepare("
+            INSERT INTO notifications (
+                user_id,
+                type,
+                title,
+                message,
+                link
+            )
+            VALUES (?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $userId,
+            $type,
+            $title,
+            $message,
+            $link
+        ]);
+
+        return;
+    }
+
     $stmt = $conn->prepare("
         INSERT INTO notifications (
             user_id,
             type,
             title,
             message,
-            link
+            channel,
+            action_url,
+            status,
+            is_read
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, 'in_app', ?, 'sent', 0)
     ");
 
     $stmt->execute([
@@ -199,32 +240,94 @@ function writeAuditLog(
     ?string $entityId = null,
     array $details = []
 ): void {
+    static $hasUserIdColumn = null;
+
+    if ($hasUserIdColumn === null) {
+        $check = $conn->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'audit_logs'
+              AND column_name = 'user_id'
+        ");
+        $check->execute();
+        $hasUserIdColumn =
+            (int) $check->fetchColumn() === 1;
+    }
+
+    $detailsJson = $details
+        ? json_encode(
+            $details,
+            JSON_UNESCAPED_SLASHES
+            | JSON_UNESCAPED_UNICODE
+        )
+        : null;
+
+    if ($hasUserIdColumn) {
+        $stmt = $conn->prepare("
+            INSERT INTO audit_logs (
+                user_id,
+                company_id,
+                action,
+                entity_type,
+                entity_id,
+                details,
+                ip_address
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        $stmt->execute([
+            $userId,
+            $companyId,
+            $action,
+            $entityType,
+            $entityId,
+            $detailsJson,
+            $_SERVER['REMOTE_ADDR'] ?? null
+        ]);
+
+        return;
+    }
+
+    $actorType = 'system';
+
+    if ($userId !== null) {
+        $roleStmt = $conn->prepare("
+            SELECT role
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $roleStmt->execute([$userId]);
+
+        $actorType =
+            (string) ($roleStmt->fetchColumn()
+                ?: 'system');
+    }
+
     $stmt = $conn->prepare("
         INSERT INTO audit_logs (
-            user_id,
             company_id,
+            actor_id,
+            actor_type,
             action,
             entity_type,
             entity_id,
-            details,
+            after_data,
             ip_address
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->execute([
-        $userId,
         $companyId,
+        $userId,
+        $actorType,
         $action,
         $entityType,
         $entityId,
-        $details
-            ? json_encode(
-                $details,
-                JSON_UNESCAPED_SLASHES
-                | JSON_UNESCAPED_UNICODE
-            )
-            : null,
+        $detailsJson,
         $_SERVER['REMOTE_ADDR'] ?? null
     ]);
 }
