@@ -15,8 +15,12 @@ $platformAiEnabled =
     (string) platformSetting(
         $conn,
         'ai_enabled',
-        '1'
-    ) !== '0';
+        platformSetting(
+            $conn,
+            'ai.enabled',
+            '0'
+        )
+    ) === '1';
 
 $requestedMode =
     $role === 'customer'
