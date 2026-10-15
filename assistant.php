@@ -3,7 +3,7 @@
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/includes/ai_service.php';
+require_once __DIR__ . '/config/ai.php';
 
 requireLogin();
 
@@ -27,12 +27,27 @@ $requestedMode =
         ? (string) ($_GET['mode'] ?? 'support')
         : null;
 
-$assistantScope = aiScopeForRole(
-    $role,
-    $requestedMode === 'personalization'
-        ? 'customer_personalization'
-        : null
-);
+$assistantType = match ($role) {
+    'super_admin' =>
+        'super_admin_assistant',
+    'admin' =>
+        'admin_assistant',
+    'staff' =>
+        'staff_assistant',
+    'delivery_partner' =>
+        'delivery_assistant',
+    default =>
+        'customer_service',
+};
+
+$assistantScope =
+    $role === 'customer'
+        ? (
+            $requestedMode === 'personalization'
+                ? 'customer_personalization'
+                : 'customer_support'
+        )
+        : $assistantType;
 
 if (empty($_SESSION['ai_chat_csrf'])) {
     $_SESSION['ai_chat_csrf'] =
@@ -50,27 +65,51 @@ $messages = [];
 
 if ($conversationId) {
     $stmt = $conn->prepare("
-        SELECT id, title, scope, updated_at
-        FROM ai_conversations
-        WHERE id = ?
-          AND user_id = ?
-          AND scope = ?
+        SELECT
+            ac.id,
+            ac.assistant_type,
+            ac.status,
+            ac.started_at,
+            ac.last_message_at,
+            COALESCE(
+                (
+                    SELECT m.message
+                    FROM ai_messages m
+                    WHERE m.conversation_id = ac.id
+                      AND m.sender_type = 'user'
+                    ORDER BY m.id ASC
+                    LIMIT 1
+                ),
+                'Conversation'
+            ) AS title
+        FROM ai_conversations ac
+        WHERE ac.id = ?
+          AND ac.user_id = ?
+          AND ac.assistant_type = ?
         LIMIT 1
     ");
 
     $stmt->execute([
         $conversationId,
         $userId,
-        $assistantScope
+        $assistantType
     ]);
 
     $conversation = $stmt->fetch();
 
     if ($conversation) {
         $stmt = $conn->prepare("
-            SELECT role, content, created_at
+            SELECT
+                sender_type AS role,
+                message AS content,
+                created_at
             FROM ai_messages
             WHERE conversation_id = ?
+              AND sender_type IN (
+                    'user',
+                    'assistant'
+              )
+              AND message_type = 'text'
             ORDER BY id ASC
         ");
 
@@ -85,17 +124,33 @@ if ($conversationId) {
 }
 
 $stmt = $conn->prepare("
-    SELECT id, title, scope, updated_at
-    FROM ai_conversations
-    WHERE user_id = ?
-      AND scope = ?
-    ORDER BY updated_at DESC
+    SELECT
+        ac.id,
+        ac.assistant_type,
+        ac.status,
+        ac.started_at,
+        ac.last_message_at,
+        COALESCE(
+            (
+                SELECT m.message
+                FROM ai_messages m
+                WHERE m.conversation_id = ac.id
+                  AND m.sender_type = 'user'
+                ORDER BY m.id ASC
+                LIMIT 1
+            ),
+            'Conversation'
+        ) AS title
+    FROM ai_conversations ac
+    WHERE ac.user_id = ?
+      AND ac.assistant_type = ?
+    ORDER BY ac.last_message_at DESC, ac.id DESC
     LIMIT 20
 ");
 
 $stmt->execute([
     $userId,
-    $assistantScope
+    $assistantType
 ]);
 
 $conversations = $stmt->fetchAll();
@@ -366,9 +421,8 @@ $quickPrompts = match ($role) {
     <?php elseif (!OPENAI_AI_ENABLED): ?>
         <div class="alert alert-warning">
             <strong>AI is not configured yet.</strong>
-            Add your API key in
-            <code>config/ai.local.php</code>
-            before using this assistant.
+            Configure <code>OPENAI_API_KEY</code> in the local
+            <code>.env</code> file before using this assistant.
         </div>
     <?php endif; ?>
 
@@ -431,7 +485,7 @@ $quickPrompts = match ($role) {
                     <small class="text-muted">
                         <?= date(
                             'd M, H:i',
-                            strtotime($item['updated_at'])
+                            strtotime($item['last_message_at'])
                         ) ?>
                     </small>
                 </a>
