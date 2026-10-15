@@ -1,1 +1,13 @@
-<?php require "../includes/functions.php"; require "../includes/auth.php"; require_role("delivery_partner"); $page_title="Delivery Dashboard"; require "../includes/header.php"; ?><div class="card p-4"><h2>Delivery Partner Dashboard</h2><p>Assigned deliveries and GPS tracking will appear here.</p></div><?php require "../includes/footer.php"; ?>
+<?php
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+
+requireRole('delivery_partner');
+requireCompanyAccess();
+
+header(
+    'Location: '
+    . BASE_URL
+    . '/delivery/dashboard.php'
+);
+exit;
