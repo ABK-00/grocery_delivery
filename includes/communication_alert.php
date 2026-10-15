@@ -200,9 +200,17 @@ $communicationAlertCsrf =
                     + '/communications.php'
                     + '?portal='
                     + encodeURIComponent(portal)
+                    + '&order='
+                    + encodeURIComponent(
+                        data.call.order_id
+                    )
                     + '&with='
                     + encodeURIComponent(
                         data.call.caller_id
+                    )
+                    + '&call='
+                    + encodeURIComponent(
+                        data.call.id
                     );
             }
 
