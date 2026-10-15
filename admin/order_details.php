@@ -718,6 +718,7 @@ $deliveryStmt = $conn->prepare("
         dp.vehicle_type,
         dp.vehicle_registration,
         dp.status AS partner_status,
+        u.id AS partner_user_id,
         u.name AS partner_name,
         u.email AS partner_email,
         u.phone AS partner_phone,
@@ -1444,13 +1445,21 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
                     <?php if ($order['status'] === 'out_for_delivery'): ?>
 
-                        <a href="<?= BASE_URL ?>/admin/delivery_details.php?id=<?= (int) $delivery['id'] ?>"
-                           class="btn btn-outline-success">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="<?= BASE_URL ?>/admin/delivery_details.php?id=<?= (int) $delivery['id'] ?>"
+                               class="btn btn-outline-success">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                View Live Tracking
+                            </a>
 
-                            <i class="bi bi-geo-alt me-1"></i>
-                            View Live Tracking
-
-                        </a>
+                            <a
+                                href="<?= BASE_URL ?>/communications.php?portal=admin&order=<?= (int) $orderId ?>&with=<?= (int) ($delivery['partner_user_id'] ?? 0) ?>"
+                                class="btn btn-success"
+                            >
+                                <i class="bi bi-chat-dots-fill me-1"></i>
+                                Message / Call Rider
+                            </a>
+                        </div>
 
                     <?php endif; ?>
 
