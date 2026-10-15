@@ -56,8 +56,26 @@ if (empty($_SESSION['reorder_csrf'])) {
         bin2hex(random_bytes(32));
 }
 
+if (empty($_SESSION['customer_order_action_csrf'])) {
+    $_SESSION['customer_order_action_csrf'] =
+        bin2hex(random_bytes(32));
+}
+
 $cartError = $_SESSION['cart_error'] ?? null;
 unset($_SESSION['cart_error']);
+
+$customerOrderActionSuccess =
+    $_SESSION['customer_order_action_success']
+    ?? null;
+
+$customerOrderActionError =
+    $_SESSION['customer_order_action_error']
+    ?? null;
+
+unset(
+    $_SESSION['customer_order_action_success'],
+    $_SESSION['customer_order_action_error']
+);
 
 
 /*
@@ -316,6 +334,20 @@ if ($currentIndex === false) {
 
 <div class="container py-4">
 
+    <?php if ($customerOrderActionSuccess): ?>
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle me-1"></i>
+            <?= e($customerOrderActionSuccess) ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($customerOrderActionError): ?>
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <?= e($customerOrderActionError) ?>
+        </div>
+    <?php endif; ?>
+
     <?php if ($cartError): ?>
         <div class="alert alert-danger">
             <i class="bi bi-exclamation-triangle me-1"></i>
@@ -396,7 +428,114 @@ if ($currentIndex === false) {
 
     <?php endif; ?>
 
-    <div class="row">
+    
+    <?php
+    $canCancelUnpaid =
+        $order['status'] === 'pending'
+        && $order['payment_status'] !== 'paid';
+
+    $canRequestRefund =
+        $order['payment_status'] === 'paid'
+        && in_array(
+            $order['status'],
+            ['pending', 'confirmed', 'preparing'],
+            true
+        );
+    ?>
+
+    <?php if ($canCancelUnpaid || $canRequestRefund): ?>
+        <div class="card-box">
+            <h5 class="fw-bold mb-3">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Cancel Order / Request Refund
+            </h5>
+
+            <?php if ($canCancelUnpaid): ?>
+                <p class="text-muted mb-3">
+                    You can cancel this order before payment is completed.
+                </p>
+
+                <form
+                    method="POST"
+                    action="<?= BASE_URL ?>/api/customer_order_action.php"
+                    onsubmit="return confirm('Cancel this order? Reserved stock will be released.');"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= e($_SESSION['customer_order_action_csrf']) ?>"
+                    >
+                    <input
+                        type="hidden"
+                        name="order_id"
+                        value="<?= (int) $order['id'] ?>"
+                    >
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="cancel"
+                    >
+                    <input
+                        type="text"
+                        name="reason"
+                        class="form-control mb-2"
+                        maxlength="255"
+                        placeholder="Reason (optional)"
+                    >
+                    <button
+                        type="submit"
+                        class="btn btn-outline-danger"
+                    >
+                        <i class="bi bi-x-circle me-1"></i>
+                        Cancel Order
+                    </button>
+                </form>
+            <?php elseif ($canRequestRefund): ?>
+                <p class="text-muted mb-3">
+                    You can request a refund before the order is marked ready for pickup.
+                </p>
+
+                <form
+                    method="POST"
+                    action="<?= BASE_URL ?>/api/customer_order_action.php"
+                    onsubmit="return confirm('Submit a refund request for this order?');"
+                >
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= e($_SESSION['customer_order_action_csrf']) ?>"
+                    >
+                    <input
+                        type="hidden"
+                        name="order_id"
+                        value="<?= (int) $order['id'] ?>"
+                    >
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="request_refund"
+                    >
+                    <textarea
+                        name="reason"
+                        class="form-control mb-2"
+                        rows="2"
+                        maxlength="255"
+                        placeholder="Why are you requesting a refund?"
+                        required
+                    ></textarea>
+                    <button
+                        type="submit"
+                        class="btn btn-outline-danger"
+                    >
+                        <i class="bi bi-cash-coin me-1"></i>
+                        Request Refund
+                    </button>
+                </form>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
+
+<div class="row">
 
         <div class="col-lg-8">
 
