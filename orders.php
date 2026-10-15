@@ -32,6 +32,10 @@ function statusBadge($status)
         'preparing' => 'bg-info text-dark',
         'ready' => 'bg-secondary',
         'out_for_delivery' => 'bg-dark',
+        'delivery_failed' => 'bg-danger',
+        'returning_to_vendor' => 'bg-warning text-dark',
+        'return_pending_confirmation' => 'bg-info text-dark',
+        'returned' => 'bg-secondary',
         'delivered' => 'bg-success',
         'cancelled' => 'bg-danger'
     ];
@@ -42,6 +46,10 @@ function statusBadge($status)
         'preparing' => 'Preparing',
         'ready' => 'Ready',
         'out_for_delivery' => 'Out for Delivery',
+        'delivery_failed' => 'Delivery Failed',
+        'returning_to_vendor' => 'Returning to Vendor',
+        'return_pending_confirmation' => 'Return Awaiting Confirmation',
+        'returned' => 'Returned',
         'delivered' => 'Delivered',
         'cancelled' => 'Cancelled'
     ];
@@ -270,13 +278,45 @@ function statusBadge($status)
 
                     <div class="col-md-3 text-md-end">
 
-                        <a
-                            href="order_details.php?id=<?= (int)$order['id'] ?>"
-                            class="btn btn-outline-success"
-                        >
-                            <i class="bi bi-eye"></i>
-                            View Order
-                        </a>
+                        <div class="d-flex gap-2 justify-content-md-end flex-wrap">
+
+                            <a
+                                href="order_details.php?id=<?= (int)$order['id'] ?>"
+                                class="btn btn-outline-success"
+                            >
+                                <i class="bi bi-eye"></i>
+                                View Order
+                            </a>
+
+                            <?php if (
+                                $order['status'] === 'pending'
+                                && $order['payment_status'] !== 'paid'
+                            ): ?>
+                                <a
+                                    href="order_details.php?id=<?= (int)$order['id'] ?>"
+                                    class="btn btn-outline-danger"
+                                >
+                                    <i class="bi bi-x-circle"></i>
+                                    Cancel
+                                </a>
+                            <?php elseif (
+                                $order['payment_status'] === 'paid'
+                                && in_array(
+                                    $order['status'],
+                                    ['pending', 'confirmed', 'preparing'],
+                                    true
+                                )
+                            ): ?>
+                                <a
+                                    href="order_details.php?id=<?= (int)$order['id'] ?>"
+                                    class="btn btn-outline-danger"
+                                >
+                                    <i class="bi bi-cash-coin"></i>
+                                    Refund
+                                </a>
+                            <?php endif; ?>
+
+                        </div>
 
                     </div>
 
