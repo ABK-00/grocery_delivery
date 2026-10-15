@@ -22,6 +22,10 @@ $allowedStatuses = [
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivery_failed",
+    "returning_to_vendor",
+    "return_pending_confirmation",
+    "returned",
     "delivered",
     "cancelled"
 ];
@@ -31,9 +35,13 @@ $statusLabels = [
     "confirmed"         => "Confirmed",
     "preparing"         => "Preparing",
     "ready"             => "Ready",
-    "out_for_delivery"  => "Out for Delivery",
-    "delivered"         => "Delivered",
-    "cancelled"         => "Cancelled"
+    "out_for_delivery"            => "Out for Delivery",
+    "delivery_failed"              => "Delivery Failed",
+    "returning_to_vendor"          => "Returning to Vendor",
+    "return_pending_confirmation"  => "Return Awaiting Confirmation",
+    "returned"                    => "Returned",
+    "delivered"                   => "Delivered",
+    "cancelled"                   => "Cancelled"
 ];
 
 $statusBadgeClass = [
@@ -41,9 +49,13 @@ $statusBadgeClass = [
     "confirmed"         => "badge-confirmed",
     "preparing"         => "badge-preparing",
     "ready"             => "badge-ready",
-    "out_for_delivery"  => "badge-out",
-    "delivered"         => "badge-delivered",
-    "cancelled"         => "badge-cancelled"
+    "out_for_delivery"            => "badge-out",
+    "delivery_failed"              => "badge-cancelled",
+    "returning_to_vendor"          => "badge-preparing",
+    "return_pending_confirmation"  => "badge-pending",
+    "returned"                    => "badge-delivered",
+    "delivered"                   => "badge-delivered",
+    "cancelled"                   => "badge-cancelled"
 ];
 
 $paymentBadgeClass = [
@@ -405,7 +417,7 @@ $stat = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ? AND sta
 $stat->execute([$companyId]);
 $pendingOrders = (int)$stat->fetchColumn();
 
-$stat = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ? AND status IN ('confirmed','preparing','ready','out_for_delivery')");
+$stat = $conn->prepare("SELECT COUNT(*) FROM orders WHERE company_id = ? AND status IN ('confirmed','preparing','ready','out_for_delivery','delivery_failed','returning_to_vendor','return_pending_confirmation')");
 $stat->execute([$companyId]);
 $activeOrders = (int)$stat->fetchColumn();
 
