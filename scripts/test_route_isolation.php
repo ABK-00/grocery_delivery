@@ -219,7 +219,6 @@ foreach ($portalSidebars as $path => $portal) {
 
     foreach ([
         'assistant.php',
-        'communications.php',
         'notifications.php',
         'support.php',
         'logout.php'
@@ -237,6 +236,23 @@ foreach ($portalSidebars as $path => $portal) {
                 . ' portal binding'
         );
     }
+}
+
+foreach ($portalSidebars as $path => $portal) {
+    $content =
+        sourceText(
+            $root,
+            $path
+        );
+
+    routeResult(
+        !str_contains(
+            $content,
+            '/communications.php?portal='
+        ),
+        $path
+            . ' communications hidden from sidebar'
+    );
 }
 
 foreach ([
@@ -322,6 +338,30 @@ routeResult(
     ),
     'logout stale-tab protection'
 );
+
+$contextualPages = [
+    'admin/order_details.php',
+    'staff/order_details.php',
+    'delivery/order_details.php',
+    'customer/track_order.php'
+];
+
+foreach ($contextualPages as $path) {
+    $content =
+        sourceText(
+            $root,
+            $path
+        );
+
+    routeResult(
+        str_contains(
+            $content,
+            '/communications.php?portal='
+        ),
+        $path
+            . ' contextual delivery communications links'
+    );
+}
 
 $adminOrder =
     sourceText(
