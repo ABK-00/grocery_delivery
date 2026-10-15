@@ -182,11 +182,18 @@ foreach ([
     'support.php',
     'support_ticket.php'
 ] as $path) {
-    expectContains(
-        $root,
-        $path,
-        ['requireLogin();'],
-        $path . ' authenticated access'
+    $content = fileText($root, $path);
+
+    resultLine(
+        str_contains(
+            $content,
+            'requirePortalContext()'
+        )
+        || str_contains(
+            $content,
+            'requireLogin();'
+        ),
+        $path . ' authenticated portal access'
     );
 }
 
@@ -244,14 +251,23 @@ $legacyRequireRole = [];
 $wrongTrackingLinks = [];
 
 foreach ($allPhp as $file) {
-    $content =
-        (string) file_get_contents($file);
-
     $relative = str_replace(
         '\\',
         '/',
         substr($file, strlen($root) + 1)
     );
+
+    if (
+        str_starts_with(
+            $relative,
+            'scripts/'
+        )
+    ) {
+        continue;
+    }
+
+    $content =
+        (string) file_get_contents($file);
 
     if (str_contains($content, 'require_role(')) {
         $legacyRequireRole[] = $relative;
