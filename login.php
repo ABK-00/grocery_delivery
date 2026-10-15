@@ -49,7 +49,7 @@ if (isset($_SESSION['user_id'])) {
         if ($role === 'customer') {
 
             header(
-                'Location: ' . BASE_URL . '/marketplace.php'
+                'Location: ' . BASE_URL . '/customer/dashboard.php'
             );
 
             exit;
@@ -101,7 +101,7 @@ if (isset($_SESSION['user_id'])) {
             case 'customer':
 
                 header(
-                    'Location: ' . BASE_URL . '/marketplace.php'
+                    'Location: ' . BASE_URL . '/customer/dashboard.php'
                 );
 
                 exit;
@@ -483,7 +483,7 @@ if ($user['role'] !== 'customer') {
                 case 'customer':
 
                     header(
-                        'Location: ' . BASE_URL . '/marketplace.php'
+                        'Location: ' . BASE_URL . '/customer/dashboard.php'
                     );
 
                     exit;
