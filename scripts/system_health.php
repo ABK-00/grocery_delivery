@@ -90,6 +90,8 @@ $requiredTables = [
     'deliveries',
     'delivery_partners',
     'delivery_locations',
+    'delivery_return_items',
+    'realtime_events',
     'customer_preferences',
     'customer_addresses',
     'ai_conversations',
@@ -122,7 +124,18 @@ $requiredColumns = [
         'idempotency_key',
         'payment_status',
         'payment_reference',
-        'stock_released_at'
+        'stock_released_at',
+        'vendor_sla_expires_at',
+        'vendor_escalated_at'
+    ],
+    'deliveries' => [
+        'failure_reason',
+        'failed_at',
+        'return_started_at',
+        'return_pending_at',
+        'returned_at',
+        'return_confirmed_by',
+        'return_notes'
     ],
     'payments' => [
         'reference',
@@ -193,6 +206,58 @@ try {
 } catch (Throwable $e) {
     healthLine(
         'Expired pending orders',
+        false,
+        $e->getMessage(),
+        true
+    );
+}
+
+
+
+try {
+    $slaMinutes = max(
+        1,
+        (int) (
+            getenv('VENDOR_ORDER_SLA_MINUTES')
+            ?: 10
+        )
+    );
+
+    $cutoff = date(
+        'Y-m-d H:i:s',
+        time() - ($slaMinutes * 60)
+    );
+
+    $slaStmt = $conn->prepare("
+        SELECT COUNT(DISTINCT o.id)
+        FROM orders o
+        LEFT JOIN payments p
+            ON p.order_id = o.id
+           AND p.status = 'paid'
+        WHERE o.status = 'pending'
+          AND o.payment_status = 'paid'
+          AND o.vendor_escalated_at IS NULL
+          AND COALESCE(
+                p.paid_at,
+                o.updated_at,
+                o.created_at
+              ) <= ?
+    ");
+
+    $slaStmt->execute([$cutoff]);
+    $overdue = (int) $slaStmt->fetchColumn();
+
+    healthLine(
+        'Vendor SLA escalations pending',
+        $overdue === 0,
+        $overdue === 0
+            ? 'none'
+            : $overdue . ' order(s) need escalation',
+        true
+    );
+} catch (Throwable $e) {
+    healthLine(
+        'Vendor SLA escalations pending',
         false,
         $e->getMessage(),
         true
