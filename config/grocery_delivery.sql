@@ -1172,18 +1172,25 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE communication_threads (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id INT UNSIGNED NOT NULL,
     user_one_id INT UNSIGNED NOT NULL,
     user_two_id INT UNSIGNED NOT NULL,
-    company_id INT UNSIGNED DEFAULT NULL,
+    company_id INT UNSIGNED NOT NULL,
     created_by INT UNSIGNED NOT NULL,
     last_message_at DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    UNIQUE KEY uq_communication_pair (
+    UNIQUE KEY uq_communication_order_pair (
+        order_id,
         user_one_id,
         user_two_id
+    ),
+
+    INDEX idx_communication_order (
+        order_id,
+        updated_at
     ),
 
     INDEX idx_communication_user_one (
@@ -1195,6 +1202,12 @@ CREATE TABLE communication_threads (
         user_two_id,
         updated_at
     ),
+
+    CONSTRAINT fk_communication_order
+        FOREIGN KEY (order_id)
+        REFERENCES orders(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
 
     CONSTRAINT fk_communication_user_one
         FOREIGN KEY (user_one_id)
@@ -1217,7 +1230,7 @@ CREATE TABLE communication_threads (
     CONSTRAINT fk_communication_company
         FOREIGN KEY (company_id)
         REFERENCES companies(id)
-        ON DELETE SET NULL
+        ON DELETE CASCADE
         ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
