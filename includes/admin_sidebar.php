@@ -350,7 +350,7 @@ if ($sidebarInitials === '') {
 
 
         <a
-            href="<?= BASE_URL ?>/logout.php"
+            href="<?= BASE_URL ?>/logout.php?portal=admin"
             class="nav-link"
             title="Logout"
         >
