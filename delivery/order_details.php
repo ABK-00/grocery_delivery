@@ -479,6 +479,7 @@ $stmt = $conn->prepare("
         o.status AS order_status,
         o.payment_status,
 
+        u.id AS customer_user_id,
         u.name AS customer_name,
         u.email AS customer_email,
         u.phone AS customer_phone,
@@ -813,20 +814,20 @@ body {
 
                     </div>
 
-                    <div class="d-flex gap-2 mt-4">
-
-                        <a
-                            href="tel:<?= e($delivery['delivery_phone']) ?>"
-                            class="btn btn-success action-btn px-4"
-                        >
-
-                            <i class="bi bi-telephone-fill me-2"></i>
-
-                            Call Customer
-
-                        </a>
-
-                    </div>
+                    <?php if (
+                        $delivery['order_status'] === 'out_for_delivery'
+                        && $delivery['status'] === 'out_for_delivery'
+                    ): ?>
+                        <div class="d-flex gap-2 mt-4">
+                            <a
+                                href="<?= BASE_URL ?>/communications.php?portal=delivery&order=<?= (int) $delivery['order_id'] ?>"
+                                class="btn btn-success action-btn px-4"
+                            >
+                                <i class="bi bi-chat-dots-fill me-2"></i>
+                                Delivery Communications
+                            </a>
+                        </div>
+                    <?php endif; ?>
 
                 </div>
 
