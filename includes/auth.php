@@ -236,6 +236,63 @@ function requestedPortalRole(): ?string
 }
 
 
+
+
+function portalizeSharedUrl(
+    string $url,
+    string $role
+): string {
+    $portal =
+        portalKeyForRole($role);
+
+    if ($portal === '') {
+        return $url;
+    }
+
+    $sharedPaths = [
+        '/assistant.php',
+        '/notifications.php',
+        '/support.php',
+        '/support_ticket.php'
+    ];
+
+    $isShared = false;
+
+    foreach ($sharedPaths as $path) {
+        if (
+            str_starts_with(
+                $url,
+                BASE_URL . $path
+            )
+        ) {
+            $isShared = true;
+            break;
+        }
+    }
+
+    if (!$isShared) {
+        return $url;
+    }
+
+    if (
+        preg_match(
+            '/(?:^|[?&])portal=/',
+            $url
+        )
+    ) {
+        return $url;
+    }
+
+    return $url
+        . (
+            str_contains($url, '?')
+                ? '&'
+                : '?'
+        )
+        . 'portal='
+        . rawurlencode($portal);
+}
+
 function requirePortalContext(
     ?string $fallbackRole = null
 ): string {
