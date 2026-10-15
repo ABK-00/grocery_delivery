@@ -826,12 +826,21 @@ CREATE TABLE customer_addresses (
     label VARCHAR(60) NOT NULL DEFAULT 'Home',
     recipient_name VARCHAR(120) NOT NULL,
     phone VARCHAR(30) NOT NULL,
-    address TEXT NOT NULL,
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255) DEFAULT NULL,
+    city VARCHAR(120) DEFAULT NULL,
+    region VARCHAR(120) DEFAULT NULL,
+    country VARCHAR(120) NOT NULL DEFAULT 'Ghana',
+    latitude DECIMAL(10,7) DEFAULT NULL,
+    longitude DECIMAL(10,7) DEFAULT NULL,
+    delivery_instructions TEXT DEFAULT NULL,
     is_default TINYINT(1) NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_customer_addresses_user (user_id, is_default),
+    INDEX idx_customer_addresses_active (user_id, is_active),
     CONSTRAINT fk_customer_addresses_user
         FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE ON UPDATE CASCADE
