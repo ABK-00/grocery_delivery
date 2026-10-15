@@ -32,8 +32,10 @@ DROP TABLE IF EXISTS customer_preferences;
 DROP TABLE IF EXISTS customer_addresses;
 DROP TABLE IF EXISTS audit_logs;
 DROP TABLE IF EXISTS platform_settings;
+DROP TABLE IF EXISTS delivery_return_items;
 DROP TABLE IF EXISTS delivery_locations;
 DROP TABLE IF EXISTS deliveries;
+DROP TABLE IF EXISTS realtime_events;
 DROP TABLE IF EXISTS subscription_payments;
 DROP TABLE IF EXISTS refunds;
 DROP TABLE IF EXISTS payments;
@@ -488,6 +490,10 @@ CREATE TABLE orders (
         'preparing',
         'ready',
         'out_for_delivery',
+        'delivery_failed',
+        'returning_to_vendor',
+        'return_pending_confirmation',
+        'returned',
         'delivered',
         'cancelled'
     ) NOT NULL DEFAULT 'pending',
@@ -501,6 +507,8 @@ CREATE TABLE orders (
 
     payment_reference VARCHAR(100) DEFAULT NULL,
     stock_released_at DATETIME DEFAULT NULL,
+    vendor_sla_expires_at DATETIME DEFAULT NULL,
+    vendor_escalated_at DATETIME DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
@@ -523,6 +531,12 @@ CREATE TABLE orders (
     ),
     INDEX idx_orders_payment_reference (
         payment_reference
+    ),
+    INDEX idx_orders_vendor_sla (
+        status,
+        payment_status,
+        vendor_escalated_at,
+        vendor_sla_expires_at
     ),
 
     CONSTRAINT fk_orders_company
@@ -729,6 +743,10 @@ CREATE TABLE deliveries (
         'assigned',
         'picked_up',
         'out_for_delivery',
+        'delivery_failed',
+        'returning_to_vendor',
+        'return_pending_confirmation',
+        'returned',
         'delivered',
         'cancelled'
     ) NOT NULL DEFAULT 'assigned',
@@ -736,6 +754,13 @@ CREATE TABLE deliveries (
     assigned_at DATETIME DEFAULT NULL,
     picked_up_at DATETIME DEFAULT NULL,
     delivered_at DATETIME DEFAULT NULL,
+    failure_reason TEXT DEFAULT NULL,
+    failed_at DATETIME DEFAULT NULL,
+    return_started_at DATETIME DEFAULT NULL,
+    return_pending_at DATETIME DEFAULT NULL,
+    returned_at DATETIME DEFAULT NULL,
+    return_confirmed_by INT UNSIGNED DEFAULT NULL,
+    return_notes TEXT DEFAULT NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
@@ -759,9 +784,98 @@ CREATE TABLE deliveries (
         FOREIGN KEY (delivery_partner_id)
         REFERENCES delivery_partners(id)
         ON DELETE SET NULL
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_deliveries_return_confirmed_by
+        FOREIGN KEY (return_confirmed_by)
+        REFERENCES users(id)
+        ON DELETE SET NULL
         ON UPDATE CASCADE
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- DELIVERY RETURN RECONCILIATION
+-- ============================================================
+
+CREATE TABLE delivery_return_items (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    delivery_id INT UNSIGNED NOT NULL,
+    order_item_id INT UNSIGNED NOT NULL,
+    quantity_expected DECIMAL(10,2) NOT NULL DEFAULT 0,
+    quantity_received DECIMAL(10,2) NOT NULL DEFAULT 0,
+    quantity_restocked DECIMAL(10,2) NOT NULL DEFAULT 0,
+    item_condition ENUM(
+        'sellable',
+        'damaged',
+        'opened',
+        'perishable',
+        'missing'
+    ) NOT NULL DEFAULT 'sellable',
+    notes VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_delivery_return_item (
+        delivery_id,
+        order_item_id
+    ),
+
+    CONSTRAINT fk_return_items_delivery
+        FOREIGN KEY (delivery_id)
+        REFERENCES deliveries(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_return_items_order_item
+        FOREIGN KEY (order_item_id)
+        REFERENCES order_items(id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+
+-- ============================================================
+-- REALTIME EVENT OUTBOX
+-- ============================================================
+
+CREATE TABLE realtime_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    channel VARCHAR(120) NOT NULL,
+    event_type VARCHAR(120) NOT NULL,
+    company_id INT UNSIGNED DEFAULT NULL,
+    user_id INT UNSIGNED DEFAULT NULL,
+    dedupe_key VARCHAR(190) DEFAULT NULL,
+    payload JSON NOT NULL,
+    processed_at DATETIME DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE KEY uq_realtime_events_dedupe (dedupe_key),
+    INDEX idx_realtime_events_channel (
+        channel,
+        processed_at,
+        id
+    ),
+    INDEX idx_realtime_events_company (
+        company_id,
+        processed_at,
+        id
+    ),
+
+    CONSTRAINT fk_realtime_events_company
+        FOREIGN KEY (company_id)
+        REFERENCES companies(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_realtime_events_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
+        ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
 
 
