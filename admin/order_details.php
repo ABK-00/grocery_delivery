@@ -389,7 +389,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order_status']
                 }
             }
 
-            $customerId = orderCustomerId($conn, $orderId);
+            $customerId =
+                (int) ($order['user_id'] ?? 0);
 
             if ($customerId) {
                 createNotification(
@@ -603,7 +604,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_delivery'])) {
 
             $partnerBusy->execute([$partnerId]);
 
-            $customerId = orderCustomerId($conn, $orderId);
+            $customerId =
+                (int) ($order['user_id'] ?? 0);
 
             if ($customerId) {
                 createNotification(
@@ -612,7 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_delivery'])) {
                     'delivery',
                     'Delivery partner assigned',
                     'A delivery partner has been assigned to order #' . $order['order_number'] . '.',
-                    BASE_URL . '/customer/track_order.php?order_id=' . $orderId
+                    BASE_URL . '/customer/track_order.php?order=' . $orderId
                 );
             }
 
