@@ -101,7 +101,11 @@ $requiredTables = [
     'support_tickets',
     'support_messages',
     'platform_settings',
-    'audit_logs'
+    'audit_logs',
+    'communication_threads',
+    'communication_messages',
+    'communication_calls',
+    'communication_call_signals'
 ];
 
 $tableStmt = $conn->prepare("
@@ -194,6 +198,35 @@ $requiredColumns = [
         'metadata',
         'tool_name',
         'tool_payload'
+    ],
+    'communication_threads' => [
+        'user_one_id',
+        'user_two_id',
+        'company_id',
+        'created_by',
+        'last_message_at'
+    ],
+    'communication_messages' => [
+        'thread_id',
+        'sender_id',
+        'message',
+        'read_at'
+    ],
+    'communication_calls' => [
+        'thread_id',
+        'caller_id',
+        'callee_id',
+        'status',
+        'started_at',
+        'answered_at',
+        'ended_at'
+    ],
+    'communication_call_signals' => [
+        'call_id',
+        'sender_id',
+        'recipient_id',
+        'signal_type',
+        'payload'
     ]
 ];
 
