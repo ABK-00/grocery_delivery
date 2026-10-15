@@ -25,7 +25,7 @@ $customerPrefix = $inCustomerDir ? '' : 'customer/';
         <a href="<?= BASE_URL ?>/support.php?portal=customer" class="nav-link <?= in_array($currentPage,['support.php','support_ticket.php'])?'active':'' ?>"><i class="bi bi-life-preserver"></i><span>Support</span></a>
         <button type="button" class="nav-link theme-toggle" data-theme-toggle><i class="bi bi-moon-stars-fill theme-icon"></i><span class="theme-label">Dark Theme</span><small class="theme-state">Off</small></button>
     </div>
-    <div class="sidebar-footer"><a href="<?= BASE_URL ?>/logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
+    <div class="sidebar-footer"><a href="<?= BASE_URL ?>/logout.php?portal=customer" class="nav-link"><i class="bi bi-box-arrow-right"></i><span>Logout</span></a></div>
 </aside>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 <script>document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('customerSidebar'),o=document.getElementById('sidebarOverlay');['sidebarToggle','customerMenuBtn'].forEach(function(id){var b=document.getElementById(id);if(b&&s)b.addEventListener('click',function(){s.classList.toggle('show');if(o)o.classList.toggle('show')})});if(o&&s)o.addEventListener('click',function(){s.classList.remove('show');o.classList.remove('show')});if(s)s.querySelectorAll('.nav-link').forEach(function(a){a.addEventListener('click',function(){if(window.innerWidth<=900&&!a.hasAttribute('data-theme-toggle')){s.classList.remove('show');if(o)o.classList.remove('show')}})})});</script>
