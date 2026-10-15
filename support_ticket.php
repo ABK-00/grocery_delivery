@@ -243,7 +243,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header(
                     'Location: '
                     . BASE_URL
-                    . '/support_ticket.php?id='
+                    . '/support_ticket.php?portal='
+                    . urlencode($portal)
+                    . '&id='
                     . $ticketId
                 );
                 exit;
@@ -319,7 +321,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header(
                     'Location: '
                     . BASE_URL
-                    . '/support_ticket.php?id='
+                    . '/support_ticket.php?portal='
+                    . urlencode($portal)
+                    . '&id='
                     . $ticketId
                 );
                 exit;
@@ -456,12 +460,14 @@ $messages = $stmt->fetchAll();
 
         <?php if (in_array($role, ['super_admin', 'admin'], true)): ?>
             <form
-                method="POST">
+                method="POST"
+                class="d-flex gap-2 mt-4"
+            >
                 <input
                     type="hidden"
                     name="portal"
                     value="<?= e($portal) ?>"
-                 class="d-flex gap-2 mt-4">
+                >
                 <input
                     type="hidden"
                     name="csrf_token"
