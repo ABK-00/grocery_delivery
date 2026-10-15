@@ -595,17 +595,17 @@ $mapLng = $latestLocation
                         </div>
 
 
-                        <?php if (!empty($order['driver_phone'])): ?>
+                        <?php if (
+                            $trackingActive
+                            && !empty($order['driver_user_id'])
+                        ): ?>
 
                             <a
-                                href="tel:<?= e($order['driver_phone']) ?>"
+                                href="<?= BASE_URL ?>/communications.php?portal=customer&order=<?= (int) $order['id'] ?>&with=<?= (int) $order['driver_user_id'] ?>"
                                 class="btn btn-success w-100"
                             >
-
-                                <i class="bi bi-telephone-fill me-2"></i>
-
-                                Call Driver
-
+                                <i class="bi bi-chat-dots-fill me-2"></i>
+                                Message / Call Driver
                             </a>
 
                         <?php endif; ?>
