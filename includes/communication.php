@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * Internal Somame communications authorization and thread helpers.
- */
-
 function communicationUser(
     PDO $conn,
     int $userId
@@ -29,8 +25,105 @@ function communicationUser(
 }
 
 
-function communicationCanContact(
+function communicationDeliveryContext(
     PDO $conn,
+    int $orderId
+): array|false {
+    $stmt = $conn->prepare("
+        SELECT
+            o.id AS order_id,
+            o.order_number,
+            o.user_id AS customer_id,
+            o.company_id,
+            o.status AS order_status,
+
+            d.id AS delivery_id,
+            d.status AS delivery_status,
+
+            dp.id AS partner_id,
+            dp.user_id AS rider_user_id,
+
+            customer.name AS customer_name,
+            rider.name AS rider_name
+
+        FROM orders o
+
+        INNER JOIN deliveries d
+            ON d.order_id = o.id
+
+        INNER JOIN delivery_partners dp
+            ON dp.id = d.delivery_partner_id
+
+        INNER JOIN users customer
+            ON customer.id = o.user_id
+
+        INNER JOIN users rider
+            ON rider.id = dp.user_id
+
+        WHERE o.id = ?
+          AND o.status = 'out_for_delivery'
+          AND d.status = 'out_for_delivery'
+          AND customer.status = 'active'
+          AND rider.status = 'active'
+        LIMIT 1
+    ");
+
+    $stmt->execute([$orderId]);
+
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+
+function communicationCanAccessOrder(
+    PDO $conn,
+    int $orderId,
+    int $actorId,
+    string $actorRole,
+    ?int $actorCompanyId
+): bool {
+    $context =
+        communicationDeliveryContext(
+            $conn,
+            $orderId
+        );
+
+    if (!$context) {
+        return false;
+    }
+
+    if (
+        $actorRole === 'customer'
+    ) {
+        return (int) $context['customer_id']
+            === $actorId;
+    }
+
+    if (
+        $actorRole === 'delivery_partner'
+    ) {
+        return (int) $context['rider_user_id']
+            === $actorId;
+    }
+
+    if (
+        in_array(
+            $actorRole,
+            ['admin', 'staff'],
+            true
+        )
+    ) {
+        return $actorCompanyId !== null
+            && (int) $context['company_id']
+                === $actorCompanyId;
+    }
+
+    return false;
+}
+
+
+function communicationCanContactForOrder(
+    PDO $conn,
+    int $orderId,
     int $actorId,
     string $actorRole,
     ?int $actorCompanyId,
@@ -40,196 +133,159 @@ function communicationCanContact(
         $actorId <= 0
         || $targetId <= 0
         || $actorId === $targetId
-    ) {
-        return false;
-    }
-
-    $target = communicationUser(
-        $conn,
-        $targetId
-    );
-
-    if (
-        !$target
-        || $target['status'] !== 'active'
-    ) {
-        return false;
-    }
-
-    $targetRole =
-        (string) $target['role'];
-
-    $targetCompanyId =
-        $target['company_id'] !== null
-            ? (int) $target['company_id']
-            : null;
-
-    if (
-        $actorRole === 'super_admin'
-        || $targetRole === 'super_admin'
-    ) {
-        return true;
-    }
-
-    $companyRoles = [
-        'admin',
-        'staff',
-        'delivery_partner'
-    ];
-
-    if (
-        in_array(
-            $actorRole,
-            $companyRoles,
-            true
-        )
-        && in_array(
-            $targetRole,
-            $companyRoles,
-            true
-        )
-    ) {
-        return $actorCompanyId !== null
-            && $targetCompanyId !== null
-            && $actorCompanyId === $targetCompanyId;
-    }
-
-    if (
-        $actorRole === 'customer'
-        && in_array(
-            $targetRole,
-            ['admin', 'staff'],
-            true
-        )
-        && $targetCompanyId
-    ) {
-        $stmt = $conn->prepare("
-            SELECT 1
-            FROM orders
-            WHERE user_id = ?
-              AND company_id = ?
-            LIMIT 1
-        ");
-        $stmt->execute([
+        || !communicationCanAccessOrder(
+            $conn,
+            $orderId,
             $actorId,
-            $targetCompanyId
-        ]);
-
-        return (bool) $stmt->fetchColumn();
-    }
-
-    if (
-        in_array(
             $actorRole,
-            ['admin', 'staff'],
-            true
-        )
-        && $targetRole === 'customer'
-        && $actorCompanyId
-    ) {
-        $stmt = $conn->prepare("
-            SELECT 1
-            FROM orders
-            WHERE user_id = ?
-              AND company_id = ?
-            LIMIT 1
-        ");
-        $stmt->execute([
-            $targetId,
             $actorCompanyId
-        ]);
-
-        return (bool) $stmt->fetchColumn();
+        )
+    ) {
+        return false;
     }
+
+    $context =
+        communicationDeliveryContext(
+            $conn,
+            $orderId
+        );
+
+    if (!$context) {
+        return false;
+    }
+
+    $riderId =
+        (int) $context['rider_user_id'];
+
+    $customerId =
+        (int) $context['customer_id'];
 
     if (
         $actorRole === 'customer'
-        && $targetRole === 'delivery_partner'
     ) {
-        $stmt = $conn->prepare("
-            SELECT 1
-            FROM deliveries d
-            INNER JOIN delivery_partners dp
-                ON dp.id = d.delivery_partner_id
-            INNER JOIN orders o
-                ON o.id = d.order_id
-            WHERE o.user_id = ?
-              AND dp.user_id = ?
-            LIMIT 1
-        ");
-        $stmt->execute([
-            $actorId,
-            $targetId
-        ]);
+        return $targetId === $riderId;
+    }
 
-        return (bool) $stmt->fetchColumn();
+    if (
+        in_array(
+            $actorRole,
+            ['admin', 'staff'],
+            true
+        )
+    ) {
+        return $targetId === $riderId;
     }
 
     if (
         $actorRole === 'delivery_partner'
-        && $targetRole === 'customer'
     ) {
-        $stmt = $conn->prepare("
-            SELECT 1
-            FROM deliveries d
-            INNER JOIN delivery_partners dp
-                ON dp.id = d.delivery_partner_id
-            INNER JOIN orders o
-                ON o.id = d.order_id
-            WHERE dp.user_id = ?
-              AND o.user_id = ?
-            LIMIT 1
-        ");
-        $stmt->execute([
-            $actorId,
-            $targetId
-        ]);
+        if ($targetId === $customerId) {
+            return true;
+        }
 
-        return (bool) $stmt->fetchColumn();
+        $target =
+            communicationUser(
+                $conn,
+                $targetId
+            );
+
+        return $target
+            && $target['status'] === 'active'
+            && in_array(
+                (string) $target['role'],
+                ['admin', 'staff'],
+                true
+            )
+            && (int) ($target['company_id'] ?? 0)
+                === (int) $context['company_id'];
     }
 
     return false;
 }
 
 
-function communicationContacts(
+function communicationContactsForOrder(
     PDO $conn,
+    int $orderId,
     int $actorId,
     string $actorRole,
     ?int $actorCompanyId
 ): array {
+    $context =
+        communicationDeliveryContext(
+            $conn,
+            $orderId
+        );
+
+    if (
+        !$context
+        || !communicationCanAccessOrder(
+            $conn,
+            $orderId,
+            $actorId,
+            $actorRole,
+            $actorCompanyId
+        )
+    ) {
+        return [];
+    }
+
+    if (
+        $actorRole !== 'delivery_partner'
+    ) {
+        $rider =
+            communicationUser(
+                $conn,
+                (int) $context['rider_user_id']
+            );
+
+        return $rider
+            ? [$rider]
+            : [];
+    }
+
+    $contacts = [];
+
+    $customer =
+        communicationUser(
+            $conn,
+            (int) $context['customer_id']
+        );
+
+    if ($customer) {
+        $contacts[] = $customer;
+    }
+
     $stmt = $conn->prepare("
         SELECT
             id,
             company_id,
             name,
             email,
+            phone,
             role,
             status
         FROM users
-        WHERE id <> ?
+        WHERE company_id = ?
           AND status = 'active'
-        ORDER BY name ASC
+          AND role IN ('admin', 'staff')
+        ORDER BY
+            CASE role
+                WHEN 'admin' THEN 0
+                ELSE 1
+            END,
+            name ASC
     ");
-    $stmt->execute([$actorId]);
 
-    $contacts = [];
+    $stmt->execute([
+        (int) $context['company_id']
+    ]);
 
     foreach (
         $stmt->fetchAll(PDO::FETCH_ASSOC)
         as $user
     ) {
-        if (
-            communicationCanContact(
-                $conn,
-                $actorId,
-                $actorRole,
-                $actorCompanyId,
-                (int) $user['id']
-            )
-        ) {
-            $contacts[] = $user;
-        }
+        $contacts[] = $user;
     }
 
     return $contacts;
@@ -238,6 +294,7 @@ function communicationContacts(
 
 function communicationThread(
     PDO $conn,
+    int $orderId,
     int $actorId,
     string $actorRole,
     ?int $actorCompanyId,
@@ -245,8 +302,9 @@ function communicationThread(
     bool $create = true
 ): array|false {
     if (
-        !communicationCanContact(
+        !communicationCanContactForOrder(
             $conn,
+            $orderId,
             $actorId,
             $actorRole,
             $actorCompanyId,
@@ -269,18 +327,22 @@ function communicationThread(
     $stmt = $conn->prepare("
         SELECT *
         FROM communication_threads
-        WHERE user_one_id = ?
+        WHERE order_id = ?
+          AND user_one_id = ?
           AND user_two_id = ?
         LIMIT 1
     ");
+
     $stmt->execute([
+        $orderId,
         $one,
         $two
     ]);
 
-    $thread = $stmt->fetch(
-        PDO::FETCH_ASSOC
-    );
+    $thread =
+        $stmt->fetch(
+            PDO::FETCH_ASSOC
+        );
 
     if (
         $thread
@@ -289,44 +351,29 @@ function communicationThread(
         return $thread;
     }
 
-    $target =
-        communicationUser(
+    $context =
+        communicationDeliveryContext(
             $conn,
-            $targetId
+            $orderId
         );
-
-    $companyId = null;
-
-    if (
-        $actorCompanyId !== null
-        && !empty($target['company_id'])
-        && (int) $target['company_id']
-            === $actorCompanyId
-    ) {
-        $companyId = $actorCompanyId;
-    } elseif (
-        $actorRole === 'customer'
-        && !empty($target['company_id'])
-    ) {
-        $companyId =
-            (int) $target['company_id'];
-    }
 
     $stmt = $conn->prepare("
         INSERT INTO communication_threads (
+            order_id,
             user_one_id,
             user_two_id,
             company_id,
             created_by
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
     ");
 
     try {
         $stmt->execute([
+            $orderId,
             $one,
             $two,
-            $companyId,
+            (int) $context['company_id'],
             $actorId
         ]);
     } catch (PDOException $e) {
@@ -341,11 +388,14 @@ function communicationThread(
     $stmt = $conn->prepare("
         SELECT *
         FROM communication_threads
-        WHERE user_one_id = ?
+        WHERE order_id = ?
+          AND user_one_id = ?
           AND user_two_id = ?
         LIMIT 1
     ");
+
     $stmt->execute([
+        $orderId,
         $one,
         $two
     ]);
@@ -359,7 +409,9 @@ function communicationThread(
 function communicationAssertThreadAccess(
     PDO $conn,
     int $threadId,
-    int $userId
+    int $userId,
+    string $role,
+    ?int $companyId
 ): array {
     $stmt = $conn->prepare("
         SELECT *
@@ -371,19 +423,56 @@ function communicationAssertThreadAccess(
           )
         LIMIT 1
     ");
+
     $stmt->execute([
         $threadId,
         $userId,
         $userId
     ]);
 
-    $thread = $stmt->fetch(
-        PDO::FETCH_ASSOC
-    );
+    $thread =
+        $stmt->fetch(
+            PDO::FETCH_ASSOC
+        );
 
     if (!$thread) {
         throw new RuntimeException(
-            'Conversation not found.'
+            'Delivery conversation not found.'
+        );
+    }
+
+    if (
+        !communicationCanAccessOrder(
+            $conn,
+            (int) $thread['order_id'],
+            $userId,
+            $role,
+            $companyId
+        )
+    ) {
+        throw new RuntimeException(
+            'This delivery communication channel is no longer active.'
+        );
+    }
+
+    $otherId =
+        communicationOtherUserId(
+            $thread,
+            $userId
+        );
+
+    if (
+        !communicationCanContactForOrder(
+            $conn,
+            (int) $thread['order_id'],
+            $userId,
+            $role,
+            $companyId,
+            $otherId
+        )
+    ) {
+        throw new RuntimeException(
+            'You are not allowed to use this delivery conversation.'
         );
     }
 
@@ -396,8 +485,9 @@ function communicationOtherUserId(
     int $userId
 ): int {
     return (int) (
-        (int) $thread['user_one_id'] === $userId
-            ? $thread['user_two_id']
-            : $thread['user_one_id']
+        (int) $thread['user_one_id']
+            === $userId
+                ? $thread['user_two_id']
+                : $thread['user_one_id']
     );
 }
